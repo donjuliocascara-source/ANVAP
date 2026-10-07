@@ -62,7 +62,9 @@ class CloudSyncService {
   private unsubscribers: Unsubscribe[] = [];
   private isInitialized = false;
   private isWritingToCloud = false;
-  private writeQueue: Promise<any> = Promise.resolve();
+  private activeWrites = 0;
+  private maxConcurrentWrites = 8;
+  private pendingQueue: Array<{ op: () => Promise<any>; resolve: (v: any) => void; reject: (e: any) => void }> = [];
 
   public status: CloudSyncStatus = {
     isOnline: typeof navigator !== "undefined" ? navigator.onLine : true,
@@ -86,29 +88,41 @@ class CloudSyncService {
   }
 
   /**
-   * Encola escrituras secuencialmente para prevenir saturación del write stream en Firestore
+   * Ejecuta operaciones de escritura en paralelo controlado (hasta 8 concurrentes)
+   * para maximizar velocidad sin saturar el canal de red.
    */
   private enqueueWrite<T>(operation: () => Promise<T>): Promise<T> {
-    const task = async () => {
-      try {
-        return await operation();
-      } catch (err: any) {
-        if (
-          err?.code === "resource-exhausted" ||
-          (err?.message && (err.message.includes("resource-exhausted") || err.message.includes("RESOURCE_EXHAUSTED") || err.message.includes("Quota limit exceeded")))
-        ) {
-          console.warn("[CloudSync] Cuota de Firestore alcanzada. Los datos permanecen persistidos y seguros en la base de datos local:", err?.message || err);
-          this.status.error = "Cuota diaria de Firebase alcanzada. Operando en modo local seguro con persistencia completa.";
-          this.notifyStatus();
-          return undefined as unknown as T;
-        }
-        console.warn("[CloudSync] Aviso en operación de escritura Firestore:", err?.message || err);
-        throw err;
-      }
-    };
-    const chained = this.writeQueue.then(task, task);
-    this.writeQueue = chained;
-    return chained;
+    return new Promise<T>((resolve, reject) => {
+      this.pendingQueue.push({ op: operation, resolve, reject });
+      this.processQueue();
+    });
+  }
+
+  private processQueue() {
+    while (this.activeWrites < this.maxConcurrentWrites && this.pendingQueue.length > 0) {
+      const task = this.pendingQueue.shift();
+      if (!task) break;
+      this.activeWrites++;
+      task.op()
+        .then((res) => {
+          task.resolve(res);
+        })
+        .catch((err) => {
+          if (isFirestoreQuotaOrResourceError(err)) {
+            console.warn("[CloudSync] Cuota de Firestore alcanzada. Operando en modo local seguro:", err?.message || err);
+            this.status.error = "Cuota diaria de Firebase alcanzada. Operando en modo local seguro con persistencia completa.";
+            this.notifyStatus();
+            task.resolve(undefined as any);
+          } else {
+            console.warn("[CloudSync] Aviso en operación de escritura Firestore:", err?.message || err);
+            task.reject(err);
+          }
+        })
+        .finally(() => {
+          this.activeWrites--;
+          this.processQueue();
+        });
+    }
   }
 
   public subscribeStatus(listener: SyncListener): () => void {
@@ -143,14 +157,7 @@ class CloudSyncService {
       // 1. Descarga inicial de todas las colecciones principales y combinación con local
       await this.pullAllFromCloud();
 
-      // 2. Solo si la nube estaba completamente vacía y localDB tiene datos previos, subir datos iniciales
-      // Evita subir miles de documentos en bucle si ya fueron descargados de Firestore
-      const localState = localDB.getState();
-      if (this.status.totalCloudLotes === 0 && Array.isArray(localState.lotes) && localState.lotes.length > 0) {
-        await this.pushAllLocalToCloud();
-      }
-
-      // 3. Establecer listeners en tiempo real (onSnapshot)
+      // 2. Establecer listeners en tiempo real (onSnapshot)
       this.setupRealtimeListeners();
 
       this.status.lastSyncTime = new Date();
@@ -165,229 +172,79 @@ class CloudSyncService {
   }
 
   /**
-   * Configura listeners en tiempo real para reflejar cambios de otras máquinas al instante
+   * Configura listeners en tiempo real para reflejar cambios y eliminaciones de todas las colecciones al instante
    */
   private setupRealtimeListeners() {
-    // 1. Listener de LOTES
-    try {
-      const unsubLotes = onSnapshot(
-        collection(db, "lotes"),
-        (snapshot) => {
-          if (snapshot.empty && !this.isWritingToCloud) return;
-          const cloudLotes: Lote[] = [];
-          snapshot.forEach((docSnap) => {
-            const data = docSnap.data() as Lote;
-            if (data && data.LOTE_ID) {
-              cloudLotes.push(data);
+    // Definición de las 10 colecciones operacionales que deben reflejarse en tiempo real
+    const collectionsToListen = [
+      { name: "lotes", type: "lotes" },
+      { name: "humedades", type: "humedades" },
+      { name: "analisisHumedo", type: "analisisHumedo" },
+      { name: "analisisSeco", type: "analisisSeco" },
+      { name: "presecados", type: "presecados" },
+      { name: "batchesVaporizado", type: "batchesVaporizado" },
+      { name: "batchLotes", type: "batchLotes" },
+      { name: "controlesVaporizado", type: "controlesVaporizado" },
+      { name: "analisisVaporizados", type: "analisisVaporizados" },
+      { name: "programaciones", type: "programaciones" }
+    ];
+
+    collectionsToListen.forEach(({ name, type }) => {
+      try {
+        const unsub = onSnapshot(
+          collection(db, name),
+          (snapshot) => {
+            const items: any[] = [];
+            snapshot.forEach((docSnap) => {
+              const data = docSnap.data();
+              if (data) {
+                items.push(data);
+              }
+            });
+
+            if (type === "lotes") {
+              this.status.totalCloudLotes = items.length;
             }
-          });
-
-          this.status.totalCloudLotes = cloudLotes.length;
-          this.status.lastSyncTime = new Date();
-          this.notifyStatus();
-
-          // Si el cambio viene de otra máquina o de Firestore, actualizar localDB
-          if (!this.isWritingToCloud) {
-            localDB.mergeFromCloud({ lotes: cloudLotes });
-            window.dispatchEvent(new CustomEvent("cloud_data_updated", { detail: { type: "lotes", count: cloudLotes.length } }));
-          }
-        },
-        (error) => {
-          if (isFirestoreQuotaOrResourceError(error)) {
-            console.warn("[CloudSync] Aviso de cuota/conexión en listener de lotes:", error?.message || error);
-            this.status.isOnline = false;
+            this.status.lastSyncTime = new Date();
             this.notifyStatus();
-            return;
-          }
-          if (isPermissionError(error)) {
-            this.status.error = "Permisos de Firestore en actualización. Operando con base de datos local segura.";
-            this.notifyStatus();
-            try {
-              handleFirestoreError(error, OperationType.LIST, "lotes");
-            } catch {
-              // Handled gracefully after structured logging
-            }
-          } else {
-            console.warn("[CloudSync] Aviso en listener de lotes:", error?.message || error);
-          }
-        }
-      );
-      this.unsubscribers.push(unsubLotes);
-    } catch (e) {
-      console.warn("[CloudSync] No se pudo configurar listener de lotes:", e);
-    }
 
-    // 2. Listener de HUMEDADES
-    try {
-      const unsubHum = onSnapshot(
-        collection(db, "humedades"),
-        (snapshot) => {
-          if (snapshot.empty && !this.isWritingToCloud) return;
-          const cloudHum: RegistroHumedad[] = [];
-          snapshot.forEach((docSnap) => {
-            const data = docSnap.data() as RegistroHumedad;
-            if (data && data.LOTE_ID) {
-              cloudHum.push(data);
+            // Sincronizar en localDB reflejando el conjunto actual exacto de Firestore
+            localDB.syncCollectionFromCloud(type, items);
+            window.dispatchEvent(
+              new CustomEvent("cloud_data_updated", {
+                detail: { type, count: items.length }
+              })
+            );
+          },
+          (error) => {
+            if (isFirestoreQuotaOrResourceError(error)) {
+              console.warn(`[CloudSync] Aviso cuota/conexión en listener ${name}:`, error?.message || error);
+              this.status.isOnline = false;
+              this.notifyStatus();
+              return;
             }
-          });
-
-          if (!this.isWritingToCloud) {
-            localDB.mergeFromCloud({ registroHumedad: cloudHum });
-            window.dispatchEvent(new CustomEvent("cloud_data_updated", { detail: { type: "humedades", count: cloudHum.length } }));
-          }
-        },
-        (error) => {
-          if (isFirestoreQuotaOrResourceError(error)) {
-            console.warn("[CloudSync] Aviso de cuota/conexión en listener de humedades:", error?.message || error);
-            this.status.isOnline = false;
-            this.notifyStatus();
-            return;
-          }
-          if (isPermissionError(error)) {
-            try {
-              handleFirestoreError(error, OperationType.LIST, "humedades");
-            } catch {
-              // Handled gracefully
+            if (isPermissionError(error)) {
+              this.status.error = "Permisos de Firestore en actualización. Operando con base de datos local segura.";
+              this.notifyStatus();
+              try {
+                handleFirestoreError(error, OperationType.LIST, name);
+              } catch {
+                // Handled gracefully
+              }
+            } else {
+              console.warn(`[CloudSync] Aviso en listener ${name}:`, error?.message || error);
             }
-          } else {
-            console.warn("[CloudSync] Aviso en listener de humedades:", error?.message || error);
           }
-        }
-      );
-      this.unsubscribers.push(unsubHum);
-    } catch (e) {
-      console.warn("[CloudSync] No se pudo configurar listener de humedades:", e);
-    }
-
-    // 3. Listener de ANALISIS HUMEDO
-    try {
-      const unsubAH = onSnapshot(
-        collection(db, "analisisHumedo"),
-        (snapshot) => {
-          if (snapshot.empty && !this.isWritingToCloud) return;
-          const cloudAH: AnalisisHumedo[] = [];
-          snapshot.forEach((docSnap) => {
-            const data = docSnap.data() as AnalisisHumedo;
-            if (data && data.LOTE_ID) {
-              cloudAH.push(data);
-            }
-          });
-
-          if (!this.isWritingToCloud) {
-            localDB.mergeFromCloud({ analisisHumedo: cloudAH });
-            window.dispatchEvent(new CustomEvent("cloud_data_updated", { detail: { type: "analisisHumedo", count: cloudAH.length } }));
-          }
-        },
-        (error) => {
-          if (isFirestoreQuotaOrResourceError(error)) {
-            console.warn("[CloudSync] Aviso de cuota/conexión en listener de analisisHumedo:", error?.message || error);
-            this.status.isOnline = false;
-            this.notifyStatus();
-            return;
-          }
-          if (isPermissionError(error)) {
-            try {
-              handleFirestoreError(error, OperationType.LIST, "analisisHumedo");
-            } catch {
-              // Handled gracefully
-            }
-          } else {
-            console.warn("[CloudSync] Aviso en listener de analisisHumedo:", error?.message || error);
-          }
-        }
-      );
-      this.unsubscribers.push(unsubAH);
-    } catch (e) {
-      console.warn("[CloudSync] No se pudo configurar listener de analisisHumedo:", e);
-    }
-
-    // 4. Listener de ANALISIS SECO
-    try {
-      const unsubAS = onSnapshot(
-        collection(db, "analisisSeco"),
-        (snapshot) => {
-          if (snapshot.empty && !this.isWritingToCloud) return;
-          const cloudAS: AnalisisSeco[] = [];
-          snapshot.forEach((docSnap) => {
-            const data = docSnap.data() as AnalisisSeco;
-            if (data && data.LOTE_ID) {
-              cloudAS.push(data);
-            }
-          });
-
-          if (!this.isWritingToCloud) {
-            localDB.mergeFromCloud({ analisisSeco: cloudAS });
-            window.dispatchEvent(new CustomEvent("cloud_data_updated", { detail: { type: "analisisSeco", count: cloudAS.length } }));
-          }
-        },
-        (error) => {
-          if (isFirestoreQuotaOrResourceError(error)) {
-            console.warn("[CloudSync] Aviso de cuota/conexión en listener de analisisSeco:", error?.message || error);
-            this.status.isOnline = false;
-            this.notifyStatus();
-            return;
-          }
-          if (isPermissionError(error)) {
-            try {
-              handleFirestoreError(error, OperationType.LIST, "analisisSeco");
-            } catch {
-              // Handled gracefully
-            }
-          } else {
-            console.warn("[CloudSync] Aviso en listener de analisisSeco:", error?.message || error);
-          }
-        }
-      );
-      this.unsubscribers.push(unsubAS);
-    } catch (e) {
-      console.warn("[CloudSync] No se pudo configurar listener de analisisSeco:", e);
-    }
-
-    // 5. Listener de BATCHES VAPORIZADO
-    try {
-      const unsubBatches = onSnapshot(
-        collection(db, "batchesVaporizado"),
-        (snapshot) => {
-          if (snapshot.empty && !this.isWritingToCloud) return;
-          const cloudBatches: BatchVaporizado[] = [];
-          snapshot.forEach((docSnap) => {
-            const data = docSnap.data() as BatchVaporizado;
-            if (data && data.BATCH_ID) {
-              cloudBatches.push(data);
-            }
-          });
-
-          if (!this.isWritingToCloud) {
-            localDB.mergeFromCloud({ batchesVaporizado: cloudBatches });
-            window.dispatchEvent(new CustomEvent("cloud_data_updated", { detail: { type: "batchesVaporizado", count: cloudBatches.length } }));
-          }
-        },
-        (error) => {
-          if (isFirestoreQuotaOrResourceError(error)) {
-            console.warn("[CloudSync] Aviso de cuota/conexión en listener de batches:", error?.message || error);
-            this.status.isOnline = false;
-            this.notifyStatus();
-            return;
-          }
-          if (isPermissionError(error)) {
-            try {
-              handleFirestoreError(error, OperationType.LIST, "batchesVaporizado");
-            } catch {
-              // Handled gracefully
-            }
-          } else {
-            console.warn("[CloudSync] Aviso en listener de batches:", error?.message || error);
-          }
-        }
-      );
-      this.unsubscribers.push(unsubBatches);
-    } catch (e) {
-      console.warn("[CloudSync] No se pudo configurar listener de batches:", e);
-    }
+        );
+        this.unsubscribers.push(unsub);
+      } catch (e) {
+        console.warn(`[CloudSync] No se pudo configurar listener ${name}:`, e);
+      }
+    });
   }
 
   /**
-   * Descarga todos los datos de Firestore y los fusiona en localDB
+   * Descarga todos los datos de Firestore y los sincroniza en localDB
    */
   public async pullAllFromCloud(): Promise<boolean> {
     this.status.isSyncing = true;
@@ -420,39 +277,21 @@ class CloudSyncService {
         getDocs(collection(db, "systemConfig"))
       ]);
 
-      const cloudData: any = {};
+      const cloudData: any = {
+        lotes: lotesSnap.docs.map((d) => d.data() as Lote).filter((l) => l && l.LOTE_ID),
+        registroHumedad: humSnap.docs.map((d) => d.data() as RegistroHumedad),
+        analisisHumedo: ahSnap.docs.map((d) => d.data() as AnalisisHumedo),
+        analisisSeco: asSnap.docs.map((d) => d.data() as AnalisisSeco),
+        presecados: preSnap.docs.map((d) => d.data() as Presecado),
+        batchesVaporizado: batchSnap.docs.map((d) => d.data() as BatchVaporizado).filter((b) => b && b.BATCH_ID),
+        batchLotes: batchLotesSnap.docs.map((d) => d.data() as BatchLote),
+        controlesVaporizado: ctrlSnap.docs.map((d) => d.data() as ControlVaporizado),
+        analisisVaporizado: avSnap.docs.map((d) => d.data() as AnalisisVaporizado),
+        programacionesOficiales: progSnap.docs.map((d) => d.data() as any)
+      };
 
-      if (!lotesSnap.empty) {
-        cloudData.lotes = lotesSnap.docs.map((d) => d.data() as Lote);
-        this.status.totalCloudLotes = cloudData.lotes.length;
-      }
-      if (!humSnap.empty) {
-        cloudData.registroHumedad = humSnap.docs.map((d) => d.data() as RegistroHumedad);
-      }
-      if (!ahSnap.empty) {
-        cloudData.analisisHumedo = ahSnap.docs.map((d) => d.data() as AnalisisHumedo);
-      }
-      if (!asSnap.empty) {
-        cloudData.analisisSeco = asSnap.docs.map((d) => d.data() as AnalisisSeco);
-      }
-      if (!preSnap.empty) {
-        cloudData.presecados = preSnap.docs.map((d) => d.data() as Presecado);
-      }
-      if (!batchSnap.empty) {
-        cloudData.batchesVaporizado = batchSnap.docs.map((d) => d.data() as BatchVaporizado);
-      }
-      if (!batchLotesSnap.empty) {
-        cloudData.batchLotes = batchLotesSnap.docs.map((d) => d.data() as BatchLote);
-      }
-      if (!ctrlSnap.empty) {
-        cloudData.controlesVaporizado = ctrlSnap.docs.map((d) => d.data() as ControlVaporizado);
-      }
-      if (!avSnap.empty) {
-        cloudData.analisisVaporizado = avSnap.docs.map((d) => d.data() as AnalisisVaporizado);
-      }
-      if (!progSnap.empty) {
-        cloudData.programacionesOficiales = progSnap.docs.map((d) => d.data() as ProgramacionApit);
-      }
+      this.status.totalCloudLotes = cloudData.lotes.length;
+
       if (!sysCfgSnap.empty) {
         const usersDoc = sysCfgSnap.docs.find((d) => d.id === "users_directory");
         const usersData = usersDoc?.data();
@@ -461,11 +300,9 @@ class CloudSyncService {
         }
       }
 
-      // Si obtuvimos algo de la nube, actualizar localDB
-      if (Object.keys(cloudData).length > 0) {
-        localDB.mergeFromCloud(cloudData);
-        window.dispatchEvent(new CustomEvent("cloud_data_updated", { detail: { full: true } }));
-      }
+      // Sincronizar en localDB reflejando el estado real y exacto de Firestore
+      localDB.mergeFromCloud(cloudData, { replace: true });
+      window.dispatchEvent(new CustomEvent("cloud_data_updated", { detail: { full: true } }));
 
       this.status.lastSyncTime = new Date();
       this.status.error = null;
@@ -490,15 +327,14 @@ class CloudSyncService {
   }
 
   /**
-   * Ejecuta operaciones de escritura en lotes atómicos (batch) de tamaño controlado (25 docs)
-   * con pausas entre commits para evitar saturar el buffer de write stream de Firestore.
+   * Ejecuta operaciones de escritura en lotes atómicos (batch) de alto rendimiento (hasta 250 docs por commit)
+   * sin retardos artificiales innecesarios para garantizar sincronización casi instantánea.
    */
   private async commitOperationsInBatches(
     operations: Array<{ ref: any; data: any }>
   ): Promise<number> {
     if (operations.length === 0) return 0;
-    // BATCH_SIZE reducido a 25 para evitar agotar el write stream de WebChannel long-polling
-    const BATCH_SIZE = 25;
+    const BATCH_SIZE = 250;
     let successfulWrites = 0;
 
     for (let i = 0; i < operations.length; i += BATCH_SIZE) {
@@ -519,10 +355,9 @@ class CloudSyncService {
           errMsg.includes("resource-exhausted") ||
           errMsg.includes("Write stream exhausted");
 
-        console.warn(`[CloudSync] Pausa en lote Firestore (${i}/${operations.length}):`, errMsg);
+        console.warn(`[CloudSync] Reintento en lote Firestore (${i}/${operations.length}):`, errMsg);
 
-        // Pausa prolongada si Firestore notificó saturación del write stream o backoff
-        const backoffWait = isResourceExhausted ? 2500 : 800;
+        const backoffWait = isResourceExhausted ? 1500 : 300;
         await new Promise((resolve) => setTimeout(resolve, backoffWait));
 
         try {
@@ -537,9 +372,9 @@ class CloudSyncService {
         }
       }
 
-      // Pausa estratégica de 400ms entre lotes para que el canal HTTP drene y confirme
+      // Breve respiro de 30ms únicamente cuando hay más de 250 registros pendientes
       if (i + BATCH_SIZE < operations.length) {
-        await new Promise((resolve) => setTimeout(resolve, 400));
+        await new Promise((resolve) => setTimeout(resolve, 30));
       }
     }
 
@@ -821,63 +656,66 @@ class CloudSyncService {
   }
 
   /**
-   * Elimina un lote de Firestore
+   * Elimina un lote de Firestore y limpia sus dependencias en paralelo
    */
   public async deleteLoteFromCloud(loteId: string): Promise<void> {
     if (!loteId) return;
     return this.enqueueWrite(async () => {
       try {
-        this.isWritingToCloud = true;
         const cleanId = loteId.toString().trim().replace(/[\/\s]/g, "_");
-        await deleteDoc(doc(db, "lotes", cleanId));
-        try {
-          await deleteDoc(doc(db, "humedades", `HUM-${cleanId}`));
-          await deleteDoc(doc(db, "humedades", cleanId));
-          await deleteDoc(doc(db, "analisisHumedo", `AH-${cleanId}`));
-          await deleteDoc(doc(db, "analisisHumedo", cleanId));
-        } catch {
-          // ignore
-        }
+        await Promise.allSettled([
+          deleteDoc(doc(db, "lotes", cleanId)),
+          deleteDoc(doc(db, "humedades", `HUM-${cleanId}`)),
+          deleteDoc(doc(db, "humedades", cleanId)),
+          deleteDoc(doc(db, "analisisHumedo", `AH-${cleanId}`)),
+          deleteDoc(doc(db, "analisisHumedo", cleanId)),
+          deleteDoc(doc(db, "analisisSeco", `AS-${cleanId}`)),
+          deleteDoc(doc(db, "analisisSeco", cleanId)),
+          deleteDoc(doc(db, "presecados", `PRE-${cleanId}`)),
+          deleteDoc(doc(db, "presecados", cleanId))
+        ]);
         this.status.lastSyncTime = new Date();
         this.notifyStatus();
       } catch (err: any) {
-        if (isFirestoreQuotaOrResourceError(err)) {
-          return;
-        }
-        if (isPermissionError(err)) {
-          handleFirestoreError(err, OperationType.DELETE, `lotes/${loteId}`);
-        } else {
-          console.warn(`[CloudSync] Aviso eliminando lote ${loteId}:`, err?.message || err);
-        }
-      } finally {
-        this.isWritingToCloud = false;
+        if (isFirestoreQuotaOrResourceError(err)) return;
+        console.warn(`[CloudSync] Aviso eliminando lote ${loteId}:`, err?.message || err);
       }
     });
   }
 
   /**
-   * Elimina un batch de vaporizado de Firestore
+   * Elimina un batch de vaporizado y sus registros vinculados en Firestore
    */
   public async deleteBatchFromCloud(batchId: string): Promise<void> {
     if (!batchId) return;
     return this.enqueueWrite(async () => {
       try {
-        this.isWritingToCloud = true;
         const cleanId = batchId.toString().trim().replace(/[\/\s]/g, "_");
-        await deleteDoc(doc(db, "batchesVaporizado", cleanId));
+        const deleteOps: Promise<any>[] = [
+          deleteDoc(doc(db, "batchesVaporizado", cleanId)),
+          deleteDoc(doc(db, "controlesVaporizado", cleanId)),
+          deleteDoc(doc(db, "controlesVaporizado", `CTRL-${cleanId}`)),
+          deleteDoc(doc(db, "analisisVaporizados", cleanId)),
+          deleteDoc(doc(db, "programaciones", cleanId)),
+          deleteDoc(doc(db, "programaciones", `PROG-${cleanId}`))
+        ];
+
+        try {
+          const blSnap = await getDocs(collection(db, "batchLotes"));
+          blSnap.docs.forEach((d) => {
+            const data = d.data();
+            if (data?.BATCH_ID === batchId || data?.BATCH_ID === cleanId || d.id.startsWith(cleanId)) {
+              deleteOps.push(deleteDoc(d.ref));
+            }
+          });
+        } catch {}
+
+        await Promise.allSettled(deleteOps);
         this.status.lastSyncTime = new Date();
         this.notifyStatus();
       } catch (err: any) {
-        if (isFirestoreQuotaOrResourceError(err)) {
-          return;
-        }
-        if (isPermissionError(err)) {
-          handleFirestoreError(err, OperationType.DELETE, `batchesVaporizado/${batchId}`);
-        } else {
-          console.warn(`[CloudSync] Aviso eliminando batch ${batchId}:`, err?.message || err);
-        }
-      } finally {
-        this.isWritingToCloud = false;
+        if (isFirestoreQuotaOrResourceError(err)) return;
+        console.warn(`[CloudSync] Aviso eliminando batch ${batchId}:`, err?.message || err);
       }
     });
   }

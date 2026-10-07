@@ -71,7 +71,7 @@ export interface ProgramacionBatchOficial {
   estado: "PROGRAMADO" | "EN PROCESO" | "VAPORIZADO" | "FINALIZADO" | "OBSERVADO";
 }
 
-const STORAGE_KEY_PROGRAMACIONES_OFICIALES = "molino_programaciones_batch_oficiales_v2";
+const STORAGE_KEY_PROGRAMACIONES_OFICIALES = "molino_programaciones_batch_oficiales_v3";
 
 /**
  * Extrae o estima los valores de calidad de un lote cruzando con análisis húmedo y presecado
@@ -536,134 +536,7 @@ export function generarSiguienteCorrelativoV(existentes: string[] = []): string 
 /**
  * Casos iniciales modelo exactamente extraídos de las 2 imágenes del usuario
  */
-export const PROGRAMACIONES_INICIALES_MODELO: ProgramacionBatchOficial[] = [
-  {
-    id: "PROG-BATCH-202-1",
-    caso: "CASO 3 (PARTE 1)",
-    fecha: "2026-08-19",
-    turno: "DIA",
-    batch: "V202-1",
-    filasLote: [
-      {
-        loteId: "C02053",
-        cliente: "JUAN BANCES CHUNGA",
-        variedad: "NIR",
-        sacos: 250,
-        peso: 30100,
-        sacProg: 250,
-        pesoProg: 30100,
-        ph: 16.0,
-        desv: 1.0,
-        blInt: 22.0,
-        blBlanco: 38.0,
-        qi: 8.0,
-        qb: 13.0,
-        tt: 2.0,
-        tp: 4.0,
-        tpun: 5.0,
-        m: 1.4,
-        triz: 2.0,
-        condicion: "APTO"
-      }
-    ],
-    clientePrincipal: "JUAN BANCES CHUNGA",
-    variedadPrincipal: "NIR",
-    totalSacosProg: 250,
-    pesoTotalKg: 30100,
-    promedios: {
-      ph: 16.0,
-      desv: 1.0,
-      blInt: 22.0,
-      blBlanco: 38.0,
-      qi: 8.0,
-      qb: 13.0,
-      tt: 2.0,
-      tp: 4.0,
-      tpun: 5.0,
-      m: 1.4,
-      triz: 2.0,
-      condicion: "APTO"
-    },
-    parametrosRecomendadosIA: {
-      presionBar: 0.50,
-      velExclusa: 6,
-      tiempoReposoMin: 40,
-      tempSecadoC: 80,
-      justificacion: "Variedad NIR a 16.0% con 30.1 TN opera a 0.50 bar, esclusa 6 y reposo 40 min."
-    },
-    parametrosDeterminados: {
-      presionBar: 0.50,
-      velExclusa: 6,
-      tiempoReposoMin: 40,
-      tempSecadoC: 80
-    },
-    observacion: "LOTE NIR PARTE 1 - DIA",
-    estado: "PROGRAMADO"
-  },
-  {
-    id: "PROG-BATCH-202-2",
-    caso: "CASO 3 (PARTE 2)",
-    fecha: "2026-08-20",
-    turno: "NOCHE",
-    batch: "V202-2",
-    filasLote: [
-      {
-        loteId: "C02053",
-        cliente: "JUAN BANCES CHUNGA",
-        variedad: "NIR",
-        sacos: 250,
-        peso: 30100,
-        sacProg: 250,
-        pesoProg: 30100,
-        ph: 16.0,
-        desv: 1.0,
-        blInt: 22.0,
-        blBlanco: 38.0,
-        qi: 8.0,
-        qb: 13.0,
-        tt: 2.0,
-        tp: 4.0,
-        tpun: 5.0,
-        m: 1.4,
-        triz: 2.0,
-        condicion: "APTO"
-      }
-    ],
-    clientePrincipal: "JUAN BANCES CHUNGA",
-    variedadPrincipal: "NIR",
-    totalSacosProg: 250,
-    pesoTotalKg: 30100,
-    promedios: {
-      ph: 16.0,
-      desv: 1.0,
-      blInt: 22.0,
-      blBlanco: 38.0,
-      qi: 8.0,
-      qb: 13.0,
-      tt: 2.0,
-      tp: 4.0,
-      tpun: 5.0,
-      m: 1.4,
-      triz: 2.0,
-      condicion: "APTO"
-    },
-    parametrosRecomendadosIA: {
-      presionBar: 0.50,
-      velExclusa: 6,
-      tiempoReposoMin: 40,
-      tempSecadoC: 80,
-      justificacion: "Continuación de Lote NIR parte 2 para turno noche a 0.50 bar y 80°C secado."
-    },
-    parametrosDeterminados: {
-      presionBar: 0.50,
-      velExclusa: 6,
-      tiempoReposoMin: 40,
-      tempSecadoC: 80
-    },
-    observacion: "LOTE NIR PARTE 2 - NOCHE",
-    estado: "PROGRAMADO"
-  }
-];
+export const PROGRAMACIONES_INICIALES_MODELO: ProgramacionBatchOficial[] = [];
 
 export function cargarProgramacionesOficiales(): ProgramacionBatchOficial[] {
   try {

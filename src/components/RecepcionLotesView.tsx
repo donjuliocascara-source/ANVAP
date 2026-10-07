@@ -283,6 +283,8 @@ export const RecepcionLotesView: React.FC<RecepcionLotesViewProps> = ({
   // Navigation inside the unified view
   const [activeMode, setActiveMode] = useState<"catalogo" | "nuevo_unificado" | "detalle_lote">("catalogo");
   const [viewMode, setViewMode] = useState<"tarjetas" | "lista">("lista");
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(24);
   const [selectedLoteId, setSelectedLoteId] = useState<string>(initialLoteId || lotes[0]?.LOTE_ID || "");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedEstadoFilter, setSelectedEstadoFilter] = useState("");
@@ -2052,9 +2054,19 @@ export const RecepcionLotesView: React.FC<RecepcionLotesViewProps> = ({
 
   // Pre-calculate evaluation for all lots to support instant filtering, metrics and UI badges
   const lotesConCalidad = useMemo(() => {
+    // Index humedades and analisisHumedos by LOTE_ID for instant O(1) Map lookups
+    const humMap = new Map<string, RegistroHumedad>();
+    for (const h of humedades) {
+      if (h.LOTE_ID) humMap.set(h.LOTE_ID, h);
+    }
+    const anMap = new Map<string, AnalisisHumedo>();
+    for (const a of analisisHumedos) {
+      if (a.LOTE_ID) anMap.set(a.LOTE_ID, a);
+    }
+
     return lotes.map((lote) => {
-      const humRec = humedades.find((h) => h.LOTE_ID === lote.LOTE_ID);
-      const anRec = analisisHumedos.find((a) => a.LOTE_ID === lote.LOTE_ID);
+      const humRec = humMap.get(lote.LOTE_ID);
+      const anRec = anMap.get(lote.LOTE_ID);
 
       const avgHum = humRec?.["H. PROMEDIO"] || lote.HUM || 0;
       const cardDesv = humRec?.["DESV."] || lote.DESV || 0;
@@ -2171,6 +2183,20 @@ export const RecepcionLotesView: React.FC<RecepcionLotesViewProps> = ({
       return matchesSearch && matchesEstado && matchesCategoria && matchesCalidad;
     });
   }, [lotesConCalidad, searchTerm, selectedEstadoFilter, selectedCategoriaFilter, selectedCalidadFilter]);
+
+  // Reset de página al cambiar filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedEstadoFilter, selectedCategoriaFilter, selectedCalidadFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredLotes.length / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+
+  const paginatedLotes = useMemo(() => {
+    if (pageSize >= 999999) return filteredLotes;
+    const startIndex = (safeCurrentPage - 1) * pageSize;
+    return filteredLotes.slice(startIndex, startIndex + pageSize);
+  }, [filteredLotes, safeCurrentPage, pageSize]);
 
   const selectedFocusLote = lotes.find((l) => l.LOTE_ID === selectedLoteId) || lotes[0];
   const focusHumedadRec = selectedFocusLote ? humedades.find((h) => h.LOTE_ID === selectedFocusLote.LOTE_ID) : null;
@@ -2695,7 +2721,7 @@ export const RecepcionLotesView: React.FC<RecepcionLotesViewProps> = ({
           {/* Master Cards Grid / Table View */}
           {viewMode === "tarjetas" ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredLotes.map(({ lote, humRec, anRec, avgHum, cardDesv, hasCaladas, cardCaladas, cardCaladasCount, cardMenores17, cardPctMenores17, cardMenores10, cardPctMenores10, cardVetoHum10, evalResult, estadoNormalizado, hasAnalisisData, hasAutorizacionExp, isRech }) => {
+            {paginatedLotes.map(({ lote, humRec, anRec, avgHum, cardDesv, hasCaladas, cardCaladas, cardCaladasCount, cardMenores17, cardPctMenores17, cardMenores10, cardPctMenores10, cardVetoHum10, evalResult, estadoNormalizado, hasAnalisisData, hasAutorizacionExp, isRech }) => {
               // Category info
               const cat = obtenerCategoriaLote(lote.ESTADO_LOTE);
               const metaCat = obtenerMetaCategoria(cat);
@@ -3005,7 +3031,7 @@ export const RecepcionLotesView: React.FC<RecepcionLotesViewProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800 text-slate-200">
-                  {filteredLotes.map(({ lote, humRec, anRec, avgHum, cardDesv, evalResult, estadoNormalizado, hasAnalisisData, hasAutorizacionExp, isRech }) => {
+                  {paginatedLotes.map(({ lote, humRec, anRec, avgHum, cardDesv, evalResult, estadoNormalizado, hasAnalisisData, hasAutorizacionExp, isRech }) => {
                     const cat = obtenerCategoriaLote(lote.ESTADO_LOTE);
                     const metaCat = obtenerMetaCategoria(cat);
                     const codigoBadgeProps = getDictamenBadgeProps(estadoNormalizado, evalResult, hasAnalisisData);
@@ -3232,6 +3258,62 @@ export const RecepcionLotesView: React.FC<RecepcionLotesViewProps> = ({
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {/* Barra de Paginación de Alto Rendimiento */}
+        {filteredLotes.length > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 bg-slate-850 border border-slate-750 rounded-xl text-xs text-slate-300 shadow-sm">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-slate-400">
+                Mostrando <strong className="text-amber-400 font-mono">{(safeCurrentPage - 1) * pageSize + 1}</strong> - <strong className="text-amber-400 font-mono">{Math.min(filteredLotes.length, safeCurrentPage * pageSize)}</strong> de <strong className="text-white font-mono">{filteredLotes.length}</strong> lotes
+              </span>
+              <div className="h-4 w-px bg-slate-700 hidden sm:block mx-1" />
+              <div className="flex items-center gap-1.5 text-slate-400">
+                <span>Por página:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="bg-slate-900 border border-slate-700 text-slate-200 rounded px-2 py-1 text-xs font-mono focus:border-amber-500 focus:outline-none cursor-pointer"
+                >
+                  <option value={24}>24 lotes</option>
+                  <option value={48}>48 lotes</option>
+                  <option value={96}>96 lotes</option>
+                  <option value={999999}>Todos</option>
+                </select>
+              </div>
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  disabled={safeCurrentPage <= 1}
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed border border-slate-700 rounded text-slate-200 font-medium transition cursor-pointer"
+                >
+                  ← Anterior
+                </button>
+
+                <div className="flex items-center gap-1 px-1">
+                  <span className="text-slate-400 text-xs">
+                    Página <strong className="text-amber-400 font-mono">{safeCurrentPage}</strong> de <strong className="text-slate-300 font-mono">{totalPages}</strong>
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={safeCurrentPage >= totalPages}
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed border border-slate-700 rounded text-slate-200 font-medium transition cursor-pointer"
+                >
+                  Siguiente →
+                </button>
+              </div>
+            )}
           </div>
         )}
 

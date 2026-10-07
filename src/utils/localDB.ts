@@ -143,1019 +143,17 @@ export interface LocalDatabaseSchema {
   resultadosCoccionExternos?: any[];
 }
 
-const STORAGE_KEY = "arroz_apit_local_db_v4";
+const STORAGE_KEY = "arroz_apit_local_db_v7";
 
 const INITIAL_DATA: LocalDatabaseSchema = {
-  lotes: [
-    {
-      LOTE_ID: "C06964",
-      FECHA_INGRESO: "2026-09-16",
-      CLIENTE: "BALDERA TUÑOQUE NICOLAS",
-      VARIEDAD: "PUNTILLA",
-      SACOS: 31,
-      PESO_KG: 3100,
-      HUM: 25.35,
-      DESV: 0.99,
-      UBICACION: "PRE LIMPIA",
-      ESTADO_LOTE: "ANALIZADO",
-      OBSERVACIONES: "V=R,M=P.C=P,P=P"
-    },
-    {
-      LOTE_ID: "C06967",
-      FECHA_INGRESO: "2026-09-17",
-      CLIENTE: "SUCLUPE SIESQUEN JULIO",
-      VARIEDAD: "VALOR",
-      SACOS: 45,
-      PESO_KG: 4500,
-      HUM: 19.99,
-      DESV: 2.45,
-      UBICACION: "SILO HUMEDO",
-      ESTADO_LOTE: "ANALIZADO",
-      OBSERVACIONES: "V=P,M=P,P=P,C=P"
-    },
-    {
-      LOTE_ID: "C06968",
-      FECHA_INGRESO: "2026-09-18",
-      CLIENTE: "MORENO URBINA LUIS ALBERTO",
-      VARIEDAD: "VALOR",
-      SACOS: 50,
-      PESO_KG: 5000,
-      HUM: 19.77,
-      DESV: 2.15,
-      UBICACION: "SILO HUMEDO",
-      ESTADO_LOTE: "ANALIZADO",
-      OBSERVACIONES: "V=R,M=P,C=P,P=P"
-    },
-    {
-      LOTE_ID: "C06971",
-      FECHA_INGRESO: "2026-09-17",
-      CLIENTE: "SUCLUPE SIESQUEN JULIO",
-      VARIEDAD: "VALOR",
-      SACOS: 45,
-      PESO_KG: 4500,
-      HUM: 19.99,
-      DESV: 2.45,
-      UBICACION: "SILO HUMEDO",
-      ESTADO_LOTE: "ANALIZADO",
-      OBSERVACIONES: "V=P,M=P,P=P,C=P"
-    },
-    {
-      LOTE_ID: "C06972",
-      FECHA_INGRESO: "2026-09-17",
-      CLIENTE: "SUCLUPE SIESQUEN JULIO",
-      VARIEDAD: "VALOR",
-      SACOS: 45,
-      PESO_KG: 4500,
-      HUM: 19.99,
-      DESV: 2.45,
-      UBICACION: "SILO HUMEDO",
-      ESTADO_LOTE: "ANALIZADO",
-      OBSERVACIONES: "V=P,M=P,P=P,C=P"
-    },
-    {
-      LOTE_ID: "C06985",
-      FECHA_INGRESO: "2026-09-17",
-      CLIENTE: "SUCLUPE SIESQUEN JULIO",
-      VARIEDAD: "VALOR",
-      SACOS: 45,
-      PESO_KG: 4500,
-      HUM: 19.99,
-      DESV: 2.45,
-      UBICACION: "SILO HUMEDO",
-      ESTADO_LOTE: "ANALIZADO",
-      OBSERVACIONES: "V=P,M=P,P=P,C=P"
-    },
-    {
-      LOTE_ID: "C06986",
-      FECHA_INGRESO: "2026-09-18",
-      CLIENTE: "SUCLUPE SIESQUEN JULIO",
-      VARIEDAD: "VALOR",
-      SACOS: 45,
-      PESO_KG: 4500,
-      HUM: 19.99,
-      DESV: 2.45,
-      UBICACION: "SILO HUMEDO",
-      ESTADO_LOTE: "ANALIZADO",
-      OBSERVACIONES: "V=P,M=P,P=P,C=P"
-    },
-    {
-      LOTE_ID: "C06987",
-      FECHA_INGRESO: "2026-09-19",
-      CLIENTE: "SUCLUPE SIESQUEN JULIO",
-      VARIEDAD: "VALOR",
-      SACOS: 45,
-      PESO_KG: 4500,
-      HUM: 19.99,
-      DESV: 2.45,
-      UBICACION: "SILO HUMEDO",
-      ESTADO_LOTE: "ANALIZADO",
-      OBSERVACIONES: "V=P,M=P,P=P,C=P"
-    },
-    {
-      LOTE_ID: "C06988",
-      FECHA_INGRESO: "2026-09-20",
-      CLIENTE: "SUCLUPE SIESQUEN JULIO",
-      VARIEDAD: "VALOR",
-      SACOS: 45,
-      PESO_KG: 4500,
-      HUM: 19.99,
-      DESV: 2.45,
-      UBICACION: "SILO HUMEDO",
-      ESTADO_LOTE: "ANALIZADO",
-      OBSERVACIONES: "V=P,M=P,P=P,C=P"
-    },
-    {
-      LOTE_ID: "C06989",
-      FECHA_INGRESO: "2026-09-21",
-      CLIENTE: "SUCLUPE SIESQUEN JULIO",
-      VARIEDAD: "VALOR",
-      SACOS: 45,
-      PESO_KG: 4500,
-      HUM: 19.99,
-      DESV: 2.45,
-      UBICACION: "SILO HUMEDO",
-      ESTADO_LOTE: "ANALIZADO",
-      OBSERVACIONES: "V=P,M=P,P=P,C=P"
-    },
-    {
-      LOTE_ID: "C06990",
-      FECHA_INGRESO: "2026-09-22",
-      CLIENTE: "SUCLUPE SIESQUEN JULIO",
-      VARIEDAD: "VALOR",
-      SACOS: 45,
-      PESO_KG: 4500,
-      HUM: 19.99,
-      DESV: 2.45,
-      UBICACION: "SILO HUMEDO",
-      ESTADO_LOTE: "ANALIZADO",
-      OBSERVACIONES: "V=P,M=P,P=P,C=P"
-    },
-    {
-      LOTE_ID: "C06991",
-      FECHA_INGRESO: "2026-09-23",
-      CLIENTE: "SUCLUPE SIESQUEN JULIO",
-      VARIEDAD: "VALOR",
-      SACOS: 45,
-      PESO_KG: 4500,
-      HUM: 19.99,
-      DESV: 2.45,
-      UBICACION: "SILO HUMEDO",
-      ESTADO_LOTE: "ANALIZADO",
-      OBSERVACIONES: "V=P,M=P,P=P,C=P"
-    },
-    {
-      LOTE_ID: "C06992",
-      FECHA_INGRESO: "2026-09-24",
-      CLIENTE: "SUCLUPE SIESQUEN JULIO",
-      VARIEDAD: "VALOR",
-      SACOS: 45,
-      PESO_KG: 4500,
-      HUM: 19.99,
-      DESV: 2.45,
-      UBICACION: "SILO HUMEDO",
-      ESTADO_LOTE: "ANALIZADO",
-      OBSERVACIONES: "V=P,M=P,P=P,C=P"
-    },
-    {
-      LOTE_ID: "C08432",
-      FECHA_INGRESO: "2026-10-01",
-      CLIENTE: "SUCLUPE SIESQUEN JULIO",
-      VARIEDAD: "VALOR",
-      SACOS: 360,
-      PESO_KG: 18000,
-      HUM: 19.8,
-      DESV: 1.2,
-      UBICACION: "SILO HUMEDO",
-      ESTADO_LOTE: "PROGRAMADO",
-      OBSERVACIONES: "Lote parte del Proceso de Unión V200 (V200-1) con C08434"
-    },
-    {
-      LOTE_ID: "C08434",
-      FECHA_INGRESO: "2026-10-01",
-      CLIENTE: "SUCLUPE SIESQUEN JULIO",
-      VARIEDAD: "VALOR",
-      SACOS: 453,
-      PESO_KG: 22650,
-      HUM: 19.9,
-      DESV: 1.4,
-      UBICACION: "SILO HUMEDO",
-      ESTADO_LOTE: "PROGRAMADO",
-      OBSERVACIONES: "Lote matriz fraccionado en V200-1 (90 sacos), V200-2 (333 sacos) y V200-3 (30 sacos)."
-    },
-    {
-      LOTE_ID: "C08428",
-      FECHA_INGRESO: "2026-10-01",
-      CLIENTE: "SUCLUPE SIESQUEN JULIO",
-      VARIEDAD: "VALOR",
-      SACOS: 340,
-      PESO_KG: 17000,
-      HUM: 20.0,
-      DESV: 1.3,
-      UBICACION: "SILO HUMEDO",
-      ESTADO_LOTE: "PROGRAMADO",
-      OBSERVACIONES: "Lote parte del Proceso de Unión V200 (V200-3) con remanente de C08434"
-    }
-  ],
-  registroHumedad: [
-    {
-      "ID ANALISIS": "HUM-C06964",
-      LOTE_ID: "C06964",
-      FECHA: "2026-09-16",
-      FECHA_ANALISIS: "2026-09-16",
-      "PROM. GENERAL": 25.35,
-      "H. PROMEDIO": 25.35,
-      DESVIACION: 0.99,
-      M1: 26.2,
-      M2: 26.1,
-      M3: 25,
-      M4: 24.1,
-      HUM_MAX: 26.2,
-      HUM_MIN: 24.1
-    },
-    {
-      "ID ANALISIS": "HUM-C06967",
-      LOTE_ID: "C06967",
-      FECHA: "2026-09-17",
-      FECHA_ANALISIS: "2026-09-17",
-      "PROM. GENERAL": 19.99,
-      "H. PROMEDIO": 19.99,
-      DESVIACION: 2.45,
-      M1: 23.8,
-      M2: 19.8,
-      M3: 18,
-      M4: 20.8,
-      M5: 23.4,
-      M6: 21.4,
-      M7: 16.5,
-      M8: 20.4,
-      M9: 18.3,
-      M10: 17.5,
-      HUM_MAX: 23.8,
-      HUM_MIN: 16.5
-    },
-    {
-      "ID ANALISIS": "HUM-C06968",
-      LOTE_ID: "C06968",
-      FECHA: "2026-09-18",
-      FECHA_ANALISIS: "2026-09-18",
-      "PROM. GENERAL": 19.77,
-      "H. PROMEDIO": 19.77,
-      DESVIACION: 2.15,
-      M1: 23.8,
-      M2: 19.8,
-      M3: 17,
-      M4: 20.8,
-      M5: 23.4,
-      M6: 21.4,
-      M7: 16.5,
-      M8: 20.4,
-      M9: 18.3,
-      M10: 17.5,
-      HUM_MAX: 23.5,
-      HUM_MIN: 17.2
-    },
-    {
-      "ID ANALISIS": "HUM-C06971",
-      LOTE_ID: "C06971",
-      FECHA: "2026-09-17",
-      FECHA_ANALISIS: "2026-09-17",
-      "PROM. GENERAL": 19.99,
-      "H. PROMEDIO": 19.99,
-      DESVIACION: 2.45,
-      M1: 19,
-      M2: 17.7,
-      M3: 21,
-      M4: 18.7,
-      M5: 23.5,
-      M6: 18.3,
-      M7: 19.9,
-      M8: 17.2,
-      M9: 19.3,
-      M10: 23.1,
-      HUM_MAX: 23.8,
-      HUM_MIN: 16.5
-    },
-    {
-      "ID ANALISIS": "HUM-C06972",
-      LOTE_ID: "C06972",
-      FECHA: "2026-09-17",
-      FECHA_ANALISIS: "2026-09-17",
-      "PROM. GENERAL": 19.99,
-      "H. PROMEDIO": 19.99,
-      DESVIACION: 2.45,
-      M1: 19,
-      M2: 17.7,
-      M3: 21,
-      M4: 18.7,
-      M5: 23.5,
-      M6: 18.3,
-      M7: 19.9,
-      M8: 17.2,
-      M9: 19.3,
-      M10: 23.1,
-      HUM_MAX: 23.8,
-      HUM_MIN: 16.5
-    },
-    {
-      "ID ANALISIS": "HUM-C06985",
-      LOTE_ID: "C06985",
-      FECHA: "2026-09-17",
-      FECHA_ANALISIS: "2026-09-17",
-      "PROM. GENERAL": 19.99,
-      "H. PROMEDIO": 19.99,
-      DESVIACION: 2.45,
-      M1: 19,
-      M2: 17.7,
-      M3: 21,
-      M4: 18.7,
-      M5: 23.5,
-      M6: 18.3,
-      M7: 19.9,
-      M8: 17.2,
-      M9: 19.3,
-      M10: 23.1,
-      HUM_MAX: 23.8,
-      HUM_MIN: 16.5
-    },
-    {
-      "ID ANALISIS": "HUM-C06986",
-      LOTE_ID: "C06986",
-      FECHA: "2026-09-18",
-      FECHA_ANALISIS: "2026-09-18",
-      "PROM. GENERAL": 19.99,
-      "H. PROMEDIO": 19.99,
-      DESVIACION: 2.45,
-      M1: 19,
-      M2: 17.7,
-      M3: 21,
-      M4: 18.7,
-      M5: 23.5,
-      M6: 18.3,
-      M7: 19.9,
-      M8: 17.2,
-      M9: 19.3,
-      M10: 23.1,
-      HUM_MAX: 23.8,
-      HUM_MIN: 16.5
-    },
-    {
-      "ID ANALISIS": "HUM-C06987",
-      LOTE_ID: "C06987",
-      FECHA: "2026-09-19",
-      FECHA_ANALISIS: "2026-09-19",
-      "PROM. GENERAL": 19.99,
-      "H. PROMEDIO": 19.99,
-      DESVIACION: 2.45,
-      M1: 19,
-      M2: 17.7,
-      M3: 21,
-      M4: 18.7,
-      M5: 23.5,
-      M6: 18.3,
-      M7: 19.9,
-      M8: 17.2,
-      M9: 19.3,
-      M10: 23.1,
-      HUM_MAX: 23.8,
-      HUM_MIN: 16.5
-    },
-    {
-      "ID ANALISIS": "HUM-C06988",
-      LOTE_ID: "C06988",
-      FECHA: "2026-09-20",
-      FECHA_ANALISIS: "2026-09-20",
-      "PROM. GENERAL": 19.99,
-      "H. PROMEDIO": 19.99,
-      DESVIACION: 2.45,
-      M1: 15,
-      M2: 15,
-      M3: 19,
-      M4: 16,
-      M5: 15,
-      M6: 28,
-      M7: 19.9,
-      M8: 17.2,
-      M9: 19.3,
-      M10: 23.1,
-      HUM_MAX: 23.8,
-      HUM_MIN: 16.5
-    },
-    {
-      "ID ANALISIS": "HUM-C06989",
-      LOTE_ID: "C06989",
-      FECHA: "2026-09-21",
-      FECHA_ANALISIS: "2026-09-21",
-      "PROM. GENERAL": 19.99,
-      "H. PROMEDIO": 19.99,
-      DESVIACION: 2.45,
-      M1: 16,
-      M2: 17.7,
-      M3: 21,
-      M4: 18.7,
-      M5: 19,
-      M6: 18.3,
-      M7: 19.9,
-      M8: 17.2,
-      M9: 19.3,
-      M10: 23.1,
-      HUM_MAX: 23.8,
-      HUM_MIN: 16.5
-    },
-    {
-      "ID ANALISIS": "HUM-C06990",
-      LOTE_ID: "C06990",
-      FECHA: "2026-09-22",
-      FECHA_ANALISIS: "2026-09-22",
-      "PROM. GENERAL": 19.99,
-      "H. PROMEDIO": 19.99,
-      DESVIACION: 2.45,
-      M1: 19,
-      M2: 17.7,
-      M3: 21,
-      M4: 18.7,
-      M5: 23.5,
-      M6: 18.3,
-      M7: 19.9,
-      M8: 17.2,
-      M9: 19.3,
-      M10: 23.1,
-      HUM_MAX: 23.8,
-      HUM_MIN: 16.5
-    },
-    {
-      "ID ANALISIS": "HUM-C06991",
-      LOTE_ID: "C06991",
-      FECHA: "2026-09-23",
-      FECHA_ANALISIS: "2026-09-23",
-      "PROM. GENERAL": 19.99,
-      "H. PROMEDIO": 19.99,
-      DESVIACION: 2.45,
-      M1: 19,
-      M2: 17.7,
-      M3: 21,
-      M4: 18.7,
-      M5: 23.5,
-      M6: 18.3,
-      M7: 19.9,
-      M8: 17.2,
-      M9: 19.3,
-      M10: 23.1,
-      HUM_MAX: 23.8,
-      HUM_MIN: 16.5
-    },
-    {
-      "ID ANALISIS": "HUM-C06992",
-      LOTE_ID: "C06992",
-      FECHA: "2026-09-24",
-      FECHA_ANALISIS: "2026-09-24",
-      "PROM. GENERAL": 19.99,
-      "H. PROMEDIO": 19.99,
-      DESVIACION: 2.45,
-      M1: 19,
-      M2: 17.7,
-      M3: 21,
-      M4: 18.7,
-      M5: 23.5,
-      M6: 18.3,
-      M7: 19.9,
-      M8: 17.2,
-      M9: 19.3,
-      M10: 23.1,
-      HUM_MAX: 23.8,
-      HUM_MIN: 16.5
-    },
-    {
-      "ID ANALISIS": "HUM-C08432",
-      LOTE_ID: "C08432",
-      FECHA: "2026-10-01",
-      FECHA_ANALISIS: "2026-10-01",
-      "PROM. GENERAL": 19.8,
-      "H. PROMEDIO": 19.8,
-      DESVIACION: 1.2,
-      M1: 19.8,
-      M2: 19.7,
-      M3: 19.9
-    },
-    {
-      "ID ANALISIS": "HUM-C08434",
-      LOTE_ID: "C08434",
-      FECHA: "2026-10-01",
-      FECHA_ANALISIS: "2026-10-01",
-      "PROM. GENERAL": 19.9,
-      "H. PROMEDIO": 19.9,
-      DESVIACION: 1.4,
-      M1: 19.9,
-      M2: 19.8,
-      M3: 20.0
-    },
-    {
-      "ID ANALISIS": "HUM-C08428",
-      LOTE_ID: "C08428",
-      FECHA: "2026-10-01",
-      FECHA_ANALISIS: "2026-10-01",
-      "PROM. GENERAL": 20.0,
-      "H. PROMEDIO": 20.0,
-      DESVIACION: 1.3,
-      M1: 20.0,
-      M2: 19.9,
-      M3: 20.1
-    }
-  ],
-  analisisHumedo: [
-    {
-      ANALISIS_HUMEDO_ID: "AH-C08432",
-      LOTE_ID: "C08432",
-      FECHA_ANALISIS: "2026-10-01",
-      VARIEDAD: "VALOR",
-      HUMEDADES: 19.8,
-      RI: 78.5,
-      RB: 68.5,
-      RM: 10.0,
-      QI: 12.0,
-      QB: 14.5,
-      ENTERO: 54.0,
-      TT: 4.0,
-      TP: 1.8,
-      "T. PUNT.": 1.2,
-      M: 0.6,
-      MANCHADO: 0.6,
-      TZ: 1.5,
-      GR: 0.4,
-      GI: 1.0,
-      GV: 0.5,
-      BLI: 22.0,
-      "B.INTEGRAL": 22.0,
-      "B. PULIDO": 30.5,
-      BLP: 30.5,
-      IMPUREZS: 0.5
-    },
-    {
-      ANALISIS_HUMEDO_ID: "AH-C08434",
-      LOTE_ID: "C08434",
-      FECHA_ANALISIS: "2026-10-01",
-      VARIEDAD: "VALOR",
-      HUMEDADES: 19.9,
-      RI: 78.2,
-      RB: 68.3,
-      RM: 9.9,
-      QI: 12.2,
-      QB: 14.8,
-      ENTERO: 53.5,
-      TT: 4.2,
-      TP: 1.9,
-      "T. PUNT.": 1.2,
-      M: 0.7,
-      MANCHADO: 0.7,
-      TZ: 1.6,
-      GR: 0.4,
-      GI: 1.1,
-      GV: 0.6,
-      BLI: 21.8,
-      "B.INTEGRAL": 21.8,
-      "B. PULIDO": 30.2,
-      BLP: 30.2,
-      IMPUREZS: 0.6
-    },
-    {
-      ANALISIS_HUMEDO_ID: "AH-C08428",
-      LOTE_ID: "C08428",
-      FECHA_ANALISIS: "2026-10-01",
-      VARIEDAD: "VALOR",
-      HUMEDADES: 20.0,
-      RI: 78.6,
-      RB: 68.4,
-      RM: 10.2,
-      QI: 12.1,
-      QB: 14.6,
-      ENTERO: 53.8,
-      TT: 4.1,
-      TP: 1.8,
-      "T. PUNT.": 1.1,
-      M: 0.6,
-      MANCHADO: 0.6,
-      TZ: 1.5,
-      GR: 0.3,
-      GI: 1.0,
-      GV: 0.5,
-      BLI: 22.1,
-      "B.INTEGRAL": 22.1,
-      "B. PULIDO": 30.4,
-      BLP: 30.4,
-      IMPUREZS: 0.5
-    },
-    {
-      ANALISIS_HUMEDO_ID: "AH-C06964",
-      LOTE_ID: "C06964",
-      FECHA_ANALISIS: "2026-09-16",
-      VARIEDAD: "PUNTILLA",
-      HUMEDADES: 25.35,
-      RI: 77.9,
-      RB: 70.3,
-      RM: 7.6,
-      QI: 8.3,
-      QB: 18.5,
-      ENTERO: 51.8,
-      TT: 2.3,
-      TP: 8.5,
-      "T. PUNT.": 8.5,
-      M: 2,
-      MANCHADO: 2,
-      TZ: 2.2,
-      GR: 0,
-      GI: 1.6,
-      GV: 3.8,
-      "B.INTEGRAL": 23.5,
-      BLI: 23.5,
-      OBSERVACIONES: "V=R,M=P.C=P,P=P"
-    },
-    {
-      ANALISIS_HUMEDO_ID: "AH-C06967",
-      LOTE_ID: "C06967",
-      FECHA_ANALISIS: "2026-09-17",
-      VARIEDAD: "VALOR",
-      HUMEDADES: 19.99,
-      RI: 79.5,
-      RB: 72,
-      RM: 7.5,
-      QI: 7.8,
-      QB: 18.6,
-      ENTERO: 53.4,
-      TT: 1.5,
-      TP: 3.4,
-      "T. PUNT.": 3.4,
-      M: 2.3,
-      MANCHADO: 2.3,
-      TZ: 2.5,
-      GR: 0.3,
-      GI: 1.8,
-      GV: 3.2,
-      "B.INTEGRAL": 23.9,
-      BLI: 23.9,
-      OBSERVACIONES: "V=P,M=P,P=P,C=P"
-    },
-    {
-      ANALISIS_HUMEDO_ID: "AH-C06968",
-      LOTE_ID: "C06968",
-      FECHA_ANALISIS: "2026-09-18",
-      VARIEDAD: "VALOR",
-      HUMEDADES: 19.77,
-      RI: 77,
-      RB: 69.9,
-      RM: 7.1,
-      QI: 8.2,
-      QB: 18.1,
-      ENTERO: 51.8,
-      TT: 1.3,
-      TP: 4,
-      "T. PUNT.": 4,
-      M: 1.8,
-      MANCHADO: 1.8,
-      TZ: 1.8,
-      GR: 0.3,
-      GI: 1.8,
-      GV: 3.1,
-      "B.INTEGRAL": 22.3,
-      BLI: 22.3,
-      OBSERVACIONES: "V=R,M=P,C=P,P=P"
-    },
-    {
-      ANALISIS_HUMEDO_ID: "AH-C06971",
-      LOTE_ID: "C06971",
-      FECHA_ANALISIS: "2026-09-17",
-      VARIEDAD: "VALOR",
-      HUMEDADES: 19.99,
-      RI: 79.5,
-      RB: 72,
-      RM: 7.5,
-      QI: 7.8,
-      QB: 18.6,
-      ENTERO: 53.4,
-      TT: 1.5,
-      TP: 3.4,
-      "T. PUNT.": 3.4,
-      M: 2.3,
-      MANCHADO: 2.3,
-      TZ: 2.5,
-      GR: 0.3,
-      GI: 1.8,
-      GV: 3.2,
-      "B.INTEGRAL": 23.9,
-      BLI: 23.9,
-      OBSERVACIONES: "V=P,M=P,P=P,C=P"
-    },
-    {
-      ANALISIS_HUMEDO_ID: "AH-C06972",
-      LOTE_ID: "C06972",
-      FECHA_ANALISIS: "2026-09-17",
-      VARIEDAD: "VALOR",
-      HUMEDADES: 19.99,
-      RI: 79.5,
-      RB: 72,
-      RM: 7.5,
-      QI: 7.8,
-      QB: 18.6,
-      ENTERO: 53.4,
-      TT: 1.5,
-      TP: 3.4,
-      "T. PUNT.": 3.4,
-      M: 2.3,
-      MANCHADO: 2.3,
-      TZ: 2.5,
-      GR: 0.3,
-      GI: 1.8,
-      GV: 3.2,
-      "B.INTEGRAL": 23.9,
-      BLI: 23.9,
-      OBSERVACIONES: "V=P,M=P,P=P,C=P"
-    },
-    {
-      ANALISIS_HUMEDO_ID: "AH-C06985",
-      LOTE_ID: "C06985",
-      FECHA_ANALISIS: "2026-09-17",
-      VARIEDAD: "VALOR",
-      HUMEDADES: 19.99,
-      RI: 79.5,
-      RB: 72,
-      RM: 7.5,
-      QI: 7.8,
-      QB: 18.6,
-      ENTERO: 53.4,
-      TT: 1.5,
-      TP: 3.4,
-      "T. PUNT.": 3.4,
-      M: 2.3,
-      MANCHADO: 2.3,
-      TZ: 2.5,
-      GR: 0.3,
-      GI: 1.8,
-      GV: 3.2,
-      "B.INTEGRAL": 23.9,
-      BLI: 23.9,
-      OBSERVACIONES: "V=P,M=P,P=P,C=P"
-    },
-    {
-      ANALISIS_HUMEDO_ID: "AH-C06986",
-      LOTE_ID: "C06986",
-      FECHA_ANALISIS: "2026-09-18",
-      VARIEDAD: "VALOR",
-      HUMEDADES: 19.99,
-      RI: 79.5,
-      RB: 72,
-      RM: 7.5,
-      QI: 7.8,
-      QB: 18.6,
-      ENTERO: 53.4,
-      TT: 1.5,
-      TP: 3.4,
-      "T. PUNT.": 3.4,
-      M: 2.3,
-      MANCHADO: 2.3,
-      TZ: 2.5,
-      GR: 0.3,
-      GI: 1.8,
-      GV: 3.2,
-      "B.INTEGRAL": 23.9,
-      BLI: 23.9,
-      OBSERVACIONES: "V=P,M=P,P=P,C=P"
-    },
-    {
-      ANALISIS_HUMEDO_ID: "AH-C06987",
-      LOTE_ID: "C06987",
-      FECHA_ANALISIS: "2026-09-19",
-      VARIEDAD: "VALOR",
-      HUMEDADES: 19.99,
-      RI: 79.5,
-      RB: 72,
-      RM: 7.5,
-      QI: 7.8,
-      QB: 18.6,
-      ENTERO: 53.4,
-      TT: 1.5,
-      TP: 3.4,
-      "T. PUNT.": 3.4,
-      M: 2.3,
-      MANCHADO: 2.3,
-      TZ: 2.5,
-      GR: 0.3,
-      GI: 1.8,
-      GV: 3.2,
-      "B.INTEGRAL": 23.9,
-      BLI: 23.9,
-      OBSERVACIONES: "V=P,M=P,P=P,C=P"
-    },
-    {
-      ANALISIS_HUMEDO_ID: "AH-C06988",
-      LOTE_ID: "C06988",
-      FECHA_ANALISIS: "2026-09-20",
-      VARIEDAD: "VALOR",
-      HUMEDADES: 19.99,
-      RI: 79.5,
-      RB: 72,
-      RM: 7.5,
-      QI: 7.8,
-      QB: 18.6,
-      ENTERO: 53.4,
-      TT: 1.5,
-      TP: 3.4,
-      "T. PUNT.": 3.4,
-      M: 2.3,
-      MANCHADO: 2.3,
-      TZ: 2.5,
-      GR: 0.3,
-      GI: 1.8,
-      GV: 3.2,
-      "B.INTEGRAL": 23.9,
-      BLI: 23.9,
-      OBSERVACIONES: "V=P,M=P,P=P,C=P"
-    },
-    {
-      ANALISIS_HUMEDO_ID: "AH-C06989",
-      LOTE_ID: "C06989",
-      FECHA_ANALISIS: "2026-09-21",
-      VARIEDAD: "VALOR",
-      HUMEDADES: 19.99,
-      RI: 79.5,
-      RB: 72,
-      RM: 7.5,
-      QI: 7.8,
-      QB: 18.6,
-      ENTERO: 53.4,
-      TT: 1.5,
-      TP: 3.4,
-      "T. PUNT.": 3.4,
-      M: 2.3,
-      MANCHADO: 2.3,
-      TZ: 2.5,
-      GR: 0.3,
-      GI: 1.8,
-      GV: 3.2,
-      "B.INTEGRAL": 23.9,
-      BLI: 23.9,
-      OBSERVACIONES: "V=P,M=P,P=P,C=P"
-    },
-    {
-      ANALISIS_HUMEDO_ID: "AH-C06990",
-      LOTE_ID: "C06990",
-      FECHA_ANALISIS: "2026-09-22",
-      VARIEDAD: "VALOR",
-      HUMEDADES: 19.99,
-      RI: 79.5,
-      RB: 72,
-      RM: 7.5,
-      QI: 7.8,
-      QB: 18.6,
-      ENTERO: 53.4,
-      TT: 1.5,
-      TP: 3.4,
-      "T. PUNT.": 3.4,
-      M: 2.3,
-      MANCHADO: 2.3,
-      TZ: 2.5,
-      GR: 0.3,
-      GI: 1.8,
-      GV: 3.2,
-      "B.INTEGRAL": 23.9,
-      BLI: 23.9,
-      OBSERVACIONES: "V=P,M=P,P=P,C=P"
-    },
-    {
-      ANALISIS_HUMEDO_ID: "AH-C06991",
-      LOTE_ID: "C06991",
-      FECHA_ANALISIS: "2026-09-23",
-      VARIEDAD: "VALOR",
-      HUMEDADES: 19.99,
-      RI: 79.5,
-      RB: 72,
-      RM: 7.5,
-      QI: 7.8,
-      QB: 18.6,
-      ENTERO: 53.4,
-      TT: 1.5,
-      TP: 3.4,
-      "T. PUNT.": 3.4,
-      M: 2.3,
-      MANCHADO: 2.3,
-      TZ: 2.5,
-      GR: 0.3,
-      GI: 1.8,
-      GV: 3.2,
-      "B.INTEGRAL": 23.9,
-      BLI: 23.9,
-      OBSERVACIONES: "V=P,M=P,P=P,C=P"
-    },
-    {
-      ANALISIS_HUMEDO_ID: "AH-C06992",
-      LOTE_ID: "C06992",
-      FECHA_ANALISIS: "2026-09-24",
-      VARIEDAD: "VALOR",
-      HUMEDADES: 19.99,
-      RI: 79.5,
-      RB: 72,
-      RM: 7.5,
-      QI: 7.8,
-      QB: 18.6,
-      ENTERO: 53.4,
-      TT: 1.5,
-      TP: 3.4,
-      "T. PUNT.": 3.4,
-      M: 2.3,
-      MANCHADO: 2.3,
-      TZ: 2.5,
-      GR: 0.3,
-      GI: 1.8,
-      GV: 3.2,
-      "B.INTEGRAL": 23.9,
-      BLI: 23.9,
-      OBSERVACIONES: "V=P,M=P,P=P,C=P"
-    }
-  ],
+  lotes: [],
+  registroHumedad: [],
+  analisisHumedo: [],
   presecado: [],
   analisisSeco: [],
   programacionApit: [],
-  batchesVaporizado: [
-    {
-      BATCH_ID: "BAT-V200-1",
-      CORRELATIVO: "V200-1",
-      PROCESO_PADRE: "V200",
-      SUB_BATCH: "V200-1",
-      ES_SUB_BATCH: true,
-      GRUPO_UNION_ID: "UNION-V200",
-      LOTES_UNION: ["C08432", "C08434", "C08428"],
-      CLIENTE: "SUCLUPE SIESQUEN JULIO",
-      VARIEDAD: "VALOR",
-      FECHA_PROGRAMADA: "2026-10-05",
-      TURNO: "Turno Día",
-      EQUIPO: "APIT",
-      TON_PROGRAMADAS: 35.0,
-      TON_PROCESADAS: 0,
-      PESO_TOTAL_KG: 35000,
-      TOTAL_SACOS: 700,
-      CAPACIDAD_MAX_KG: 35000,
-      CAPACIDAD_PROGRAMADA_TN: 35,
-      CAPACIDAD_UTILIZADA_PCT: 100,
-      ESTADO_BATCH: "PROGRAMADO",
-      ESTADO_COMPATIBILIDAD: "COMPATIBLE",
-      OPERADOR: "Pedro Huamán",
-      OBSERVACIONES: "Unión Proceso V200 (1/3): C08432 (18.0 TN) + C08434 Parte 1 (17.0 TN). Sobrante C08434 habilitado: 53.0 TN."
-    },
-    {
-      BATCH_ID: "BAT-V200-2",
-      CORRELATIVO: "V200-2",
-      PROCESO_PADRE: "V200",
-      SUB_BATCH: "V200-2",
-      ES_SUB_BATCH: true,
-      GRUPO_UNION_ID: "UNION-V200",
-      LOTES_UNION: ["C08432", "C08434", "C08428"],
-      CLIENTE: "SUCLUPE SIESQUEN JULIO",
-      VARIEDAD: "VALOR",
-      FECHA_PROGRAMADA: "2026-10-05",
-      TURNO: "Turno Noche",
-      EQUIPO: "APIT",
-      TON_PROGRAMADAS: 35.0,
-      TON_PROCESADAS: 0,
-      PESO_TOTAL_KG: 35000,
-      TOTAL_SACOS: 700,
-      CAPACIDAD_MAX_KG: 35000,
-      CAPACIDAD_PROGRAMADA_TN: 35,
-      CAPACIDAD_UTILIZADA_PCT: 100,
-      ESTADO_BATCH: "PROGRAMADO",
-      ESTADO_COMPATIBILIDAD: "COMPATIBLE",
-      OPERADOR: "Pedro Huamán",
-      OBSERVACIONES: "Unión Proceso V200 (2/3): C08434 Parte 2 (35.0 TN). Sobrante C08434 restante: 18.0 TN habilitado para unirse con C08428."
-    },
-    {
-      BATCH_ID: "BAT-V200-3",
-      CORRELATIVO: "V200-3",
-      PROCESO_PADRE: "V200",
-      SUB_BATCH: "V200-3",
-      ES_SUB_BATCH: true,
-      GRUPO_UNION_ID: "UNION-V200",
-      LOTES_UNION: ["C08432", "C08434", "C08428"],
-      CLIENTE: "SUCLUPE SIESQUEN JULIO",
-      VARIEDAD: "VALOR",
-      FECHA_PROGRAMADA: "2026-10-06",
-      TURNO: "Turno Día",
-      EQUIPO: "APIT",
-      TON_PROGRAMADAS: 35.0,
-      TON_PROCESADAS: 0,
-      PESO_TOTAL_KG: 35000,
-      TOTAL_SACOS: 700,
-      CAPACIDAD_MAX_KG: 35000,
-      CAPACIDAD_PROGRAMADA_TN: 35,
-      CAPACIDAD_UTILIZADA_PCT: 100,
-      ESTADO_BATCH: "PROGRAMADO",
-      ESTADO_COMPATIBILIDAD: "COMPATIBLE",
-      OPERADOR: "Pedro Huamán",
-      OBSERVACIONES: "Unión Proceso V200 (3/3): Restante C08434 (18.0 TN) + C08428 (17.0 TN). Proceso de unión completado al 100%."
-    }
-  ],
-  batchLotes: [
-    { BATCH_LOTE_ID: "BL-V200-1-C08432", BATCH_ID: "BAT-V200-1", LOTE_ID: "C08432", SACOS: 360, PESO_KG: 18000, PARTE: 1, TOTAL_PARTES: 1, ORDEN: 1, ESTADO: "ASIGNADO", CLIENTE: "SUCLUPE SIESQUEN JULIO", VARIEDAD: "VALOR", OBSERVACIONES: "Parte 1 de 1 (100% lote C08432)" },
-    { BATCH_LOTE_ID: "BL-V200-1-C08434", BATCH_ID: "BAT-V200-1", LOTE_ID: "C08434", SACOS: 90, PESO_KG: 4500, PARTE: 1, TOTAL_PARTES: 3, ORDEN: 2, ESTADO: "ASIGNADO", CLIENTE: "SUCLUPE SIESQUEN JULIO", VARIEDAD: "VALOR", OBSERVACIONES: "Parte 1 de 3 (90 sacos asignados - Saldo restante: 363 sacos)" },
-    { BATCH_LOTE_ID: "BL-V200-2-C08434", BATCH_ID: "BAT-V200-2", LOTE_ID: "C08434", SACOS: 333, PESO_KG: 16650, PARTE: 2, TOTAL_PARTES: 3, ORDEN: 1, ESTADO: "ASIGNADO", CLIENTE: "SUCLUPE SIESQUEN JULIO", VARIEDAD: "VALOR", OBSERVACIONES: "Parte 2 de 3 (333 sacos asignados - Saldo restante: 30 sacos)" },
-    { BATCH_LOTE_ID: "BL-V200-3-C08434", BATCH_ID: "BAT-V200-3", LOTE_ID: "C08434", SACOS: 30, PESO_KG: 1500, PARTE: 3, TOTAL_PARTES: 3, ORDEN: 1, ESTADO: "ASIGNADO", CLIENTE: "SUCLUPE SIESQUEN JULIO", VARIEDAD: "VALOR", OBSERVACIONES: "Parte 3 de 3 (30 sacos finales - Saldo restante: 0 sacos)" },
-    { BATCH_LOTE_ID: "BL-V200-3-C08428", BATCH_ID: "BAT-V200-3", LOTE_ID: "C08428", SACOS: 340, PESO_KG: 17000, PARTE: 1, TOTAL_PARTES: 1, ORDEN: 2, ESTADO: "ASIGNADO", CLIENTE: "SUCLUPE SIESQUEN JULIO", VARIEDAD: "VALOR", OBSERVACIONES: "Parte 1 de 1 (100% lote C08428)" }
-  ],
+  batchesVaporizado: [],
+  batchLotes: [],
   controlVaporizado: [],
   analisisVaporizado: [],
   equipos: [
@@ -1486,19 +484,39 @@ class LocalDBService {
       return this.cache!;
     }
 
-    // Limpieza de claves previas de v2 y v3 para iniciar pruebas totalmente limpias
+    // Limpieza de claves previas de v1 a v6 para iniciar la aplicación sin ningún lote ni batch subido
     try {
-      if (window.localStorage.getItem("arroz_apit_local_db_v2") || window.localStorage.getItem("arroz_apit_local_db_v3")) {
-        window.localStorage.removeItem("arroz_apit_local_db_v2");
-        window.localStorage.removeItem("arroz_apit_local_db_v3");
-        window.localStorage.removeItem("programaciones_batch_oficial_v1");
-        window.localStorage.removeItem("resultados_coccion_externos_v1");
-        window.localStorage.removeItem("sabana_batches_v1");
-        window.localStorage.removeItem("historico_recetas_secado_v1");
+      const staleKeys = [
+        "arroz_apit_local_db_v1",
+        "arroz_apit_local_db_v2",
+        "arroz_apit_local_db_v3",
+        "arroz_apit_local_db_v4",
+        "arroz_apit_local_db_v5",
+        "arroz_apit_local_db_v6",
+        "programaciones_batch_oficial_v1",
+        "molino_programaciones_batch_oficiales_v1",
+        "molino_programaciones_batch_oficiales_v2",
+        "resultados_coccion_externos_v1",
+        "sabana_batches_v1",
+        "sabana_batches_trabajados_v1",
+        "historico_recetas_secado_v1"
+      ];
+      let hasStale = false;
+      for (const k of staleKeys) {
+        if (window.localStorage.getItem(k)) {
+          window.localStorage.removeItem(k);
+          hasStale = true;
+        }
+      }
+      if (hasStale) {
         if (window.indexedDB && window.indexedDB.deleteDatabase) {
+          window.indexedDB.deleteDatabase("ArrozApitStorage_v1");
           window.indexedDB.deleteDatabase("ArrozApitStorage_v2");
           window.indexedDB.deleteDatabase("ArrozApitStorage_v3");
+          window.indexedDB.deleteDatabase("ArrozApitStorage_v4");
+          window.indexedDB.deleteDatabase("ArrozApitStorage_v5");
         }
+        clearIndexedDB().catch(() => {});
       }
     } catch {
       // Ignorar
@@ -1891,7 +909,27 @@ class LocalDBService {
   }
 
   public getState(): LocalDatabaseSchema {
-    return JSON.parse(JSON.stringify(this.load()));
+    const raw = this.load();
+    return {
+      ...raw,
+      lotes: raw.lotes ? [...raw.lotes] : [],
+      registroHumedad: raw.registroHumedad ? [...raw.registroHumedad] : [],
+      analisisHumedo: raw.analisisHumedo ? [...raw.analisisHumedo] : [],
+      presecado: raw.presecado ? [...raw.presecado] : [],
+      analisisSeco: raw.analisisSeco ? [...raw.analisisSeco] : [],
+      programacionApit: raw.programacionApit ? [...raw.programacionApit] : [],
+      batchesVaporizado: raw.batchesVaporizado ? [...raw.batchesVaporizado] : [],
+      batchLotes: raw.batchLotes ? [...raw.batchLotes] : [],
+      controlVaporizado: raw.controlVaporizado ? [...raw.controlVaporizado] : [],
+      analisisVaporizado: raw.analisisVaporizado ? [...raw.analisisVaporizado] : [],
+      equipos: raw.equipos ? [...raw.equipos] : [],
+      estadosLote: raw.estadosLote ? [...raw.estadosLote] : [],
+      programacionesOficiales: raw.programacionesOficiales ? [...raw.programacionesOficiales] : [],
+      users: raw.users ? [...raw.users] : [],
+      auditLogs: raw.auditLogs ? [...raw.auditLogs] : [],
+      historialParametros: raw.historialParametros ? [...raw.historialParametros] : [],
+      resultadosCoccionExternos: raw.resultadosCoccionExternos ? [...raw.resultadosCoccionExternos] : [],
+    };
   }
 
   public clearAllOperationalData(usuario: string = "Ing. Fredy Granados Caicedo"): LocalDatabaseSchema {
@@ -1930,13 +968,25 @@ class LocalDBService {
       clearIndexedDB().catch(() => {});
       saveToIndexedDB(this.cache).catch(() => {});
       try {
-        window.localStorage.removeItem("programaciones_batch_oficial_v1");
-        window.localStorage.removeItem("resultados_coccion_externos_v1");
-        window.localStorage.removeItem("sabana_batches_v1");
-        window.localStorage.removeItem("historico_recetas_secado_v1");
-        window.localStorage.removeItem("arroz_apit_local_db_v2");
-        window.localStorage.removeItem("arroz_apit_local_db_v3");
+        [
+          "programaciones_batch_oficial_v1",
+          "molino_programaciones_batch_oficiales_v1",
+          "molino_programaciones_batch_oficiales_v2",
+          "molino_programaciones_batch_oficiales_v3",
+          "resultados_coccion_externos_v1",
+          "sabana_batches_v1",
+          "sabana_batches_trabajados_v1",
+          "sabana_batches_trabajados_v2",
+          "historico_recetas_secado_v1",
+          "arroz_apit_local_db_v1",
+          "arroz_apit_local_db_v2",
+          "arroz_apit_local_db_v3",
+          "arroz_apit_local_db_v4",
+          "arroz_apit_local_db_v5",
+          "arroz_apit_local_db_v6"
+        ].forEach((k) => window.localStorage.removeItem(k));
         this.cleanupStaleLocalStorage();
+        fetch("/api/reset-data", { method: "POST" }).catch(() => {});
       } catch {}
       window.dispatchEvent(new CustomEvent("localdb_change", { detail: { source: "clear_operational_data", timestamp: Date.now() } }));
     }
@@ -3023,6 +2073,15 @@ class LocalDBService {
     } else {
       db.programacionesOficiales.unshift(progObj);
     }
+    db.programacionApit = db.programacionesOficiales;
+    if (typeof window !== "undefined" && window.localStorage) {
+      try {
+        window.localStorage.setItem("programaciones_batch_oficial_v1", JSON.stringify(db.programacionesOficiales));
+        window.dispatchEvent(new CustomEvent("programaciones-oficiales-updated", { detail: db.programacionesOficiales }));
+      } catch {
+        // ignore
+      }
+    }
     this.persist();
     return progObj;
   }
@@ -3700,105 +2759,157 @@ class LocalDBService {
     return this.ocrFallback(imageBase64OrTipo, tipoDocumento);
   }
 
-  // --- CLOUD SYNC MERGE ---
-  public mergeFromCloud(cloudData: Partial<LocalDatabaseSchema>) {
+  // --- CLOUD SYNC MERGE & DIRECT COLLECTION REPLACEMENT ---
+  public syncCollectionFromCloud(collectionName: string, items: any[]) {
     const db = this.load();
-    let changed = false;
+    let changed = true;
 
-    if (Array.isArray(cloudData.lotes) && cloudData.lotes.length > 0) {
-      const loteMap = new Map<string, Lote>();
-      db.lotes.forEach((l) => {
-        const canonical = formatLoteCode(l.LOTE_ID);
-        if (canonical) loteMap.set(canonical, { ...l, LOTE_ID: canonical });
-      });
-      cloudData.lotes.forEach((cl) => {
-        const canonical = formatLoteCode(cl.LOTE_ID);
-        if (canonical) {
-          const existing = loteMap.get(canonical);
-          loteMap.set(canonical, { ...existing, ...cl, LOTE_ID: canonical });
-          changed = true;
+    switch (collectionName) {
+      case "lotes": {
+        const canonicalItems = (items || []).map((l: Lote) => ({
+          ...l,
+          LOTE_ID: formatLoteCode(l.LOTE_ID) || l.LOTE_ID
+        }));
+        db.lotes = canonicalItems;
+        deduplicateAndMigrateLotes(db);
+        break;
+      }
+      case "humedades": {
+        db.registroHumedad = items || [];
+        break;
+      }
+      case "analisisHumedo": {
+        db.analisisHumedo = items || [];
+        break;
+      }
+      case "analisisSeco": {
+        db.analisisSeco = items || [];
+        break;
+      }
+      case "presecados": {
+        db.presecado = items || [];
+        break;
+      }
+      case "batchesVaporizado": {
+        db.batchesVaporizado = items || [];
+        break;
+      }
+      case "batchLotes": {
+        db.batchLotes = items || [];
+        break;
+      }
+      case "controlesVaporizado": {
+        db.controlVaporizado = items || [];
+        break;
+      }
+      case "analisisVaporizados": {
+        db.analisisVaporizado = items || [];
+        break;
+      }
+      case "programaciones": {
+        db.programacionesOficiales = items || [];
+        db.programacionApit = items || [];
+        if (typeof window !== "undefined" && window.localStorage) {
+          try {
+            window.localStorage.setItem("programaciones_batch_oficial_v1", JSON.stringify(items || []));
+            window.dispatchEvent(new CustomEvent("programaciones-oficiales-updated", { detail: items || [] }));
+          } catch {
+            // ignore
+          }
         }
-      });
-      db.lotes = Array.from(loteMap.values());
+        break;
+      }
+      default:
+        changed = false;
+        break;
     }
 
-    // Construir conjunto de LOTE_IDs válidos para descartar registros huérfanos de pruebas previas eliminadas
+    if (changed) {
+      this.persist();
+    }
+  }
+
+  public mergeFromCloud(cloudData: Partial<LocalDatabaseSchema>, options?: { replace?: boolean }) {
+    const db = this.load();
+    let changed = false;
+    const isReplace = options?.replace ?? true;
+
+    if (Array.isArray(cloudData.lotes)) {
+      const canonicalItems = cloudData.lotes.map((cl) => {
+        const canonical = formatLoteCode(cl.LOTE_ID);
+        return { ...cl, LOTE_ID: canonical || cl.LOTE_ID };
+      });
+      db.lotes = canonicalItems;
+      changed = true;
+    }
+
+    // Conjunto de LOTE_IDs válidos para descartar huérfanos
     const validLoteIds = new Set<string>();
     db.lotes.forEach((l) => {
       const canonical = formatLoteCode(l.LOTE_ID);
       if (canonical) validLoteIds.add(canonical);
     });
 
-    if (Array.isArray(cloudData.registroHumedad) && cloudData.registroHumedad.length > 0) {
-      const humMap = new Map<string, RegistroHumedad>();
-      db.registroHumedad.forEach((h) => {
-        const canonical = formatLoteCode(h.LOTE_ID);
-        if (canonical && validLoteIds.has(canonical)) {
-          humMap.set(canonical, { ...h, LOTE_ID: canonical, "ID ANALISIS": `HUM-${canonical}` });
-        }
-      });
-      cloudData.registroHumedad.forEach((ch) => {
-        const canonical = formatLoteCode(ch.LOTE_ID);
-        if (canonical && validLoteIds.has(canonical)) {
-          humMap.set(canonical, { ...humMap.get(canonical), ...ch, LOTE_ID: canonical, "ID ANALISIS": `HUM-${canonical}` });
-          changed = true;
-        }
-      });
-      db.registroHumedad = Array.from(humMap.values());
+    if (Array.isArray(cloudData.registroHumedad)) {
+      db.registroHumedad = isReplace
+        ? cloudData.registroHumedad
+        : [...cloudData.registroHumedad];
+      changed = true;
     }
 
-    if (Array.isArray(cloudData.analisisHumedo) && cloudData.analisisHumedo.length > 0) {
-      const ahMap = new Map<string, AnalisisHumedo>();
-      db.analisisHumedo.forEach((a) => {
-        const loteKey = (a.LOTE_ID || "").toUpperCase();
-        const id = a.ANALISIS_HUMEDO_ID || a.LOTE_ID;
-        if (id && validLoteIds.has(loteKey)) {
-          ahMap.set(id.toUpperCase(), a);
-        }
-      });
-      cloudData.analisisHumedo.forEach((ca) => {
-        const loteKey = (ca.LOTE_ID || "").toUpperCase();
-        const id = ca.ANALISIS_HUMEDO_ID || ca.LOTE_ID;
-        if (id && validLoteIds.has(loteKey)) {
-          ahMap.set(id.toUpperCase(), { ...ahMap.get(id.toUpperCase()), ...ca });
-          changed = true;
-        }
-      });
-      db.analisisHumedo = Array.from(ahMap.values());
+    if (Array.isArray(cloudData.analisisHumedo)) {
+      db.analisisHumedo = isReplace
+        ? cloudData.analisisHumedo
+        : [...cloudData.analisisHumedo];
+      changed = true;
     }
 
-    if (Array.isArray(cloudData.analisisSeco) && cloudData.analisisSeco.length > 0) {
-      const asMap = new Map<string, AnalisisSeco>();
-      db.analisisSeco.forEach((a) => {
-        const loteKey = (a.LOTE_ID || "").toUpperCase();
-        const id = a.ANALISIS_SECO_ID || a.LOTE_ID;
-        if (id && validLoteIds.has(loteKey)) {
-          asMap.set(id.toUpperCase(), a);
-        }
-      });
-      cloudData.analisisSeco.forEach((cas) => {
-        const loteKey = (cas.LOTE_ID || "").toUpperCase();
-        const id = cas.ANALISIS_SECO_ID || cas.LOTE_ID;
-        if (id && validLoteIds.has(loteKey)) {
-          asMap.set(id.toUpperCase(), { ...asMap.get(id.toUpperCase()), ...cas });
-          changed = true;
-        }
-      });
-      db.analisisSeco = Array.from(asMap.values());
+    if (Array.isArray(cloudData.analisisSeco)) {
+      db.analisisSeco = isReplace
+        ? cloudData.analisisSeco
+        : [...cloudData.analisisSeco];
+      changed = true;
     }
 
-    if (Array.isArray(cloudData.batchesVaporizado) && cloudData.batchesVaporizado.length > 0) {
-      const bMap = new Map<string, BatchVaporizado>();
-      db.batchesVaporizado.forEach((b) => {
-        if (b.BATCH_ID) bMap.set(b.BATCH_ID.toUpperCase(), b);
-      });
-      cloudData.batchesVaporizado.forEach((cb) => {
-        if (cb.BATCH_ID) {
-          bMap.set(cb.BATCH_ID.toUpperCase(), { ...bMap.get(cb.BATCH_ID.toUpperCase()), ...cb });
-          changed = true;
+    if (Array.isArray(cloudData.presecado)) {
+      db.presecado = cloudData.presecado;
+      changed = true;
+    }
+
+    if (Array.isArray(cloudData.batchesVaporizado)) {
+      db.batchesVaporizado = isReplace
+        ? cloudData.batchesVaporizado
+        : [...cloudData.batchesVaporizado];
+      changed = true;
+    }
+
+    if (Array.isArray(cloudData.batchLotes)) {
+      db.batchLotes = cloudData.batchLotes;
+      changed = true;
+    }
+
+    if (Array.isArray(cloudData.controlVaporizado)) {
+      db.controlVaporizado = cloudData.controlVaporizado;
+      changed = true;
+    }
+
+    if (Array.isArray(cloudData.analisisVaporizado)) {
+      db.analisisVaporizado = cloudData.analisisVaporizado;
+      changed = true;
+    }
+
+    if (Array.isArray(cloudData.programacionesOficiales)) {
+      db.programacionesOficiales = cloudData.programacionesOficiales;
+      db.programacionApit = cloudData.programacionesOficiales;
+      if (typeof window !== "undefined" && window.localStorage) {
+        try {
+          window.localStorage.setItem("programaciones_batch_oficial_v1", JSON.stringify(cloudData.programacionesOficiales));
+          window.dispatchEvent(new CustomEvent("programaciones-oficiales-updated", { detail: cloudData.programacionesOficiales }));
+        } catch {
+          // ignore
         }
-      });
-      db.batchesVaporizado = Array.from(bMap.values());
+      }
+      changed = true;
     }
 
     if (Array.isArray(cloudData.users) && cloudData.users.length > 0) {

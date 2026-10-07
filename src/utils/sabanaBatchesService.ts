@@ -1,6 +1,6 @@
 import { HistorialBatchTrabajado, RecomendacionRecetaIngreso } from "../types";
 
-const SABANA_BATCHES_STORAGE_KEY = "sabana_batches_trabajados_v1";
+const SABANA_BATCHES_STORAGE_KEY = "sabana_batches_trabajados_v2";
 
 /**
  * Datos históricos oficiales transcritos directamente de la sábana operativa de planta (Batches 313 al 336)
@@ -1307,22 +1307,23 @@ export function recomendarRecetaPorPerfilIngreso(
 
   candidatosEvaluados.sort((a, b) => b.scoreTotal - a.scoreTotal);
 
-  const mejorCandidato = candidatosEvaluados[0]?.batch || historial[0];
-  const requiereSegundoPase = mejorCandidato.pres2Bar !== null && mejorCandidato.pres2Bar !== undefined;
+  const mejorCandidato = candidatosEvaluados[0]?.batch || historial[0] || null;
+  const requiereSegundoPase = mejorCandidato ? (mejorCandidato.pres2Bar !== null && mejorCandidato.pres2Bar !== undefined) : false;
 
   // Extraer parámetros operativos
-  const pres1 = mejorCandidato.pres1Bar ?? (tipoProceso === "HUMEDO" ? 0.35 : 0.08);
-  const rpm1 = mejorCandidato.rpm1 ?? (tipoProceso === "HUMEDO" ? 7 : 6);
-  const reposo1 = mejorCandidato.tReposo1Min ?? (tipoProceso === "HUMEDO" ? 40 : 35);
+  const pres1 = mejorCandidato?.pres1Bar ?? (tipoProceso === "HUMEDO" ? 0.35 : 0.08);
+  const rpm1 = mejorCandidato?.rpm1 ?? (tipoProceso === "HUMEDO" ? 7 : 6);
+  const reposo1 = mejorCandidato?.tReposo1Min ?? (tipoProceso === "HUMEDO" ? 40 : 35);
 
-  const pres2 = mejorCandidato.pres2Bar ?? (requiereSegundoPase ? 0.07 : undefined);
-  const rpm2 = mejorCandidato.rpm2 ?? (requiereSegundoPase ? 6 : undefined);
-  const reposo2 = mejorCandidato.tReposo2Min ?? (requiereSegundoPase ? 70 : undefined);
+  const pres2 = mejorCandidato?.pres2Bar ?? (requiereSegundoPase ? 0.07 : undefined);
+  const rpm2 = mejorCandidato?.rpm2 ?? (requiereSegundoPase ? 6 : undefined);
+  const reposo2 = mejorCandidato?.tReposo2Min ?? (requiereSegundoPase ? 70 : undefined);
 
   // Generar diagnósticos técnicos e industriales profundos para el operador
   let analisisPresion = "";
+  const refBatchStr = mejorCandidato?.batch ? ` (Batch ${mejorCandidato.batch})` : "";
   if (tipoProceso === "HUMEDO") {
-    analisisPresion = `Para condición HÚMEDA (${humedadIngreso.toFixed(1)}% HI), la evidencia de planta (Batch ${mejorCandidato.batch}) demuestra que conviene una presión constante de ${pres1.toFixed(2)} bar. Al tener grano con alta humedad, una presión moderada-alta gelatiniza el endospermo de manera uniforme sin necesidad de segundo pase.`;
+    analisisPresion = `Para condición HÚMEDA (${humedadIngreso.toFixed(1)}% HI), la evidencia de planta${refBatchStr} demuestra que conviene una presión constante de ${pres1.toFixed(2)} bar. Al tener grano con alta humedad, una presión moderada-alta gelatiniza el endospermo de manera uniforme sin necesidad de segundo pase.`;
   } else {
     analisisPresion = `Para condición ${tipoProceso} (${humedadIngreso.toFixed(1)}% HI), se debe trabajar con presión suave de ${pres1.toFixed(2)} bar en Primer Pase${requiereSegundoPase ? ` y ${pres2?.toFixed(2)} bar en Segundo Pase` : ""}. Esto evita el choque térmico brusco que genera cuarteado / trizado en granos con menor humedad.`;
   }

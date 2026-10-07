@@ -117,30 +117,89 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   // Calculate classification of lots
   const clasificacion = useMemo(() => clasificarLotes(lotes), [lotes]);
 
-  // Process Indicators Calculation
-  const totalLotes = lotes.length;
-  const lotesDisponibles = lotes.filter((l) => ["INGRESADO", "ANALIZADO", "APTO"].includes(l.ESTADO_LOTE)).length;
-  const lotesProgramados = lotes.filter((l) => l.ESTADO_LOTE === "PROGRAMADO").length;
-  const lotesEnProceso = lotes.filter((l) => ["EN PROCESO", "VAPORIZADO", "EN REPOSO", "EN SECADO"].includes(l.ESTADO_LOTE)).length;
-  const lotesCerrados = lotes.filter((l) => l.ESTADO_LOTE === "CERRADO").length;
-  const lotesObservados = lotes.filter((l) => l.ESTADO_LOTE === "OBSERVADO").length;
+  // Process Indicators and Averages Calculation (Single-pass memoized evaluation)
+  const {
+    totalLotes,
+    lotesDisponibles,
+    lotesProgramados,
+    lotesEnProceso,
+    lotesCerrados,
+    lotesObservados,
+    totalBatches,
+    batchesActivos,
+    batchesTerminados,
+    avgPresion,
+    avgTiempoVap,
+    avgTiempoRep,
+    avgHumedadIngreso
+  } = useMemo(() => {
+    let disp = 0;
+    let prog = 0;
+    let proc = 0;
+    let cerr = 0;
+    let obs = 0;
+    let sumHum = 0;
+    let countHum = 0;
 
-  const totalBatches = batches.length;
-  const batchesActivos = batches.filter((b) => b.ESTADO_BATCH === "EN PROCESO").length;
-  const batchesTerminados = batches.filter((b) => b.ESTADO_BATCH === "TERMINADO").length;
+    for (const l of lotes) {
+      const st = l.ESTADO_LOTE;
+      if (st === "INGRESADO" || st === "ANALIZADO" || st === "APTO") disp++;
+      else if (st === "PROGRAMADO") prog++;
+      else if (st === "EN PROCESO" || st === "VAPORIZADO" || st === "EN REPOSO" || st === "EN SECADO") proc++;
+      else if (st === "CERRADO") cerr++;
+      else if (st === "OBSERVADO") obs++;
 
-  // Process Averages
-  const presiones = controles.map((c) => c.PRESION_BAR).filter((p) => p > 0);
-  const avgPresion = presiones.length ? (presiones.reduce((a, b) => a + b, 0) / presiones.length).toFixed(2) : "1.85";
+      if (l.HUM && l.HUM > 0) {
+        sumHum += l.HUM;
+        countHum++;
+      }
+    }
 
-  const tiemposVap = controles.map((c) => c.TIEMPO_VAPORIZADO_MIN).filter((t) => t > 0);
-  const avgTiempoVap = tiemposVap.length ? Math.round(tiemposVap.reduce((a, b) => a + b, 0) / tiemposVap.length) : 28;
+    let actBatches = 0;
+    let termBatches = 0;
+    for (const b of batches) {
+      if (b.ESTADO_BATCH === "EN PROCESO") actBatches++;
+      else if (b.ESTADO_BATCH === "TERMINADO") termBatches++;
+    }
 
-  const tiemposRep = controles.map((c) => c.TIEMPO_REPOSO_MIN).filter((t) => t > 0);
-  const avgTiempoRep = tiemposRep.length ? Math.round(tiemposRep.reduce((a, b) => a + b, 0) / tiemposRep.length) : 45;
+    let sumPresion = 0;
+    let countPresion = 0;
+    let sumVap = 0;
+    let countVap = 0;
+    let sumRep = 0;
+    let countRep = 0;
 
-  const humedadesIngreso = lotes.map((l) => l.HUM).filter((h) => h > 0);
-  const avgHumedadIngreso = humedadesIngreso.length ? (humedadesIngreso.reduce((a, b) => a + b, 0) / humedadesIngreso.length).toFixed(1) : "14.4";
+    for (const c of controles) {
+      if (c.PRESION_BAR && c.PRESION_BAR > 0) {
+        sumPresion += c.PRESION_BAR;
+        countPresion++;
+      }
+      if (c.TIEMPO_VAPORIZADO_MIN && c.TIEMPO_VAPORIZADO_MIN > 0) {
+        sumVap += c.TIEMPO_VAPORIZADO_MIN;
+        countVap++;
+      }
+      if (c.TIEMPO_REPOSO_MIN && c.TIEMPO_REPOSO_MIN > 0) {
+        sumRep += c.TIEMPO_REPOSO_MIN;
+        countRep++;
+      }
+    }
+
+    return {
+      totalLotes: lotes.length,
+      lotesDisponibles: disp,
+      lotesProgramados: prog,
+      lotesEnProceso: proc,
+      lotesCerrados: cerr,
+      lotesObservados: obs,
+      totalBatches: batches.length,
+      batchesActivos: actBatches,
+      batchesTerminados: termBatches,
+      avgPresion: countPresion ? (sumPresion / countPresion).toFixed(2) : "1.85",
+      avgTiempoVap: countVap ? Math.round(sumVap / countVap) : 28,
+      avgTiempoRep: countRep ? Math.round(sumRep / countRep) : 45,
+      avgHumedadIngreso: countHum ? (sumHum / countHum).toFixed(1) : "14.4"
+    };
+  }, [lotes, batches, controles]);
 
   // Quality Deltas & Success Rate
   // Calculate average delta quebrado and blancura for closed/evaluated lots

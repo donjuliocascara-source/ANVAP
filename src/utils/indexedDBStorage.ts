@@ -4,7 +4,7 @@
  * miles de lotes, análisis y registros de humedad sin errores de cuota.
  */
 
-const DB_NAME = "ArrozApitStorage_v4";
+const DB_NAME = "ArrozApitStorage_v6";
 const STORE_NAME = "app_state";
 const KEY = "database_state";
 
@@ -89,6 +89,8 @@ export async function clearIndexedDB(): Promise<boolean> {
         window.indexedDB.deleteDatabase("ArrozApitStorage_v1");
         window.indexedDB.deleteDatabase("ArrozApitStorage_v2");
         window.indexedDB.deleteDatabase("ArrozApitStorage_v3");
+        window.indexedDB.deleteDatabase("ArrozApitStorage_v4");
+        window.indexedDB.deleteDatabase("ArrozApitStorage_v5");
         window.indexedDB.deleteDatabase(DB_NAME);
       } catch {}
     }

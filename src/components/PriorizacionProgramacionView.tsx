@@ -275,8 +275,12 @@ export const PriorizacionProgramacionView: React.FC<PriorizacionProgramacionView
   }, [selectedLotesData]);
 
   const totalKgSel = useMemo(() => {
+    const lotesMap = new Map<string, Lote>();
+    for (const item of lotes) {
+      if (item.LOTE_ID) lotesMap.set(item.LOTE_ID, item);
+    }
     return selectedLotesData.reduce((sum, l) => {
-      const loteObj = lotes.find(item => item.LOTE_ID === l.loteId);
+      const loteObj = lotesMap.get(l.loteId);
       const kg = loteObj?.PESO_KG || (l.sacos || 0) * 50;
       return sum + kg;
     }, 0);
@@ -377,10 +381,12 @@ export const PriorizacionProgramacionView: React.FC<PriorizacionProgramacionView
       setSelectedLoteIdsInMatrix([]);
     } else {
       const progsOficiales = cargarProgramacionesOficiales();
+      const lotesMap = new Map(lotes.map(item => [item.LOTE_ID, item]));
+      const ahMap = new Map(analisisHumedos.map(a => [a.LOTE_ID, a]));
       // Filtrar solo los lotes que sean aptos u observados Y que no estén ya programados en otro batch
       const programables = filteredLots.filter(l => {
-        const loteObj = lotes.find(item => item.LOTE_ID === l.loteId);
-        const ahObj = analisisHumedos.find(a => a.LOTE_ID === l.loteId);
+        const loteObj = lotesMap.get(l.loteId);
+        const ahObj = ahMap.get(l.loteId);
         const aptitud = verificarAptitudProgramacionLote(loteObj, ahObj);
         const batchInfo = obtenerInfoLoteEnBatches(l.loteId, progsOficiales, batches);
         return aptitud.esProgramable && !batchInfo.estaProgramado;
@@ -795,13 +801,17 @@ export const PriorizacionProgramacionView: React.FC<PriorizacionProgramacionView
                         No se encontraron lotes que coincidan con los filtros aplicados.
                       </td>
                     </tr>
-                  ) : (
-                    filteredLots.map((lote) => {
+                  ) : (() => {
+                    // Pre-computar mapas e información de batches una sola vez fuera del loop de filas
+                    const progsOficiales = cargarProgramacionesOficiales();
+                    const lotesMap = new Map(lotes.map(item => [item.LOTE_ID, item]));
+                    const ahMap = new Map(analisisHumedos.map(a => [a.LOTE_ID, a]));
+
+                    return filteredLots.map((lote) => {
                       const isSelected = selectedLoteIdsInMatrix.includes(lote.loteId);
-                      const loteObj = lotes.find(item => item.LOTE_ID === lote.loteId);
-                      const ahObj = analisisHumedos.find(a => a.LOTE_ID === lote.loteId);
+                      const loteObj = lotesMap.get(lote.loteId);
+                      const ahObj = ahMap.get(lote.loteId);
                       const aptitud = verificarAptitudProgramacionLote(loteObj, ahObj);
-                      const progsOficiales = cargarProgramacionesOficiales();
                       const batchInfo = obtenerInfoLoteEnBatches(lote.loteId, progsOficiales, batches);
                       const yaAsignadoEnBatch = batchInfo.estaProgramado;
 
@@ -978,8 +988,8 @@ export const PriorizacionProgramacionView: React.FC<PriorizacionProgramacionView
                           </td>
                         </tr>
                       );
-                    })
-                  )}
+                    });
+                  })()}
                 </tbody>
               </table>
             </div>

@@ -79,7 +79,6 @@ export const ModalUnirCodigos: React.FC<ModalUnirCodigosProps> = ({
   // Lotes disponibles con saldo
   const lotesConSaldo = useMemo(() => {
     return lotes.filter((l) => {
-      if (["C08432", "C08434", "C08428"].includes(l.LOTE_ID)) return true;
       const s = saldosMap.get(l.LOTE_ID);
       const saldo = s ? s.saldoPendienteKg : (Number(l.PESO_KG) || 0);
       return saldo > 50; // Al menos 50 kg de saldo
@@ -87,24 +86,23 @@ export const ModalUnirCodigos: React.FC<ModalUnirCodigosProps> = ({
   }, [lotes, saldosMap]);
 
   // Selected lot IDs to unite
-  const [selectedLoteIds, setSelectedLoteIds] = useState<string[]>(["C08432", "C08434", "C08428"]);
+  const [selectedLoteIds, setSelectedLoteIds] = useState<string[]>([]);
   const [subBatches, setSubBatches] = useState<SubBatchDraft[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Initialize with official case C08432, C08434, C08428 if modal opens
+  // Initialize selection if modal opens
   useEffect(() => {
     if (isOpen) {
       setErrorMessage(null);
       setSuccessMessage(null);
-      // Ensure target IDs exist or check availability
-      const targetIds = ["C08432", "C08434", "C08428"];
-      const availableIds = targetIds.filter(id => lotes.some(l => l.LOTE_ID === id));
-      const initialSelection = availableIds.length > 0 ? availableIds : (lotesConSaldo.slice(0, 3).map(l => l.LOTE_ID));
+      const initialSelection = lotesConSaldo.slice(0, 3).map(l => l.LOTE_ID);
       setSelectedLoteIds(initialSelection);
       
-      const plan = generarPlanUnionSubBatches(initialSelection, lotes, "V200", 35000, saldosMap);
+      const plan = initialSelection.length > 0 
+        ? generarPlanUnionSubBatches(initialSelection, lotes, "V200", 35000, saldosMap)
+        : [];
       setSubBatches(plan);
     }
   }, [isOpen, lotes, lotesConSaldo, saldosMap]);

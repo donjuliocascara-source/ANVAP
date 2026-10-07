@@ -278,15 +278,24 @@ export default function App() {
       console.warn("[App] Cloud sync init error:", err);
     });
 
+    // Debounce de recarga de datos para evitar re-renderizados continuos ante ráfagas de eventos
+    let reloadTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleDataReload = () => {
+      if (reloadTimer) clearTimeout(reloadTimer);
+      reloadTimer = setTimeout(() => {
+        fetchAllData();
+      }, 75);
+    };
+
     // Sincronización en tiempo real desde Firestore (cambios de otras máquinas)
     const handleCloudUpdated = () => {
-      fetchAllData();
+      scheduleDataReload();
     };
     window.addEventListener("cloud_data_updated", handleCloudUpdated);
 
     // Sincronización en tiempo real ante cualquier cambio local (bulk import, updates, hidratación IDB)
     const handleLocalDbChange = () => {
-      fetchAllData();
+      scheduleDataReload();
     };
     window.addEventListener("localdb_change", handleLocalDbChange);
 
@@ -306,6 +315,7 @@ export default function App() {
     };
     window.addEventListener("parametros-trabajo-updated" as any, handleParamsUpdated);
     return () => {
+      if (reloadTimer) clearTimeout(reloadTimer);
       window.removeEventListener("cloud_data_updated", handleCloudUpdated);
       window.removeEventListener("localdb_change", handleLocalDbChange);
       window.removeEventListener("usuarios_sistema_updated" as any, handleUsersUpdated);
@@ -1031,18 +1041,35 @@ export default function App() {
   };
 
   const pendientesDescargaCount = useMemo(() => {
-    return batches.filter(b => {
-      const muestras = analisisVap.filter(
-        a => a.BATCH_ID === b.BATCH_ID || a.BATCH_ID === (b.CORRELATIVO || "")
-      );
-      return muestras.length === 0;
-    }).length;
+    const avBatchSet = new Set<string>();
+    for (const a of analisisVap) {
+      if (a.BATCH_ID) avBatchSet.add(a.BATCH_ID);
+    }
+    let count = 0;
+    for (const b of batches) {
+      const hasMuestra = avBatchSet.has(b.BATCH_ID) || (b.CORRELATIVO ? avBatchSet.has(b.CORRELATIVO) : false);
+      if (!hasMuestra) count++;
+    }
+    return count;
   }, [batches, analisisVap]);
 
   const pendientesCoccionCount = useMemo(() => {
     const resCoccion = obtenerResultadosCoccionLocales();
+    // Index batchLotes by BATCH_ID for O(1) retrieval instead of O(N) filter per batch
+    const batchLotesMap = new Map<string, string[]>();
+    for (const bl of batchLotes) {
+      if (bl.BATCH_ID) {
+        const arr = batchLotesMap.get(bl.BATCH_ID);
+        if (arr) {
+          arr.push(bl.LOTE_ID);
+        } else {
+          batchLotesMap.set(bl.BATCH_ID, [bl.LOTE_ID]);
+        }
+      }
+    }
+
     return batches.filter(b => {
-      const bLotes = batchLotes.filter(bl => bl.BATCH_ID === b.BATCH_ID).map(bl => bl.LOTE_ID);
+      const bLotes = batchLotesMap.get(b.BATCH_ID) || [];
       const c = buscarCoccionParaBatch(b.BATCH_ID, b.CORRELATIVO, bLotes, resCoccion);
       if (!c) return true;
       const tiempoFalta = c.tiempoCoccionMin === undefined || c.tiempoCoccionMin === null || String(c.tiempoCoccionMin).trim() === "";
@@ -1055,6 +1082,21 @@ export default function App() {
       return tiempoFalta || dosifFalta || granoCocidoFalta || defectosFalta || texturaFalta || puntajeFalta || envaseFalta;
     }).length;
   }, [batches, batchLotes]);
+
+  // Memoized lotes aptos count with fast Map lookup (O(N) instead of O(N^2) on every render)
+  const lotesAptosCount = useMemo(() => {
+    const ahMap = new Map<string, AnalisisHumedo>();
+    for (const a of analisisHum) {
+      if (a.LOTE_ID) ahMap.set(a.LOTE_ID, a);
+    }
+    let count = 0;
+    for (const l of lotes) {
+      const ah = ahMap.get(l.LOTE_ID);
+      const ev = calcularEvaluacionLote(ah, l, l.HUM, l.DESV, evaluacionConfig);
+      if (ev.estadoAprobacion === "APROBADO") count++;
+    }
+    return count;
+  }, [lotes, analisisHum, evaluacionConfig]);
 
   // Si no hay sesión autenticada, mostrar pantalla de Login con PIN
   if (!isAuthenticated) {
@@ -1112,11 +1154,7 @@ export default function App() {
         onOpenOCR={() => setIsOCRModalOpen(true)}
         onOpenExcelSync={() => setIsExcelModalOpen(true)}
         onOpenConfig={() => setIsWeightsModalOpen(true)}
-        lotesAptosCount={lotes.filter((l) => {
-          const ah = analisisHum.find((a) => a.LOTE_ID === l.LOTE_ID);
-          const ev = calcularEvaluacionLote(ah, l, l.HUM, l.DESV, evaluacionConfig);
-          return ev.estadoAprobacion === "APROBADO";
-        }).length}
+        lotesAptosCount={lotesAptosCount}
       />
 
       {/* Main Content Area */}
