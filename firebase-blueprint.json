@@ -1,0 +1,220 @@
+{
+  "entities": {
+    "Lote": {
+      "title": "Lote",
+      "description": "Registro de lote de arroz cáscara ingresado a planta",
+      "type": "object",
+      "properties": {
+        "LOTE_ID": { "type": "string" },
+        "FECHA_INGRESO": { "type": "string" },
+        "CLIENTE": { "type": "string" },
+        "UBICACION": { "type": "string" },
+        "SACOS": { "type": "number" },
+        "PESO_KG": { "type": "number" },
+        "HUM": { "type": "number" },
+        "HUMEDAD": { "type": "number" },
+        "DESV": { "type": "number" },
+        "VARIEDAD": { "type": "string" },
+        "ZONA": { "type": "string" },
+        "ESTADO_LOTE": { "type": "string" },
+        "OBSERVACIONES": { "type": "string" },
+        "PROCEDENCIA": { "type": "string" },
+        "INDICE_EXITO": { "type": "number" },
+        "ES_EXPERIMENTAL": { "type": "boolean" },
+        "ESTADO_CALIDAD": { "type": "string" },
+        "AUTORIZACION_EXPERIMENTAL": { "type": "object" },
+        "SUSTENTO_EXPERIMENTAL": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["LOTE_ID"]
+    },
+    "RegistroHumedad": {
+      "title": "RegistroHumedad",
+      "description": "Registro de caladas y humedad de recepción de lote",
+      "type": "object",
+      "properties": {
+        "ID ANALISIS": { "type": "string" },
+        "LOTE_ID": { "type": "string" },
+        "FECHA_ANALISIS": { "type": "string" },
+        "H. PROMEDIO": { "type": "number" },
+        "DESV.": { "type": "number" },
+        "H.MIN.": { "type": "number" },
+        "H.MAX": { "type": "number" },
+        "OBSERVACIONES": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["LOTE_ID"]
+    },
+    "AnalisisHumedo": {
+      "title": "AnalisisHumedo",
+      "description": "Análisis organoléptico y físico en húmedo",
+      "type": "object",
+      "properties": {
+        "ANALISIS_HUMEDO_ID": { "type": "string" },
+        "LOTE_ID": { "type": "string" },
+        "FECHA_ANALISIS": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["LOTE_ID"]
+    },
+    "AnalisisSeco": {
+      "title": "AnalisisSeco",
+      "description": "Análisis de calidad post-secado",
+      "type": "object",
+      "properties": {
+        "ANALISIS_SECO_ID": { "type": "string" },
+        "LOTE_ID": { "type": "string" },
+        "FECHA_ANALISIS": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["LOTE_ID"]
+    },
+    "Presecado": {
+      "title": "Presecado",
+      "description": "Control de presecado de lote",
+      "type": "object",
+      "properties": {
+        "PRESECADO_ID": { "type": "string" },
+        "LOTE_ID": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["LOTE_ID"]
+    },
+    "BatchVaporizado": {
+      "title": "BatchVaporizado",
+      "description": "Batch de vaporizado industrial APIT",
+      "type": "object",
+      "properties": {
+        "BATCH_ID": { "type": "string" },
+        "CORRELATIVO": { "type": "string" },
+        "FECHA": { "type": "string" },
+        "EQUIPO": { "type": "string" },
+        "ESTADO_BATCH": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["BATCH_ID"]
+    },
+    "BatchLote": {
+      "title": "BatchLote",
+      "description": "Asignación de lote a batch de vaporizado",
+      "type": "object",
+      "properties": {
+        "ID": { "type": "string" },
+        "BATCH_ID": { "type": "string" },
+        "LOTE_ID": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["BATCH_ID", "LOTE_ID"]
+    },
+    "ControlVaporizado": {
+      "title": "ControlVaporizado",
+      "description": "Control de variables de vaporizado APIT",
+      "type": "object",
+      "properties": {
+        "CONTROL_ID": { "type": "string" },
+        "BATCH_ID": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["BATCH_ID"]
+    },
+    "AnalisisVaporizado": {
+      "title": "AnalisisVaporizado",
+      "description": "Análisis de calidad de arroz vaporizado",
+      "type": "object",
+      "properties": {
+        "ANALISIS_VAPORIZADO_ID": { "type": "string" },
+        "BATCH_ID": { "type": "string" },
+        "LOTE_ID": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["ANALISIS_VAPORIZADO_ID"]
+    },
+    "ProgramacionApit": {
+      "title": "ProgramacionApit",
+      "description": "Programación de molienda y vaporizado",
+      "type": "object",
+      "properties": {
+        "PROGRAMACION_ID": { "type": "string" },
+        "FECHA": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["PROGRAMACION_ID"]
+    },
+    "SystemConfig": {
+      "title": "SystemConfig",
+      "description": "Configuraciones globales de planta y algoritmos",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "parametrosTrabajo": { "type": "object" },
+        "weights": { "type": "object" },
+        "evaluacionConfig": { "type": "object" },
+        "priorizacionConfig": { "type": "object" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Registro de auditoría de acciones en planta",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "usuario": { "type": "string" },
+        "accion": { "type": "string" },
+        "fecha": { "type": "string" }
+      },
+      "required": ["id", "accion"]
+    }
+  },
+  "firestore": {
+    "/lotes/{loteId}": {
+      "schema": "Lote",
+      "description": "Colección de lotes de arroz de la planta"
+    },
+    "/humedades/{humedadId}": {
+      "schema": "RegistroHumedad",
+      "description": "Colección de registros de humedad de recepción"
+    },
+    "/analisisHumedo/{analisisId}": {
+      "schema": "AnalisisHumedo",
+      "description": "Colección de análisis en húmedo y organoléptico"
+    },
+    "/analisisSeco/{analisisId}": {
+      "schema": "AnalisisSeco",
+      "description": "Colección de análisis en seco"
+    },
+    "/presecados/{presecadoId}": {
+      "schema": "Presecado",
+      "description": "Colección de controles de presecado"
+    },
+    "/batchesVaporizado/{batchId}": {
+      "schema": "BatchVaporizado",
+      "description": "Colección de batches de vaporizado APIT"
+    },
+    "/batchLotes/{batchLoteId}": {
+      "schema": "BatchLote",
+      "description": "Relación entre batches y lotes asignados"
+    },
+    "/controlesVaporizado/{controlId}": {
+      "schema": "ControlVaporizado",
+      "description": "Controles de proceso de vaporizado"
+    },
+    "/analisisVaporizados/{analisisId}": {
+      "schema": "AnalisisVaporizado",
+      "description": "Análisis finales de vaporizado"
+    },
+    "/programaciones/{programacionId}": {
+      "schema": "ProgramacionApit",
+      "description": "Programaciones de producción de planta"
+    },
+    "/systemConfig/{configId}": {
+      "schema": "SystemConfig",
+      "description": "Configuraciones maestras del sistema"
+    },
+    "/auditLogs/{logId}": {
+      "schema": "AuditLog",
+      "description": "Bitácora de auditoría de planta"
+    }
+  }
+}

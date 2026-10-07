@@ -1,0 +1,10 @@
+{
+  "name": "Remix Remix AV4-9",
+  "description": "Sistema inteligente industrial de gestión, trazabilidad de lotes, control de vaporizado/secado, recomendación por IA, OCR de laboratorio y evaluación de calidad.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

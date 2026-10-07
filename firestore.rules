@@ -1,0 +1,97 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function isValidPayload() {
+      return request.resource.data is map && request.resource.data.keys().size() <= 150;
+    }
+
+    match /lotes/{loteId} {
+      allow get, list: if true;
+      allow create, update: if isValidId(loteId) && isValidPayload();
+      allow delete: if isValidId(loteId);
+    }
+
+    match /humedades/{humedadId} {
+      allow get, list: if true;
+      allow create, update: if isValidId(humedadId) && isValidPayload();
+      allow delete: if isValidId(humedadId);
+    }
+
+    match /analisisHumedo/{analisisId} {
+      allow get, list: if true;
+      allow create, update: if isValidId(analisisId) && isValidPayload();
+      allow delete: if isValidId(analisisId);
+    }
+
+    match /analisisSeco/{analisisId} {
+      allow get, list: if true;
+      allow create, update: if isValidId(analisisId) && isValidPayload();
+      allow delete: if isValidId(analisisId);
+    }
+
+    match /presecados/{presecadoId} {
+      allow get, list: if true;
+      allow create, update: if isValidId(presecadoId) && isValidPayload();
+      allow delete: if isValidId(presecadoId);
+    }
+
+    match /batchesVaporizado/{batchId} {
+      allow get, list: if true;
+      allow create, update: if isValidId(batchId) && isValidPayload();
+      allow delete: if isValidId(batchId);
+    }
+
+    match /batchLotes/{batchLoteId} {
+      allow get, list: if true;
+      allow create, update: if isValidId(batchLoteId) && isValidPayload();
+      allow delete: if isValidId(batchLoteId);
+    }
+
+    match /controlesVaporizado/{controlId} {
+      allow get, list: if true;
+      allow create, update: if isValidId(controlId) && isValidPayload();
+      allow delete: if isValidId(controlId);
+    }
+
+    match /analisisVaporizados/{analisisId} {
+      allow get, list: if true;
+      allow create, update: if isValidId(analisisId) && isValidPayload();
+      allow delete: if isValidId(analisisId);
+    }
+
+    match /programaciones/{programacionId} {
+      allow get, list: if true;
+      allow create, update: if isValidId(programacionId) && isValidPayload();
+      allow delete: if isValidId(programacionId);
+    }
+
+    match /systemConfig/{configId} {
+      allow get, list: if true;
+      allow create, update: if isValidId(configId) && isValidPayload();
+      allow delete: if isValidId(configId);
+    }
+
+    match /auditLogs/{logId} {
+      allow get, list: if true;
+      allow create, update: if isValidId(logId) && isValidPayload();
+      allow delete: if isValidId(logId);
+    }
+
+    match /test/{testId} {
+      allow get, list: if true;
+      allow create, update, delete: if isValidId(testId);
+    }
+  }
+}

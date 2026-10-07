@@ -1,0 +1,1382 @@
+[
+  {
+    "file": "src/components/AIPlanificadorDiarioModal.tsx",
+    "expr": "capacidadObjetivo",
+    "snippet": "<input\n              type=\"number\"\n              value={capacidadObjetivo}\n              onChange={("
+  },
+  {
+    "file": "src/components/AnalisisHumedoView.tsx",
+    "expr": "formData.FECHA_ANALISIS || new Date().toISOString().split(\"T\")[0]",
+    "snippet": "<input\n              id=\"input-analisis-fecha\"\n              type=\"date\"\n              value={formDa"
+  },
+  {
+    "file": "src/components/AnalisisVaporizadoView.tsx",
+    "expr": "batchSearchQuery",
+    "snippet": "<input\n              type=\"text\"\n              placeholder=\"Buscar batch, variedad, autoclave...\"\n  "
+  },
+  {
+    "file": "src/components/AnalisisVaporizadoView.tsx",
+    "expr": "formData.NUM_BOLETA || \"\"",
+    "snippet": "<input\n                      type=\"text\"\n                      value={formData.NUM_BOLETA || \"\"}\n   "
+  },
+  {
+    "file": "src/components/AnalisisVaporizadoView.tsx",
+    "expr": "formData.CLIENTE || currentBatch?.CLIENTE || \"\"",
+    "snippet": "<input\n                      type=\"text\"\n                      value={formData.CLIENTE || currentBat"
+  },
+  {
+    "file": "src/components/AnalisisVaporizadoView.tsx",
+    "expr": "formData.CODIGO_MUESTRA || currentBatch?.CORRELATIVO || currentBatch?.BATCH_ID || \"\"",
+    "snippet": "<input\n                      type=\"text\"\n                      value={formData.CODIGO_MUESTRA || cur"
+  },
+  {
+    "file": "src/components/AnalisisVaporizadoView.tsx",
+    "expr": "formData.TOTAL_SACOS || currentBatch?.TOTAL_SACOS || \"\"",
+    "snippet": "<input\n                      type=\"number\"\n                      value={formData.TOTAL_SACOS || curr"
+  },
+  {
+    "file": "src/components/AnalisisVaporizadoView.tsx",
+    "expr": "formData.FECHA_ANALISIS || new Date().toISOString().split(\"T\")[0]",
+    "snippet": "<input\n                      type=\"date\"\n                      value={formData.FECHA_ANALISIS || new"
+  },
+  {
+    "file": "src/components/AnalisisVaporizadoView.tsx",
+    "expr": "formData.PROCEDENCIA || \"\"",
+    "snippet": "<input\n                      type=\"text\"\n                      value={formData.PROCEDENCIA || \"\"}\n  "
+  },
+  {
+    "file": "src/components/AnalisisVaporizadoView.tsx",
+    "expr": "formData.VARIEDAD || currentBatch?.VARIEDAD || \"\"",
+    "snippet": "<input\n                      type=\"text\"\n                      value={formData.VARIEDAD || currentBa"
+  },
+  {
+    "file": "src/components/AnalisisVaporizadoView.tsx",
+    "expr": "muestraNro",
+    "snippet": "<input\n                      type=\"number\"\n                      min=\"1\"\n                      value"
+  },
+  {
+    "file": "src/components/AnalisisVaporizadoView.tsx",
+    "expr": "formData.RESPONSABLE_ANALISIS || \"Analista de Control de Calidad\"",
+    "snippet": "<input\n                      type=\"text\"\n                      value={formData.RESPONSABLE_ANALISIS "
+  },
+  {
+    "file": "src/components/AnalisisVaporizadoView.tsx",
+    "expr": "formData.VB_JEFE_AREA || \"Ing. Jefe de Planta y Calidad\"",
+    "snippet": "<input\n                      type=\"text\"\n                      value={formData.VB_JEFE_AREA || \"Ing."
+  },
+  {
+    "file": "src/components/AnalisisVaporizadoView.tsx",
+    "expr": "coccionFormData.tazasArroz ?? 3",
+    "snippet": "<input\n                        type=\"number\"\n                        step=\"0.5\"\n                    "
+  },
+  {
+    "file": "src/components/AnalisisVaporizadoView.tsx",
+    "expr": "coccionFormData.tazasAgua || \"3 1/2\"",
+    "snippet": "<input\n                        type=\"text\"\n                        value={coccionFormData.tazasAgua "
+  },
+  {
+    "file": "src/components/AnalisisVaporizadoView.tsx",
+    "expr": "coccionFormData.sabor || \"Neutro Característico\"",
+    "snippet": "<input\n                        type=\"text\"\n                        value={coccionFormData.sabor || \""
+  },
+  {
+    "file": "src/components/AnalisisVaporizadoView.tsx",
+    "expr": "coccionFormData.desplazamientoSeg || \"15 seg\"",
+    "snippet": "<input\n                        type=\"text\"\n                        value={coccionFormData.desplazami"
+  },
+  {
+    "file": "src/components/AnalisisVaporizadoView.tsx",
+    "expr": "coccionFormData.granoQuebradoOllaPct ?? 18.0",
+    "snippet": "<input\n                        type=\"number\"\n                        step=\"0.1\"\n                    "
+  },
+  {
+    "file": "src/components/AnalisisVaporizadoView.tsx",
+    "expr": "coccionFormData.granoHinchadoPct ?? 8.6",
+    "snippet": "<input\n                        type=\"number\"\n                        step=\"0.1\"\n                    "
+  },
+  {
+    "file": "src/components/AnalisisVaporizadoView.tsx",
+    "expr": "coccionFormData.granoAbiertoPct ?? 1.3",
+    "snippet": "<input\n                        type=\"number\"\n                        step=\"0.1\"\n                    "
+  },
+  {
+    "file": "src/components/AnalisisVaporizadoView.tsx",
+    "expr": "coccionFormData.texturaFrio || \"Suave\"",
+    "snippet": "<input\n                        type=\"text\"\n                        value={coccionFormData.texturaFri"
+  },
+  {
+    "file": "src/components/AnalisisVaporizadoView.tsx",
+    "expr": "coccionFormData.envaseProyectado || \"Saco 50 kg Don Julio Extra Selección\"",
+    "snippet": "<input\n                          type=\"text\"\n                          value={coccionFormData.envase"
+  },
+  {
+    "file": "src/components/AnalisisVaporizadoView.tsx",
+    "expr": "coccionFormData.puntajeCoccion ?? 95",
+    "snippet": "<input\n                        type=\"number\"\n                        min=\"0\"\n                       "
+  },
+  {
+    "file": "src/components/AnalisisVaporizadoView.tsx",
+    "expr": "coccionFormData.panelista || \"Laboratorio de Calidad\"",
+    "snippet": "<input\n                      type=\"text\"\n                      value={coccionFormData.panelista || \""
+  },
+  {
+    "file": "src/components/BatchVaporizadoView.tsx",
+    "expr": "searchQuery",
+    "snippet": "<input\n                type=\"text\"\n                placeholder=\"Buscar batch, lote, cliente...\"\n    "
+  },
+  {
+    "file": "src/components/ComparadorEvaluacionProcesos.tsx",
+    "expr": "searchQuery",
+    "snippet": "<input\n              type=\"text\"\n              placeholder=\"Buscar batch, cliente...\"\n              "
+  },
+  {
+    "file": "src/components/ConfigCriteriosUnionLotesModal.tsx",
+    "expr": "valorActual",
+    "snippet": "<input\n                          type=\"number\"\n                          step={c.step}\n             "
+  },
+  {
+    "file": "src/components/ConfigCriteriosUnionLotesModal.tsx",
+    "expr": "valorActual",
+    "snippet": "<input\n                        type=\"range\"\n                        min={c.min}\n                    "
+  },
+  {
+    "file": "src/components/ConfigEvaluacionLotesModal.tsx",
+    "expr": "searchTerm",
+    "snippet": "<input\n                    type=\"text\"\n                    placeholder=\"Buscar parámetro...\"\n       "
+  },
+  {
+    "file": "src/components/ConfigEvaluacionLotesModal.tsx",
+    "expr": "c.peso",
+    "snippet": "<input\n                              type=\"number\"\n                              min=\"0\"\n           "
+  },
+  {
+    "file": "src/components/ConfigEvaluacionLotesModal.tsx",
+    "expr": "c.valorMin ?? \"\"",
+    "snippet": "<input\n                                  type=\"number\"\n                                  step=\"0.1\"\n"
+  },
+  {
+    "file": "src/components/ConfigEvaluacionLotesModal.tsx",
+    "expr": "c.valorMax ?? \"\"",
+    "snippet": "<input\n                                  type=\"number\"\n                                  step=\"0.1\"\n"
+  },
+  {
+    "file": "src/components/ConfigEvaluacionLotesModal.tsx",
+    "expr": "c.valorMin ?? \"\"",
+    "snippet": "<input\n                                  type=\"number\"\n                                  step=\"0.1\"\n"
+  },
+  {
+    "file": "src/components/ConfigEvaluacionLotesModal.tsx",
+    "expr": "c.valorMax ?? \"\"",
+    "snippet": "<input\n                                  type=\"number\"\n                                  step=\"0.1\"\n"
+  },
+  {
+    "file": "src/components/ConfigEvaluacionLotesModal.tsx",
+    "expr": "localConfig.umbrales.umbralAprobado",
+    "snippet": "<input\n                          type=\"number\"\n                          min=\"50\"\n                  "
+  },
+  {
+    "file": "src/components/ConfigEvaluacionLotesModal.tsx",
+    "expr": "localConfig.umbrales.umbralObservacion",
+    "snippet": "<input\n                          type=\"number\"\n                          min=\"40\"\n                  "
+  },
+  {
+    "file": "src/components/ConfigEvaluacionLotesModal.tsx",
+    "expr": "localConfig.umbrales.umbralExperimental ?? localConfig.umbrales.umbralRiesgo",
+    "snippet": "<input\n                          type=\"number\"\n                          min=\"30\"\n                  "
+  },
+  {
+    "file": "src/components/ConfigEvaluacionLotesModal.tsx",
+    "expr": "reglasVeto.maxGranoVerdeObservado ?? 6.0",
+    "snippet": "<input\n                            type=\"number\"\n                            step=\"0.5\"\n            "
+  },
+  {
+    "file": "src/components/ConfigEvaluacionLotesModal.tsx",
+    "expr": "reglasVeto.maxGranoVerdeRiesgo ?? 8.0",
+    "snippet": "<input\n                            type=\"number\"\n                            step=\"0.5\"\n            "
+  },
+  {
+    "file": "src/components/ConfigEvaluacionLotesModal.tsx",
+    "expr": "reglasVeto.maxGranoVerde ?? 10.0",
+    "snippet": "<input\n                            type=\"number\"\n                            step=\"0.5\"\n            "
+  },
+  {
+    "file": "src/components/ConfigEvaluacionLotesModal.tsx",
+    "expr": "reglasVeto.maxGranoInmaduro",
+    "snippet": "<input\n                          type=\"number\"\n                          step=\"0.5\"\n                "
+  },
+  {
+    "file": "src/components/ConfigEvaluacionLotesModal.tsx",
+    "expr": "reglasVeto.minRendimientoIntegral",
+    "snippet": "<input\n                          type=\"number\"\n                          step=\"0.5\"\n                "
+  },
+  {
+    "file": "src/components/ConfigEvaluacionLotesModal.tsx",
+    "expr": "reglasVeto.umbralHumedadBajaCritica ?? 10.0",
+    "snippet": "<input\n                            type=\"number\"\n                            step=\"0.5\"\n            "
+  },
+  {
+    "file": "src/components/ConfigEvaluacionLotesModal.tsx",
+    "expr": "reglasVeto.maxPctMuestrasHumedadBaja ?? 20.0",
+    "snippet": "<input\n                            type=\"number\"\n                            step=\"1\"\n              "
+  },
+  {
+    "file": "src/components/ConfigPriorizacionModal.tsx",
+    "expr": "rango.etiqueta",
+    "snippet": "<input\n                            type=\"text\"\n                            value={rango.etiqueta}\n  "
+  },
+  {
+    "file": "src/components/ConfigPriorizacionModal.tsx",
+    "expr": "rango.minHum",
+    "snippet": "<input\n                            type=\"number\"\n                            step=\"0.1\"\n            "
+  },
+  {
+    "file": "src/components/ConfigPriorizacionModal.tsx",
+    "expr": "rango.maxHum",
+    "snippet": "<input\n                            type=\"number\"\n                            step=\"0.1\"\n            "
+  },
+  {
+    "file": "src/components/ConfigPriorizacionModal.tsx",
+    "expr": "rango.prioridadPct",
+    "snippet": "<input\n                            type=\"number\"\n                            value={rango.prioridadP"
+  },
+  {
+    "file": "src/components/ConfigPriorizacionModal.tsx",
+    "expr": "rango.diasResistencia",
+    "snippet": "<input\n                              type=\"number\"\n                              value={rango.diasRe"
+  },
+  {
+    "file": "src/components/ConfigPriorizacionModal.tsx",
+    "expr": "pConfig.poco",
+    "snippet": "<input\n                              type=\"number\"\n                              value={pConfig.poco"
+  },
+  {
+    "file": "src/components/ConfigPriorizacionModal.tsx",
+    "expr": "pConfig.regularVarBast",
+    "snippet": "<input\n                              type=\"number\"\n                              value={pConfig.regu"
+  },
+  {
+    "file": "src/components/ConfigPriorizacionModal.tsx",
+    "expr": "localConfig.rangosRiesgo.bajoMax",
+    "snippet": "<input\n                      type=\"number\"\n                      value={localConfig.rangosRiesgo.baj"
+  },
+  {
+    "file": "src/components/ConfigPriorizacionModal.tsx",
+    "expr": "localConfig.rangosRiesgo.medioMin",
+    "snippet": "<input\n                      type=\"number\"\n                      value={localConfig.rangosRiesgo.med"
+  },
+  {
+    "file": "src/components/ConfigPriorizacionModal.tsx",
+    "expr": "localConfig.rangosRiesgo.medioMax",
+    "snippet": "<input\n                      type=\"number\"\n                      value={localConfig.rangosRiesgo.med"
+  },
+  {
+    "file": "src/components/ConfigPriorizacionModal.tsx",
+    "expr": "localConfig.rangosRiesgo.altoMin",
+    "snippet": "<input\n                      type=\"number\"\n                      value={localConfig.rangosRiesgo.alt"
+  },
+  {
+    "file": "src/components/ConfigPriorizacionModal.tsx",
+    "expr": "localConfig.rangosRiesgo.altoMax",
+    "snippet": "<input\n                      type=\"number\"\n                      value={localConfig.rangosRiesgo.alt"
+  },
+  {
+    "file": "src/components/ConfigPriorizacionModal.tsx",
+    "expr": "localConfig.rangosRiesgo.emergenciaMin",
+    "snippet": "<input\n                      type=\"number\"\n                      value={localConfig.rangosRiesgo.eme"
+  },
+  {
+    "file": "src/components/ConfigWeightsModal.tsx",
+    "expr": "formWeights.incrementoQuebrado",
+    "snippet": "<input\n                      id=\"input-weight-quebrado\"\n                      type=\"number\"\n        "
+  },
+  {
+    "file": "src/components/ConfigWeightsModal.tsx",
+    "expr": "formWeights.controlDefectos",
+    "snippet": "<input\n                      id=\"input-weight-defectos\"\n                      type=\"number\"\n        "
+  },
+  {
+    "file": "src/components/ConfigWeightsModal.tsx",
+    "expr": "formWeights.resultadoCoccion",
+    "snippet": "<input\n                      id=\"input-weight-coccion\"\n                      type=\"number\"\n         "
+  },
+  {
+    "file": "src/components/ConfigWeightsModal.tsx",
+    "expr": "formWeights.blancura",
+    "snippet": "<input\n                      id=\"input-weight-blancura\"\n                      type=\"number\"\n        "
+  },
+  {
+    "file": "src/components/ConfigWeightsModal.tsx",
+    "expr": "formWeights.cumplimientoProceso",
+    "snippet": "<input\n                      id=\"input-weight-cumplimiento\"\n                      type=\"number\"\n    "
+  },
+  {
+    "file": "src/components/ControlVaporizadoView.tsx",
+    "expr": "analisisFinal.HUMEDAD ?? 12.8",
+    "snippet": "<input\n                    type=\"number\"\n                    step=\"0.1\"\n                    value={a"
+  },
+  {
+    "file": "src/components/ControlVaporizadoView.tsx",
+    "expr": "analisisFinal.BL ?? 39.5",
+    "snippet": "<input\n                    type=\"number\"\n                    step=\"0.1\"\n                    value={a"
+  },
+  {
+    "file": "src/components/ControlVaporizadoView.tsx",
+    "expr": "analisisFinal.GI ?? 98.0",
+    "snippet": "<input\n                    type=\"number\"\n                    step=\"0.5\"\n                    value={a"
+  },
+  {
+    "file": "src/components/ControlVaporizadoView.tsx",
+    "expr": "analisisFinal.RB ?? 70.8",
+    "snippet": "<input\n                    type=\"number\"\n                    step=\"0.1\"\n                    value={a"
+  },
+  {
+    "file": "src/components/ControlVaporizadoView.tsx",
+    "expr": "analisisFinal.QB ?? 14.0",
+    "snippet": "<input\n                    type=\"number\"\n                    step=\"0.1\"\n                    value={a"
+  },
+  {
+    "file": "src/components/ControlVaporizadoView.tsx",
+    "expr": "analisisFinal.RI ?? 77.5",
+    "snippet": "<input\n                    type=\"number\"\n                    step=\"0.1\"\n                    value={a"
+  },
+  {
+    "file": "src/components/ControlVaporizadoView.tsx",
+    "expr": "analisisFinal.TZ ?? 1.5",
+    "snippet": "<input\n                    type=\"number\"\n                    step=\"0.1\"\n                    value={a"
+  },
+  {
+    "file": "src/components/ControlVaporizadoView.tsx",
+    "expr": "analisisFinal.M ?? 0.6",
+    "snippet": "<input\n                    type=\"number\"\n                    step=\"0.1\"\n                    value={a"
+  },
+  {
+    "file": "src/components/ControlVaporizadoView.tsx",
+    "expr": "observacionCierre",
+    "snippet": "<input\n                    type=\"text\"\n                    value={observacionCierre}\n               "
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.fecha",
+    "snippet": "<input\n                type=\"text\"\n                value={formData.fecha}\n                onChange={"
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.turno",
+    "snippet": "<input\n                type=\"text\"\n                value={formData.turno}\n                onChange={"
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.analista",
+    "snippet": "<input\n                type=\"text\"\n                value={formData.analista}\n                onChang"
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.batchNumero",
+    "snippet": "<input\n                  type=\"text\"\n                  value={formData.batchNumero}\n                "
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.anejadora ?? \"\"",
+    "snippet": "<input\n                  type=\"text\"\n                  value={formData.anejadora ?? \"\"}\n            "
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.maquila ?? \"\"",
+    "snippet": "<input\n                  type=\"text\"\n                  value={formData.maquila ?? \"\"}\n              "
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.variedad",
+    "snippet": "<input\n                  type=\"text\"\n                  value={formData.variedad}\n                  o"
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.procedencia",
+    "snippet": "<input\n                  type=\"text\"\n                  value={formData.procedencia}\n                "
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.fechaMuestra ?? \"\"",
+    "snippet": "<input\n                  type=\"text\"\n                  value={formData.fechaMuestra ?? \"\"}\n         "
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.temperaturaGrano ?? \"\"",
+    "snippet": "<input\n                    type=\"number\"\n                    step=\"0.1\"\n                    value={f"
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.temperaturaAmbiente ?? \"\"",
+    "snippet": "<input\n                    type=\"number\"\n                    step=\"0.1\"\n                    value={f"
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.humedadRelativa ?? \"\"",
+    "snippet": "<input\n                    type=\"number\"\n                    value={formData.humedadRelativa ?? \"\"}\n"
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.codigo",
+    "snippet": "<input\n                  type=\"text\"\n                  value={formData.codigo}\n                  onC"
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.numeroSacos ?? \"\"",
+    "snippet": "<input\n                  type=\"number\"\n                  value={formData.numeroSacos ?? \"\"}\n        "
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.tipoVaporizado",
+    "snippet": "<input\n                  type=\"text\"\n                  value={formData.tipoVaporizado}\n             "
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.dosificacion?.tazasArroz?.materiaPrima ?? \"\"",
+    "snippet": "<input\n                        type=\"number\"\n                        value={formData.dosificacion?.t"
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.dosificacion?.tazasArroz?.descarga ?? formData.tazasArroz ?? \"\"",
+    "snippet": "<input\n                        type=\"number\"\n                        value={formData.dosificacion?.t"
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.dosificacion?.tazasArroz?.reproceso ?? \"\"",
+    "snippet": "<input\n                        type=\"number\"\n                        value={formData.dosificacion?.t"
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "(formData.dosificacion?.tazasAgua?.materiaPrima as string) ?? \"\"",
+    "snippet": "<input\n                        type=\"text\"\n                        value={(formData.dosificacion?.ta"
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "(formData.dosificacion?.tazasAgua?.descarga as string) ?? (formData.tazasAgua as string) ?? \"\"",
+    "snippet": "<input\n                        type=\"text\"\n                        value={(formData.dosificacion?.ta"
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "(formData.dosificacion?.tazasAgua?.reproceso as string) ?? \"\"",
+    "snippet": "<input\n                        type=\"text\"\n                        value={(formData.dosificacion?.ta"
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.dosificacion?.tiempoCoccionMin?.materiaPrima ?? \"\"",
+    "snippet": "<input\n                          type=\"number\"\n                          value={formData.dosificacio"
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.dosificacion?.tiempoCoccionMin?.descarga ?? formData.tiempoCoccionMin ?? \"\"",
+    "snippet": "<input\n                          type=\"number\"\n                          value={formData.dosificacio"
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.dosificacion?.tiempoCoccionMin?.reproceso ?? \"\"",
+    "snippet": "<input\n                          type=\"number\"\n                          value={formData.dosificacio"
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "(formData.sabor?.materiaPrima as string) ?? \"\"",
+    "snippet": "<input\n                        type=\"text\"\n                        value={(formData.sabor?.materiaPr"
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "(formData.sabor?.descarga as string) ?? \"\"",
+    "snippet": "<input\n                        type=\"text\"\n                        value={(formData.sabor?.descarga "
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "(formData.sabor?.reproceso as string) ?? \"\"",
+    "snippet": "<input\n                        type=\"text\"\n                        value={(formData.sabor?.reproceso"
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "(formData.desplazamientoSeg?.materiaPrima as string) ?? \"\"",
+    "snippet": "<input\n                        type=\"text\"\n                        value={(formData.desplazamientoSe"
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "(formData.desplazamientoSeg?.descarga as string) ?? \"\"",
+    "snippet": "<input\n                        type=\"text\"\n                        value={(formData.desplazamientoSe"
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "(formData.desplazamientoSeg?.reproceso as string) ?? \"\"",
+    "snippet": "<input\n                        type=\"text\"\n                        value={(formData.desplazamientoSe"
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.granoHinchadoPct?.materiaPrima ?? \"\"",
+    "snippet": "<input\n                        type=\"number\"\n                        step=\"0.1\"\n                    "
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.granoHinchadoPct?.descarga ?? \"\"",
+    "snippet": "<input\n                        type=\"number\"\n                        step=\"0.1\"\n                    "
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.granoHinchadoPct?.reproceso ?? \"\"",
+    "snippet": "<input\n                        type=\"number\"\n                        step=\"0.1\"\n                    "
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.granoQuebradoOllaPct?.materiaPrima ?? \"\"",
+    "snippet": "<input\n                        type=\"number\"\n                        step=\"0.1\"\n                    "
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.granoQuebradoOllaPct?.descarga ?? \"\"",
+    "snippet": "<input\n                        type=\"number\"\n                        step=\"0.1\"\n                    "
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.granoQuebradoOllaPct?.reproceso ?? \"\"",
+    "snippet": "<input\n                        type=\"number\"\n                        step=\"0.1\"\n                    "
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.granoAbiertoPct?.materiaPrima ?? \"\"",
+    "snippet": "<input\n                        type=\"number\"\n                        step=\"0.1\"\n                    "
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.granoAbiertoPct?.descarga ?? \"\"",
+    "snippet": "<input\n                        type=\"number\"\n                        step=\"0.1\"\n                    "
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.granoAbiertoPct?.reproceso ?? \"\"",
+    "snippet": "<input\n                        type=\"number\"\n                        step=\"0.1\"\n                    "
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "(formData.pegoteo?.materiaPrima as string) ?? \"\"",
+    "snippet": "<input\n                        type=\"text\"\n                        value={(formData.pegoteo?.materia"
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "(formData.pegoteo?.descarga as string) ?? \"\"",
+    "snippet": "<input\n                        type=\"text\"\n                        value={(formData.pegoteo?.descarg"
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "(formData.pegoteo?.reproceso as string) ?? \"\"",
+    "snippet": "<input\n                        type=\"text\"\n                        value={(formData.pegoteo?.reproce"
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "(formData.texturaFrio?.materiaPrima as string) ?? \"\"",
+    "snippet": "<input\n                        type=\"text\"\n                        value={(formData.texturaFrio?.mat"
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "(formData.texturaFrio?.descarga as string) ?? \"\"",
+    "snippet": "<input\n                        type=\"text\"\n                        value={(formData.texturaFrio?.des"
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "(formData.texturaFrio?.reproceso as string) ?? \"\"",
+    "snippet": "<input\n                        type=\"text\"\n                        value={(formData.texturaFrio?.rep"
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.envaseProyectado ?? \"\"",
+    "snippet": "<input\n                    type=\"text\"\n                    value={formData.envaseProyectado ?? \"\"}\n "
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.quebradoPct?.materiaPrima ?? \"\"",
+    "snippet": "<input\n                          type=\"number\"\n                          step=\"0.01\"\n               "
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.quebradoPct?.descarga ?? \"\"",
+    "snippet": "<input\n                          type=\"number\"\n                          step=\"0.01\"\n               "
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.trizadoPct?.materiaPrima ?? \"\"",
+    "snippet": "<input\n                          type=\"number\"\n                          step=\"0.1\"\n                "
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.trizadoPct?.descarga ?? \"\"",
+    "snippet": "<input\n                          type=\"number\"\n                          step=\"0.1\"\n                "
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.cuarteadoPct?.materiaPrima ?? \"\"",
+    "snippet": "<input\n                          type=\"number\"\n                          step=\"0.01\"\n               "
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.cuarteadoPct?.descarga ?? \"\"",
+    "snippet": "<input\n                          type=\"number\"\n                          step=\"0.01\"\n               "
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.blancuraBlancoKett?.materiaPrima ?? \"\"",
+    "snippet": "<input\n                          type=\"number\"\n                          step=\"0.1\"\n                "
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.blancuraBlancoKett?.descarga ?? \"\"",
+    "snippet": "<input\n                          type=\"number\"\n                          step=\"0.1\"\n                "
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.humedadBlancoPct?.materiaPrima ?? \"\"",
+    "snippet": "<input\n                          type=\"number\"\n                          step=\"0.1\"\n                "
+  },
+  {
+    "file": "src/components/FormatoRegistroVaporizadoModal.tsx",
+    "expr": "formData.humedadBlancoPct?.descarga ?? \"\"",
+    "snippet": "<input\n                          type=\"number\"\n                          step=\"0.1\"\n                "
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "formData.FECHA_HORA_INICIO?.substring(0, 10) || new Date().toISOString().substring(0, 10)",
+    "snippet": "<input\n              type=\"text\"\n              value={formData.FECHA_HORA_INICIO?.substring(0, 10) |"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "formData.BATCH_ID || formData.CORRELATIVO || batchCorrelativo || \"\"",
+    "snippet": "<input\n              type=\"text\"\n              value={formData.BATCH_ID || formData.CORRELATIVO || b"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "formData.SUPERVISOR ?? \"\"",
+    "snippet": "<input\n              type=\"text\"\n              value={formData.SUPERVISOR ?? \"\"}\n              place"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "formData.OPERADOR ?? \"\"",
+    "snippet": "<input\n              type=\"text\"\n              value={formData.OPERADOR ?? \"\"}\n              placeho"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "formData.CLIENTE !== undefined ? formData.CLIENTE : (batchClient || \"Cliente de Producción\")",
+    "snippet": "<input\n              type=\"text\"\n              value={formData.CLIENTE !== undefined ? formData.CLIE"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "formData.DESVIACION || \"\"",
+    "snippet": "<input\n              type=\"text\"\n              value={formData.DESVIACION || \"\"}\n              place"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "datosIngreso.procedencia ?? \"\"",
+    "snippet": "<input\n                    type=\"text\"\n                    value={datosIngreso.procedencia ?? \"\"}\n  "
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "datosIngreso.codigo ?? \"\"",
+    "snippet": "<input\n                    type=\"text\"\n                    value={datosIngreso.codigo ?? \"\"}\n       "
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "datosIngreso.numSacos ?? \"\"",
+    "snippet": "<input\n                    type=\"text\"\n                    value={datosIngreso.numSacos ?? \"\"}\n     "
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "datosIngreso.variedad || batchVariedad || \"\"",
+    "snippet": "<input\n                    type=\"text\"\n                    value={datosIngreso.variedad || batchVari"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "datosIngreso.tiempoReposo || \"45 min\"",
+    "snippet": "<input\n                    type=\"text\"\n                    value={datosIngreso.tiempoReposo || \"45 m"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "datosVaporizado.llenadoTolvaPulmon?.inicio ?? \"\"",
+    "snippet": "<input\n                          type=\"text\"\n                          value={datosVaporizado.llenad"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "datosVaporizado.llenadoTolvaPulmon?.fin ?? \"\"",
+    "snippet": "<input\n                          type=\"text\"\n                          value={datosVaporizado.llenad"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "datosVaporizado.inyeccionVapor?.inicio ?? \"\"",
+    "snippet": "<input\n                            type=\"text\"\n                            value={datosVaporizado.in"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "datosVaporizado.inyeccionVapor?.fin ?? \"\"",
+    "snippet": "<input\n                            type=\"text\"\n                            value={datosVaporizado.in"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "datosVaporizado.inyeccionVapor?.presion !== undefined ? datosVaporizado.inyeccionVapor.presion : (datosVaporizado.presionVapor ?? presionRecomendadaProg ?? 0.35)",
+    "snippet": "<input\n                          type=\"number\"\n                          step=\"0.01\"\n               "
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "datosVaporizado.inyeccionVapor?.velExclusa ?? velExclusaRecomendadaProg ?? \"4\"",
+    "snippet": "<input\n                          type=\"text\"\n                          value={datosVaporizado.inyecc"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "datosVaporizado.inyeccionVapor?.tiempoReposo ?? (tiempoReposoRecomendadoProgMin ? `${tiempoReposoRecomendadoProgMin",
+    "snippet": "<input\n                          type=\"text\"\n                          value={datosVaporizado.inyecc"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "datosVaporizado.inyeccionVaporPase1?.inicio ?? \"\"",
+    "snippet": "<input\n                                type=\"text\"\n                                value={datosVapor"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "datosVaporizado.inyeccionVaporPase1?.fin ?? \"\"",
+    "snippet": "<input\n                                type=\"text\"\n                                value={datosVapor"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "datosVaporizado.inyeccionVaporPase1?.tiempoReposo ?? \"10 min\"",
+    "snippet": "<input\n                              type=\"text\"\n                              value={datosVaporizad"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "datosVaporizado.inyeccionVaporPase1?.vExcl ?? datosVaporizado.inyeccionVaporPase1?.excluso ?? \"\"",
+    "snippet": "<input\n                              type=\"text\"\n                              value={datosVaporizad"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "datosVaporizado.inyeccionVaporPase1?.obs ?? \"Pre-calentamiento gradual para evitar choque térmico\"",
+    "snippet": "<input\n                            type=\"text\"\n                            value={datosVaporizado.in"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "datosVaporizado.inyeccionVaporPase2?.inicio ?? \"\"",
+    "snippet": "<input\n                                type=\"text\"\n                                value={datosVapor"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "datosVaporizado.inyeccionVaporPase2?.fin ?? \"\"",
+    "snippet": "<input\n                                type=\"text\"\n                                value={datosVapor"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "datosVaporizado.inyeccionVaporPase2?.tiempoReposo ?? \"10 min\"",
+    "snippet": "<input\n                              type=\"text\"\n                              value={datosVaporizad"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "datosVaporizado.inyeccionVaporPase2?.vExcl ?? datosVaporizado.inyeccionVaporPase2?.excluso ?? \"\"",
+    "snippet": "<input\n                              type=\"text\"\n                              value={datosVaporizad"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "datosVaporizado.inyeccionVaporPase2?.obs ?? \"Gelatinización uniforme del almidón sin trizado\"",
+    "snippet": "<input\n                            type=\"text\"\n                            value={datosVaporizado.in"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "silo.exclusa?.inicio ?? \"\"",
+    "snippet": "<input\n                          type=\"text\"\n                          value={silo.exclusa?.inicio ?"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "silo.exclusa?.fin ?? \"\"",
+    "snippet": "<input\n                          type=\"text\"\n                          value={silo.exclusa?.fin ?? \""
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "autoTLlenado",
+    "snippet": "<input\n                        type=\"text\"\n                        value={autoTLlenado}\n            "
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "silo.exclusa?.exclusa ?? \"\"",
+    "snippet": "<input\n                        type=\"text\"\n                        value={silo.exclusa?.exclusa ?? \""
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "silo.descarga?.inicio ?? \"\"",
+    "snippet": "<input\n                          type=\"text\"\n                          value={silo.descarga?.inicio "
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "silo.descarga?.fin ?? \"\"",
+    "snippet": "<input\n                          type=\"text\"\n                          value={silo.descarga?.fin ?? "
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "autoTDescarga",
+    "snippet": "<input\n                        type=\"text\"\n                        value={autoTDescarga}\n           "
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "autoTReposo",
+    "snippet": "<input\n                        type=\"text\"\n                        value={autoTReposo}\n             "
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "row.fecha || \"\"",
+    "snippet": "<input\n                          type=\"text\"\n                          value={row.fecha || \"\"}\n     "
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "row.horaInicio ?? \"\"",
+    "snippet": "<input\n                            type=\"text\"\n                            value={row.horaInicio ?? "
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "row.humedad ?? \"\"",
+    "snippet": "<input\n                          type=\"text\"\n                          value={row.humedad ?? \"\"}\n   "
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "row.modificaciones?.mod1 ?? \"\"",
+    "snippet": "<input\n                          type=\"text\"\n                          value={row.modificaciones?.mo"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "row.modificaciones?.mod2 ?? \"\"",
+    "snippet": "<input\n                          type=\"text\"\n                          value={row.modificaciones?.mo"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "row.modificaciones?.mod3 ?? \"\"",
+    "snippet": "<input\n                          type=\"text\"\n                          value={row.modificaciones?.mo"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "row.fecha || \"\"",
+    "snippet": "<input\n                          type=\"text\"\n                          value={row.fecha || \"\"}\n     "
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "row.horaInicio ?? \"\"",
+    "snippet": "<input\n                            type=\"text\"\n                            value={row.horaInicio ?? "
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "row.humedad ?? \"\"",
+    "snippet": "<input\n                          type=\"text\"\n                          value={row.humedad ?? \"\"}\n   "
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "row.modificaciones?.mod1 ?? \"\"",
+    "snippet": "<input\n                          type=\"text\"\n                          value={row.modificaciones?.mo"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "row.modificaciones?.mod2 ?? \"\"",
+    "snippet": "<input\n                          type=\"text\"\n                          value={row.modificaciones?.mo"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "row.modificaciones?.mod3 ?? \"\"",
+    "snippet": "<input\n                          type=\"text\"\n                          value={row.modificaciones?.mo"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "row.fecha || \"\"",
+    "snippet": "<input\n                          type=\"text\"\n                          value={row.fecha || \"\"}\n     "
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "row.horaInicio ?? \"\"",
+    "snippet": "<input\n                            type=\"text\"\n                            value={row.horaInicio ?? "
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "row.humedad ?? \"\"",
+    "snippet": "<input\n                          type=\"text\"\n                          value={row.humedad ?? \"\"}\n   "
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "row.modificaciones?.mod1 ?? \"\"",
+    "snippet": "<input\n                          type=\"text\"\n                          value={row.modificaciones?.mo"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "row.modificaciones?.mod2 ?? \"\"",
+    "snippet": "<input\n                          type=\"text\"\n                          value={row.modificaciones?.mo"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "row.modificaciones?.mod3 ?? \"\"",
+    "snippet": "<input\n                          type=\"text\"\n                          value={row.modificaciones?.mo"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "humedadEntradaSecado",
+    "snippet": "<input\n                        type=\"number\"\n                        step=\"0.1\"\n                    "
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "tempAmbienteSecado",
+    "snippet": "<input\n                        type=\"number\"\n                        step=\"0.5\"\n                    "
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "humedadRelativaSecado",
+    "snippet": "<input\n                        type=\"number\"\n                        step=\"1\"\n                      "
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "perfil.fecha || \"\"",
+    "snippet": "<input\n                            type=\"text\"\n                            value={perfil.fecha || \"\""
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "perfil.horaInicio ?? \"\"",
+    "snippet": "<input\n                              type=\"text\"\n                              value={perfil.horaIni"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "perfil.humedad ?? \"\"",
+    "snippet": "<input\n                            type=\"text\"\n                            value={perfil.humedad ?? "
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "perfil.modificaciones?.mod1 ?? \"\"",
+    "snippet": "<input\n                            type=\"text\"\n                            value={perfil.modificacio"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "perfil.modificaciones?.mod2 ?? \"\"",
+    "snippet": "<input\n                            type=\"text\"\n                            value={perfil.modificacio"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "perfil.modificaciones?.mod3 ?? \"\"",
+    "snippet": "<input\n                            type=\"text\"\n                            value={perfil.modificacio"
+  },
+  {
+    "file": "src/components/HojaControlVaporizadoOficial.tsx",
+    "expr": "formData.OBSERVACIONES ?? \"\"",
+    "snippet": "<input\n              type=\"text\"\n              value={formData.OBSERVACIONES ?? \"\"}\n              pl"
+  },
+  {
+    "file": "src/components/HumedadView.tsx",
+    "expr": "fechaAnalisis",
+    "snippet": "<input\n                  id=\"input-humedad-fecha\"\n                  type=\"date\"\n                  va"
+  },
+  {
+    "file": "src/components/HumedadView.tsx",
+    "expr": "samples[key] || \"\"",
+    "snippet": "<input\n                        id={`input-sample-${key}`}\n                        type=\"number\"\n    "
+  },
+  {
+    "file": "src/components/IntegracionCoccionModal.tsx",
+    "expr": "fuenteNombre",
+    "snippet": "<input\n                      type=\"text\"\n                      value={fuenteNombre}\n                "
+  },
+  {
+    "file": "src/components/IntegracionCoccionModal.tsx",
+    "expr": "apiConfig.apiUrl || \"\"",
+    "snippet": "<input\n                      type=\"text\"\n                      placeholder=\"https://tu-sistema-arroz"
+  },
+  {
+    "file": "src/components/IntegracionCoccionModal.tsx",
+    "expr": "apiConfig.apiKey || \"\"",
+    "snippet": "<input\n                      type=\"password\"\n                      placeholder=\"Bearer token_secreto"
+  },
+  {
+    "file": "src/components/LotesView.tsx",
+    "expr": "searchTerm",
+    "snippet": "<input\n                id=\"input-search-lotes\"\n                type=\"text\"\n                placehold"
+  },
+  {
+    "file": "src/components/LotesView.tsx",
+    "expr": "newLoteData.LOTE_ID || \"\"",
+    "snippet": "<input\n                        type=\"text\"\n                        required\n                        "
+  },
+  {
+    "file": "src/components/LotesView.tsx",
+    "expr": "newLoteData.FECHA_INGRESO || \"\"",
+    "snippet": "<input\n                      type=\"date\"\n                      required\n                      value="
+  },
+  {
+    "file": "src/components/LotesView.tsx",
+    "expr": "newLoteData.CLIENTE || \"\"",
+    "snippet": "<input\n                      type=\"text\"\n                      required\n                      placeh"
+  },
+  {
+    "file": "src/components/LotesView.tsx",
+    "expr": "customVariedadText",
+    "snippet": "<input\n                        type=\"text\"\n                        required\n                        "
+  },
+  {
+    "file": "src/components/LotesView.tsx",
+    "expr": "newLoteData.ZONA || \"\"",
+    "snippet": "<input\n                      type=\"text\"\n                      placeholder=\"Ej. Chiclayo / Ferreñafe"
+  },
+  {
+    "file": "src/components/LotesView.tsx",
+    "expr": "newLoteData.UBICACION || \"\"",
+    "snippet": "<input\n                      type=\"text\"\n                      placeholder=\"Ej. Silo Pulmón 01\"\n    "
+  },
+  {
+    "file": "src/components/NuevoBatchModal.tsx",
+    "expr": "correlativo",
+    "snippet": "<input\n                type=\"text\"\n                id=\"input-batch-correlativo\"\n                valu"
+  },
+  {
+    "file": "src/components/NuevoBatchModal.tsx",
+    "expr": "fechaProgramada",
+    "snippet": "<input\n                type=\"date\"\n                id=\"input-batch-fecha\"\n                value={fec"
+  },
+  {
+    "file": "src/components/NuevoBatchModal.tsx",
+    "expr": "sl.pesoKg",
+    "snippet": "<input\n                            type=\"number\"\n                            min={100}\n             "
+  },
+  {
+    "file": "src/components/NuevoBatchModal.tsx",
+    "expr": "observaciones",
+    "snippet": "<input\n              type=\"text\"\n              id=\"input-batch-obs\"\n              placeholder=\"Ej: V"
+  },
+  {
+    "file": "src/components/ParametrosTrabajoModal.tsx",
+    "expr": "formData.lotesObjetivoPorDia",
+    "snippet": "<input\n                          type=\"number\"\n                          id=\"input-lotes-objetivo\"\n "
+  },
+  {
+    "file": "src/components/ParametrosTrabajoModal.tsx",
+    "expr": "formData.maxLotesPorDia",
+    "snippet": "<input\n                          type=\"number\"\n                          id=\"input-max-lotes-dia\"\n  "
+  },
+  {
+    "file": "src/components/ParametrosTrabajoModal.tsx",
+    "expr": "formData.capacidadMinimaProcesoKg",
+    "snippet": "<input\n                          type=\"number\"\n                          id=\"input-cap-min\"\n        "
+  },
+  {
+    "file": "src/components/ParametrosTrabajoModal.tsx",
+    "expr": "formData.capacidadMaximaSecadoraKg",
+    "snippet": "<input\n                          type=\"number\"\n                          id=\"input-cap-max\"\n        "
+  },
+  {
+    "file": "src/components/ParametrosTrabajoModal.tsx",
+    "expr": "formData.capacidadExcepcionalMaximaKg",
+    "snippet": "<input\n                          type=\"number\"\n                          id=\"input-cap-excepcional\"\n"
+  },
+  {
+    "file": "src/components/ParametrosTrabajoModal.tsx",
+    "expr": "formData.toleranciaDefectosPp",
+    "snippet": "<input\n                          type=\"number\"\n                          id=\"input-tol-defectos\"\n   "
+  },
+  {
+    "file": "src/components/ParametrosTrabajoModal.tsx",
+    "expr": "formData.toleranciaQuebradoPp",
+    "snippet": "<input\n                          type=\"number\"\n                          id=\"input-tol-quebrado\"\n   "
+  },
+  {
+    "file": "src/components/ParametrosTrabajoModal.tsx",
+    "expr": "motivoCambio",
+    "snippet": "<input\n                  type=\"text\"\n                  placeholder=\"Ej: Calibración de secadora 01, "
+  },
+  {
+    "file": "src/components/PresecadoSecoView.tsx",
+    "expr": "secoForm.Humedad_Final || \"\"",
+    "snippet": "<input\n                  id=\"input-as-humedad\"\n                  type=\"number\"\n                  ste"
+  },
+  {
+    "file": "src/components/PresecadoSecoView.tsx",
+    "expr": "secoForm.QI_Final || \"\"",
+    "snippet": "<input\n                  id=\"input-as-qi\"\n                  type=\"number\"\n                  step=\"0."
+  },
+  {
+    "file": "src/components/PresecadoSecoView.tsx",
+    "expr": "secoForm.Entero_Final || \"\"",
+    "snippet": "<input\n                  id=\"input-as-entero\"\n                  type=\"number\"\n                  step"
+  },
+  {
+    "file": "src/components/PresecadoSecoView.tsx",
+    "expr": "secoForm.Blancura_Final || \"\"",
+    "snippet": "<input\n                  id=\"input-as-blancura\"\n                  type=\"number\"\n                  st"
+  },
+  {
+    "file": "src/components/PresecadoSecoView.tsx",
+    "expr": "secoForm.Coccion_Score || 90",
+    "snippet": "<input\n                  id=\"input-as-coccion\"\n                  type=\"number\"\n                  val"
+  },
+  {
+    "file": "src/components/PresecadoSecoView.tsx",
+    "expr": "preForm.Humedad || \"\"",
+    "snippet": "<input\n                id=\"input-pre-humedad\"\n                type=\"number\"\n                step=\"0."
+  },
+  {
+    "file": "src/components/PresecadoSecoView.tsx",
+    "expr": "preForm.Impurezas || \"\"",
+    "snippet": "<input\n                id=\"input-pre-impurezas\"\n                type=\"number\"\n                step=\""
+  },
+  {
+    "file": "src/components/PresecadoSecoView.tsx",
+    "expr": "preForm.RI || \"\"",
+    "snippet": "<input\n                id=\"input-pre-ri\"\n                type=\"number\"\n                step=\"0.1\"\n  "
+  },
+  {
+    "file": "src/components/PresecadoSecoView.tsx",
+    "expr": "preForm.QI || \"\"",
+    "snippet": "<input\n                id=\"input-pre-qi\"\n                type=\"number\"\n                step=\"0.1\"\n  "
+  },
+  {
+    "file": "src/components/PresecadoSecoView.tsx",
+    "expr": "preForm.Entero || \"\"",
+    "snippet": "<input\n                id=\"input-pre-entero\"\n                type=\"number\"\n                step=\"0.1"
+  },
+  {
+    "file": "src/components/PresecadoSecoView.tsx",
+    "expr": "preForm.TZ || \"\"",
+    "snippet": "<input\n                id=\"input-pre-tz\"\n                type=\"number\"\n                step=\"0.1\"\n  "
+  },
+  {
+    "file": "src/components/PriorizacionLotesView.tsx",
+    "expr": "searchTerm",
+    "snippet": "<input\n            type=\"text\"\n            placeholder=\"Buscar por lote, cliente, variedad o zona..."
+  },
+  {
+    "file": "src/components/PriorizacionLotesView.tsx",
+    "expr": "manualNewPosition",
+    "snippet": "<input\n                  type=\"number\"\n                  min={1}\n                  max={calculatedLo"
+  },
+  {
+    "file": "src/components/PriorizacionProgramacionView.tsx",
+    "expr": "searchTerm",
+    "snippet": "<input\n                    type=\"text\"\n                    placeholder=\"Filtrar por lote, cliente, v"
+  },
+  {
+    "file": "src/components/PriorizacionProgramacionView.tsx",
+    "expr": "manualNewPosition",
+    "snippet": "<input\n                  type=\"number\"\n                  min={1}\n                  max={calculatedLo"
+  },
+  {
+    "file": "src/components/ProgramacionApitView.tsx",
+    "expr": "formData.SACOS_PROGRAMADOS || \"\"",
+    "snippet": "<input\n                    id=\"input-prog-sacos\"\n                    type=\"number\"\n                 "
+  },
+  {
+    "file": "src/components/ProgramacionApitView.tsx",
+    "expr": "formData.PESO_PROGRAMADO_KG || \"\"",
+    "snippet": "<input\n                    id=\"input-prog-peso\"\n                    type=\"number\"\n                  "
+  },
+  {
+    "file": "src/components/ProgramacionApitView.tsx",
+    "expr": "formData.OBSERVACIONES || \"\"",
+    "snippet": "<input\n                    type=\"text\"\n                    placeholder=\"Instrucciones operativas...\""
+  },
+  {
+    "file": "src/components/ProgramacionBatchOficialView.tsx",
+    "expr": "busquedaLote",
+    "snippet": "<input\n                type=\"text\"\n                placeholder=\"Buscar por lote, batch (V200) o clie"
+  },
+  {
+    "file": "src/components/ProgramacionBatchOficialView.tsx",
+    "expr": "busquedaSelectorLotes",
+    "snippet": "<input\n                  type=\"text\"\n                  value={busquedaSelectorLotes}\n               "
+  },
+  {
+    "file": "src/components/ProgramacionBatchOficialView.tsx",
+    "expr": "casoNombre",
+    "snippet": "<input\n                  type=\"text\"\n                  value={casoNombre}\n                  onChange"
+  },
+  {
+    "file": "src/components/ProgramacionBatchOficialView.tsx",
+    "expr": "fechaProg",
+    "snippet": "<input\n                  type=\"date\"\n                  value={fechaProg}\n                  onChange="
+  },
+  {
+    "file": "src/components/ProgramacionBatchOficialView.tsx",
+    "expr": "batchCorrelativo",
+    "snippet": "<input\n                  type=\"text\"\n                  value={batchCorrelativo}\n                  on"
+  },
+  {
+    "file": "src/components/ProgramacionBatchOficialView.tsx",
+    "expr": "observacionProg",
+    "snippet": "<input\n                  type=\"text\"\n                  value={observacionProg}\n                  onC"
+  },
+  {
+    "file": "src/components/ProgramacionBatchOficialView.tsx",
+    "expr": "fila.sacProg",
+    "snippet": "<input\n                              type=\"number\"\n                              min={0}\n           "
+  },
+  {
+    "file": "src/components/ProgramacionBatchOficialView.tsx",
+    "expr": "fila.pesoProg",
+    "snippet": "<input\n                              type=\"number\"\n                              min={0}\n           "
+  },
+  {
+    "file": "src/components/ProgramacionBatchOficialView.tsx",
+    "expr": "fila.ph",
+    "snippet": "<input\n                            type=\"number\"\n                            step=\"0.1\"\n            "
+  },
+  {
+    "file": "src/components/ProgramacionBatchOficialView.tsx",
+    "expr": "fila.desv",
+    "snippet": "<input\n                            type=\"number\"\n                            step=\"0.1\"\n            "
+  },
+  {
+    "file": "src/components/ProgramacionBatchOficialView.tsx",
+    "expr": "fila.blInt",
+    "snippet": "<input\n                            type=\"number\"\n                            step=\"0.1\"\n            "
+  },
+  {
+    "file": "src/components/ProgramacionBatchOficialView.tsx",
+    "expr": "fila.blBlanco",
+    "snippet": "<input\n                            type=\"number\"\n                            step=\"0.1\"\n            "
+  },
+  {
+    "file": "src/components/ProgramacionBatchOficialView.tsx",
+    "expr": "fila.qi",
+    "snippet": "<input\n                            type=\"number\"\n                            step=\"0.1\"\n            "
+  },
+  {
+    "file": "src/components/ProgramacionBatchOficialView.tsx",
+    "expr": "fila.qb",
+    "snippet": "<input\n                            type=\"number\"\n                            step=\"0.1\"\n            "
+  },
+  {
+    "file": "src/components/ProgramacionBatchOficialView.tsx",
+    "expr": "fila.tt",
+    "snippet": "<input\n                            type=\"number\"\n                            step=\"0.1\"\n            "
+  },
+  {
+    "file": "src/components/ProgramacionBatchOficialView.tsx",
+    "expr": "fila.tp",
+    "snippet": "<input\n                            type=\"number\"\n                            step=\"0.1\"\n            "
+  },
+  {
+    "file": "src/components/ProgramacionBatchOficialView.tsx",
+    "expr": "fila.tpun",
+    "snippet": "<input\n                            type=\"number\"\n                            step=\"0.1\"\n            "
+  },
+  {
+    "file": "src/components/ProgramacionBatchOficialView.tsx",
+    "expr": "fila.m",
+    "snippet": "<input\n                            type=\"number\"\n                            step=\"0.1\"\n            "
+  },
+  {
+    "file": "src/components/ProgramacionBatchOficialView.tsx",
+    "expr": "fila.triz",
+    "snippet": "<input\n                            type=\"number\"\n                            step=\"0.1\"\n            "
+  },
+  {
+    "file": "src/components/ProgramacionBatchOficialView.tsx",
+    "expr": "presionDet",
+    "snippet": "<input\n                      type=\"number\"\n                      step=\"0.05\"\n                      v"
+  },
+  {
+    "file": "src/components/ProgramacionBatchOficialView.tsx",
+    "expr": "velExclDet",
+    "snippet": "<input\n                    type=\"number\"\n                    value={velExclDet}\n                    "
+  },
+  {
+    "file": "src/components/ProgramacionBatchOficialView.tsx",
+    "expr": "tiempoReposoDet",
+    "snippet": "<input\n                      type=\"number\"\n                      value={tiempoReposoDet}\n           "
+  },
+  {
+    "file": "src/components/ProgramacionBatchOficialView.tsx",
+    "expr": "tempSecadoDet",
+    "snippet": "<input\n                      type=\"number\"\n                      value={tempSecadoDet}\n             "
+  },
+  {
+    "file": "src/components/ProgramacionBatchOficialView.tsx",
+    "expr": "quickEditData.caso",
+    "snippet": "<input\n                    type=\"text\"\n                    value={quickEditData.caso}\n              "
+  },
+  {
+    "file": "src/components/ProgramacionBatchOficialView.tsx",
+    "expr": "quickEditData.presionBar",
+    "snippet": "<input\n                      type=\"number\"\n                      step=\"0.01\"\n                      v"
+  },
+  {
+    "file": "src/components/ProgramacionBatchOficialView.tsx",
+    "expr": "quickEditData.velExclusa",
+    "snippet": "<input\n                      type=\"number\"\n                      step=\"1\"\n                      valu"
+  },
+  {
+    "file": "src/components/ProgramacionBatchOficialView.tsx",
+    "expr": "quickEditData.tiempoReposoMin",
+    "snippet": "<input\n                      type=\"number\"\n                      step=\"5\"\n                      valu"
+  },
+  {
+    "file": "src/components/ProgramacionBatchOficialView.tsx",
+    "expr": "quickEditData.tempSecadoC",
+    "snippet": "<input\n                      type=\"number\"\n                      step=\"1\"\n                      valu"
+  },
+  {
+    "file": "src/components/RecepcionLotesView.tsx",
+    "expr": "searchTerm",
+    "snippet": "<input\n                id=\"input-search-recepcion-lotes\"\n                type=\"text\"\n               "
+  },
+  {
+    "file": "src/components/RecepcionLotesView.tsx",
+    "expr": "loteForm.LOTE_ID || \"\"",
+    "snippet": "<input\n                      type=\"text\"\n                      required\n                      placeh"
+  },
+  {
+    "file": "src/components/RecepcionLotesView.tsx",
+    "expr": "loteForm.FECHA_INGRESO || \"\"",
+    "snippet": "<input\n                    type=\"date\"\n                    required\n                    value={loteF"
+  },
+  {
+    "file": "src/components/RecepcionLotesView.tsx",
+    "expr": "loteForm.CLIENTE || \"\"",
+    "snippet": "<input\n                    type=\"text\"\n                    required\n                    list=\"lista-"
+  },
+  {
+    "file": "src/components/RecepcionLotesView.tsx",
+    "expr": "customVariedadText",
+    "snippet": "<input\n                      type=\"text\"\n                      placeholder=\"Escriba variedad manual."
+  },
+  {
+    "file": "src/components/RecepcionLotesView.tsx",
+    "expr": "loteForm.ZONA || \"\"",
+    "snippet": "<input\n                    type=\"text\"\n                    list=\"lista-zonas-procedencia\"\n          "
+  },
+  {
+    "file": "src/components/RecepcionLotesView.tsx",
+    "expr": "loteForm.UBICACION || \"\"",
+    "snippet": "<input\n                    type=\"text\"\n                    list=\"lista-ubicaciones-silo\"\n           "
+  },
+  {
+    "file": "src/components/RecepcionLotesView.tsx",
+    "expr": "loteForm.OBSERVACIONES || \"\"",
+    "snippet": "<input\n                    type=\"text\"\n                    placeholder=\"Detalles sobre vehículo, hum"
+  },
+  {
+    "file": "src/components/RecepcionLotesView.tsx",
+    "expr": "caladas[key] || \"\"",
+    "snippet": "<input\n                        type=\"number\"\n                        step=\"0.1\"\n                    "
+  },
+  {
+    "file": "src/components/RecepcionLotesView.tsx",
+    "expr": "analisisForm.OBSERVACIONES || \"\"",
+    "snippet": "<input\n                  type=\"text\"\n                  placeholder=\"Detalles sobre uniformidad, dict"
+  },
+  {
+    "file": "src/components/SimuladorView.tsx",
+    "expr": "humedadIngreso",
+    "snippet": "<input\n              id=\"sim-slider-humedad\"\n              aria-label=\"Humedad inicial en porcentaje"
+  },
+  {
+    "file": "src/components/SimuladorView.tsx",
+    "expr": "presionBar",
+    "snippet": "<input\n              id=\"sim-slider-presion\"\n              aria-label=\"Presión de vapor en bar\"\n    "
+  },
+  {
+    "file": "src/components/SimuladorView.tsx",
+    "expr": "tiempoVaporizado",
+    "snippet": "<input\n              id=\"sim-slider-tiempo-vap\"\n              aria-label=\"Tiempo de vaporizado en mi"
+  },
+  {
+    "file": "src/components/SimuladorView.tsx",
+    "expr": "tiempoReposo",
+    "snippet": "<input\n              id=\"sim-slider-tiempo-rep\"\n              aria-label=\"Tiempo de reposo en minuto"
+  },
+  {
+    "file": "src/components/SimuladorView.tsx",
+    "expr": "rpm",
+    "snippet": "<input\n              id=\"sim-slider-rpm\"\n              aria-label=\"Velocidad de giro del autoclave e"
+  }
+]

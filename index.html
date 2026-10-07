@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="es" class="notranslate" translate="no">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="google" content="notranslate" />
+    <meta name="googlebot" content="notranslate" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="alternate icon" href="/favicon.svg" />
+    <title>Remix AV4-8 - Sistema de Vaporizado y Secado de Arroz | ItsyCreaciones</title>
+    <meta name="description" content="Sistema inteligente industrial de gestión, trazabilidad de lotes, control de vaporizado/secado, recomendación por IA, OCR de laboratorio y evaluación de calidad." />
+    <meta property="og:title" content="Remix AV4-8 - Sistema de Vaporizado y Secado de Arroz" />
+    <meta property="og:description" content="Sistema inteligente industrial de gestión, trazabilidad de lotes, control de vaporizado/secado, recomendación por IA, OCR de laboratorio y evaluación de calidad." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script>
+      (function() {
+        // Intercept and silence benign Vite HMR websocket, sandbox transport, and Google Translate CSP notifications
+        var isBenign = function(msg) {
+          if (!msg) return false;
+          var lower = String(msg).toLowerCase();
+          return (
+            lower.indexOf('websocket') !== -1 ||
+            lower.indexOf('failed to connect to websocket') !== -1 ||
+            lower.indexOf('no se pudo conectar con el websocket') !== -1 ||
+            lower.indexOf('closed without opened') !== -1 ||
+            lower.indexOf('cerrado sin abrir') !== -1 ||
+            lower.indexOf('illegal invocation') !== -1 ||
+            lower.indexOf('webchannelconnection') !== -1 ||
+            lower.indexOf('flujo rpc \'listen\'') !== -1 ||
+            lower.indexOf('transporte de la transmisión rpc') !== -1 ||
+            lower.indexOf('[vite]') !== -1 ||
+            lower.indexOf('vite:ws') !== -1 ||
+            lower.indexOf('translate_http') !== -1 ||
+            lower.indexOf('gstatic.com') !== -1 ||
+            lower.indexOf('translate.googleapis.com') !== -1 ||
+            lower.indexOf('violates the following content security policy') !== -1 ||
+            lower.indexOf('content security policy') !== -1
+          );
+        };
+
+        var origDebug = console.debug;
+        console.debug = function() {
+          var msg = '';
+          for (var i = 0; i < arguments.length; i++) {
+            var item = arguments[i];
+            msg += (item && (item.stack || item.message || item.toString())) + ' ';
+          }
+          if (isBenign(msg)) return;
+          return origDebug ? origDebug.apply(console, arguments) : undefined;
+        };
+
+        var origInfo = console.info;
+        console.info = function() {
+          var msg = '';
+          for (var i = 0; i < arguments.length; i++) {
+            var item = arguments[i];
+            msg += (item && (item.stack || item.message || item.toString())) + ' ';
+          }
+          if (isBenign(msg)) return;
+          return origInfo ? origInfo.apply(console, arguments) : undefined;
+        };
+
+        var origError = console.error;
+        console.error = function() {
+          var msg = '';
+          for (var i = 0; i < arguments.length; i++) {
+            var item = arguments[i];
+            msg += (item && (item.stack || item.message || item.toString())) + ' ';
+          }
+          if (isBenign(msg)) return;
+          return origError.apply(console, arguments);
+        };
+
+        var origWarn = console.warn;
+        console.warn = function() {
+          var msg = '';
+          for (var i = 0; i < arguments.length; i++) {
+            var item = arguments[i];
+            msg += (item && (item.stack || item.message || item.toString())) + ' ';
+          }
+          if (isBenign(msg)) return;
+          return origWarn.apply(console, arguments);
+        };
+
+        window.addEventListener('unhandledrejection', function(event) {
+          var reason = event && event.reason;
+          var msg = (reason && (reason.stack || reason.message || reason.toString())) || '';
+          if (isBenign(msg)) {
+            event.preventDefault();
+            if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+          }
+        });
+
+        window.addEventListener('error', function(event) {
+          var err = event && event.error;
+          var msg = (event && (event.message || '')) + ' ' + (err && (err.stack || err.message || err.toString()) || '');
+          if (isBenign(msg)) {
+            event.preventDefault();
+            if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+          }
+        });
+      })();
+    </script>
+  </head>
+  <body class="notranslate">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
