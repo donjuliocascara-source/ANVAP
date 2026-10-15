@@ -1,0 +1,165 @@
+{
+  "lotes": [],
+  "registroHumedad": [],
+  "analisisHumedo": [],
+  "presecado": [],
+  "analisisSeco": [],
+  "programacionApit": [],
+  "batchesVaporizado": [],
+  "batchLotes": [],
+  "controlVaporizado": [],
+  "analisisVaporizado": [],
+  "equipos": [
+    {
+      "EQUIPO_ID": "EQ-APIT",
+      "EQUIPO": "APIT",
+      "PROCESO": "Vaporizado",
+      "CAPACIDAD_TN": 35,
+      "ESTADO": "OPERATIVO",
+      "OBSERVACIONES": "Autoclave y Línea Oficial de Vaporizado APIT (35 TN)"
+    }
+  ],
+  "estadosLote": [
+    {
+      "ESTADO_ID": "EST-01",
+      "ESTADO": "INGRESADO",
+      "ORDEN": 1,
+      "DESCRIPCION": "Lote recibido en tolva/acopio"
+    },
+    {
+      "ESTADO_ID": "EST-02",
+      "ESTADO": "ANALIZADO",
+      "ORDEN": 2,
+      "DESCRIPCION": "Análisis húmedo y humedad completados"
+    },
+    {
+      "ESTADO_ID": "EST-03",
+      "ESTADO": "APTO",
+      "ORDEN": 3,
+      "DESCRIPCION": "Calificado como apto para proceso APIT"
+    },
+    {
+      "ESTADO_ID": "EST-04",
+      "ESTADO": "PROGRAMADO",
+      "ORDEN": 4,
+      "DESCRIPCION": "Asignado a Batch y turno de vaporizado"
+    },
+    {
+      "ESTADO_ID": "EST-05",
+      "ESTADO": "EN PROCESO",
+      "ORDEN": 5,
+      "DESCRIPCION": "En carga o maceración inicial"
+    },
+    {
+      "ESTADO_ID": "EST-06",
+      "ESTADO": "VAPORIZADO",
+      "ORDEN": 6,
+      "DESCRIPCION": "Inyección de vapor culminada"
+    },
+    {
+      "ESTADO_ID": "EST-07",
+      "ESTADO": "EN REPOSO",
+      "ORDEN": 7,
+      "DESCRIPCION": "Tiempo de reposo / atemperado en tolva"
+    },
+    {
+      "ESTADO_ID": "EST-08",
+      "ESTADO": "EN SECADO",
+      "ORDEN": 8,
+      "DESCRIPCION": "En proceso de secado columnar"
+    },
+    {
+      "ESTADO_ID": "EST-09",
+      "ESTADO": "ANALISIS_FINAL",
+      "ORDEN": 9,
+      "DESCRIPCION": "Muestras de vaporizado y seco analizadas"
+    },
+    {
+      "ESTADO_ID": "EST-10",
+      "ESTADO": "EVALUADO",
+      "ORDEN": 10,
+      "DESCRIPCION": "Evaluación antes vs después e índice de éxito"
+    },
+    {
+      "ESTADO_ID": "EST-11",
+      "ESTADO": "CERRADO",
+      "ORDEN": 11,
+      "DESCRIPCION": "Lote cerrado y archivado en histórico"
+    },
+    {
+      "ESTADO_ID": "EST-99",
+      "ESTADO": "OBSERVADO",
+      "ORDEN": 99,
+      "DESCRIPCION": "Lote con desviación o reproceso"
+    }
+  ],
+  "successWeights": {
+    "incrementoQuebrado": 35,
+    "controlDefectos": 25,
+    "resultadoCoccion": 20,
+    "blancura": 10,
+    "cumplimientoProceso": 10,
+    "targetQuebradoMaxInc": 2.5,
+    "targetBlancuraMin": 31,
+    "targetHumedadFinal": 13
+  },
+  "auditLogs": [],
+  "users": [
+    {
+      "id": "usr-fredy",
+      "nombre": "Ing. Fredy Granados Caicedo",
+      "email": "fredyleonardogranadoscaicedo@gmail.com",
+      "rol": "PROGRAMADOR",
+      "cargo": "Ingeniería de Procesos & Desarrollador Principal / Programador",
+      "departamento": "Ingeniería de Sistemas y Optimización Industrial (ItsyCreaciones)",
+      "avatarColor": "from-purple-600 to-indigo-700",
+      "iniciales": "FG",
+      "nivelAcceso": "Super Admin / Control Total / Configuración de Algoritmos IA & OCR",
+      "telefono": "+51 987 654 321",
+      "activo": true,
+      "permisos": [
+        "Control total del sistema y arquitectura de datos",
+        "Configuración de parámetros matemáticos y ponderaciones de éxito",
+        "Calibración de algoritmos de Visión IA y OCR de formatos",
+        "Sincronización de base de datos y hojas de cálculo",
+        "Auditoría integral de procesos y trazabilidad",
+        "Administración y asignación de usuarios y roles"
+      ],
+      "pin": "2026"
+    }
+  ],
+  "parametrosTrabajo": {
+    "lotesObjetivoPorDia": 2,
+    "maxLotesPorDia": 3,
+    "capacidadMinimaProcesoKg": 22000,
+    "capacidadMaximaSecadoraKg": 35000,
+    "capacidadExcepcionalMaximaKg": 37000,
+    "toleranciaDefectosPp": 2,
+    "toleranciaQuebradoPp": 2,
+    "turnosDisponibles": [
+      "Turno Día",
+      "Turno Noche"
+    ],
+    "sugeridoPorIA": {
+      "lotesObjetivoPorDia": 2,
+      "maxLotesPorDia": 3,
+      "capacidadMinimaProcesoKg": 22000,
+      "capacidadMaximaSecadoraKg": 35000,
+      "capacidadExcepcionalMaximaKg": 37000,
+      "toleranciaDefectosPp": 2,
+      "toleranciaQuebradoPp": 2,
+      "turnosDisponibles": [
+        "Turno Día",
+        "Turno Noche"
+      ],
+      "justificacionIA": "Optimización estándar para secadoras cilíndricas de 35 TN y autoclave APIT.",
+      "fechaSugerencia": "2026-08-29"
+    },
+    "ultimaModificacion": "2026-08-29 08:00:00",
+    "modificadoPor": "Ing. Fredy Granados Caicedo"
+  },
+  "historialParametros": [],
+  "programacionesOficiales": [],
+  "resultadosCoccionExternos": [],
+  "priorizacionAudit": []
+}
