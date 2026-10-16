@@ -53,6 +53,7 @@ import {
   printOrExportElementToPdf,
   generateFichaFinalBatchCerradoPDF
 } from "../utils/pdfPrintHelper";
+import { calcularTiempoBateriaSilosSimultaneo } from "../utils/batchCalculator";
 
 interface FichaFinalBatchCerradoModalProps {
   isOpen: boolean;
@@ -695,20 +696,15 @@ export const FichaFinalBatchCerradoModal: React.FC<FichaFinalBatchCerradoModalPr
       };
     });
 
-    const sumSilosMin = silosDetalle.reduce((acc, s) => acc + s.totalSilo, 0);
-    const primerSiloIni = silosRawList.find((s) => s.exclusa?.inicio)?.exclusa?.inicio;
-    const ultimoSiloFin = [...silosRawList].reverse().find((s) => s.descarga?.fin)?.descarga?.fin;
-    const spanSilosMin = calcDurationMinutes(primerSiloIni, ultimoSiloFin);
-
-    const calcSilosMin =
-      sumSilosMin > 0
-        ? sumSilosMin
-        : spanSilosMin > 0
-        ? spanSilosMin
+    // Cálculo de tiempo simultáneo para "Batería de Enfriamiento y Reposo (Silos 1 al 5)":
+    // Contabilizado con la diferencia de la hora menor y la hora mayor registrada (independientemente de cada silo)
+    const simultaneoSilos = calcularTiempoBateriaSilosSimultaneo(silosRawList);
+    const tiempoBateriaSilosMin =
+      simultaneoSilos.tiempoTotalMin > 0
+        ? simultaneoSilos.tiempoTotalMin
         : parseMinutesValue((vap as any)?.tiempoTotalBateriaSilosMin) ||
           parseMinutesValue((ctrl?.resumenEtapas as any)?.totalBateriaSilos) ||
           0;
-    const tiempoBateriaSilosMin = calcSilosMin;
 
     // ➔ SUMA: TIEMPO TOTAL DE VAPORIZADO
     // (tiempo de llenado de tolva pulmón + tiempo de inyección de vapor + tiempo de fallas mecánicas + tiempo de batería de enfriamiento de los silos)

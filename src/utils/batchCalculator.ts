@@ -465,3 +465,149 @@ export function obtenerValoresIngresoBatchDesdeLotes(params: {
     humedadPct: humedadFinal
   };
 }
+
+export interface ResultadoTiempoBateriaSilos {
+  horaMenor: string;
+  horaMayor: string;
+  tiempoTotalMin: number;
+  duracionFormateada: string;
+  detallesHoras: string[];
+}
+
+/**
+ * En "Batería de Enfriamiento y Reposo (Silos 1 al 5)", el tiempo total debe contabilizar
+ * con la diferencia entre la hora menor y la hora mayor registrada (independientemente de cada silo),
+ * porque las acciones en los silos se realizan simultáneamente y sumar los tiempos por silo
+ * exagera el tiempo real del proceso.
+ */
+export function calcularTiempoBateriaSilosSimultaneo(silos?: any[]): ResultadoTiempoBateriaSilos {
+  if (!silos || !Array.isArray(silos) || silos.length === 0) {
+    return {
+      horaMenor: "",
+      horaMayor: "",
+      tiempoTotalMin: 0,
+      duracionFormateada: "0 min",
+      detallesHoras: []
+    };
+  }
+
+  // Normaliza y parsea a minutos del día (0-1439) soportando 24h y 12h con AM/PM
+  const parseTimeToMinutes = (t: string): number | null => {
+    if (!t || typeof t !== "string") return null;
+    const clean = t.trim().toUpperCase();
+    const isPM = clean.includes("PM");
+    const isAM = clean.includes("AM");
+    const timeOnly = clean.replace(/[APM\s]/g, "");
+    const parts = timeOnly.split(":").map((p) => parseInt(p, 10));
+    if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+      let hours = parts[0];
+      const minutes = parts[1];
+      if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+      if (isPM && hours < 12) hours += 12;
+      if (isAM && hours === 12) hours = 0;
+      return hours * 60 + minutes;
+    }
+    return null;
+  };
+
+  const padTime = (mins: number): string => {
+    const normalized = ((mins % 1440) + 1440) % 1440;
+    const hh = String(Math.floor(normalized / 60)).padStart(2, "0");
+    const mm = String(normalized % 60).padStart(2, "0");
+    return `${hh}:${mm}`;
+  };
+
+  // Extraer todas las horas válidas registradas en cualquier silo (exclusa, reposo y descarga)
+  const rawTimesList: Array<{ raw: string; mins: number; siloNumber?: number }> = [];
+
+  silos.forEach((s, idx) => {
+    if (!s) return;
+    const siloNum = s.siloNumber || idx + 1;
+    const candidates = [
+      s.exclusa?.inicio,
+      s.exclusa?.fin,
+      s.descarga?.inicio,
+      s.descarga?.fin,
+      s.tiempoLlenadoInicio,
+      s.tiempoLlenadoFin,
+      s.tiempoReposoInicio,
+      s.tiempoReposoFin,
+      s.tiempoDescargaInicio,
+      s.tiempoDescargaFin,
+      s.horaInicio,
+      s.horaFin
+    ];
+
+    candidates.forEach((cand) => {
+      if (cand && typeof cand === "string") {
+        const mins = parseTimeToMinutes(cand);
+        if (mins !== null) {
+          rawTimesList.push({
+            raw: cand.trim(),
+            mins,
+            siloNumber: siloNum
+          });
+        }
+      }
+    });
+  });
+
+  if (rawTimesList.length === 0) {
+    return {
+      horaMenor: "",
+      horaMayor: "",
+      tiempoTotalMin: 0,
+      duracionFormateada: "0 min",
+      detallesHoras: []
+    };
+  }
+
+  if (rawTimesList.length === 1) {
+    const single = rawTimesList[0];
+    return {
+      horaMenor: single.raw,
+      horaMayor: single.raw,
+      tiempoTotalMin: 0,
+      duracionFormateada: "0 min",
+      detallesHoras: [single.raw]
+    };
+  }
+
+  // Detección de cruce de medianoche en turno noche (ej. 22:30 a 02:45)
+  // Si la dispersión simple excede 12 horas (720 min), los horarios de madrugada (< 12:00)
+  // corresponden al día siguiente del turno (+1440 minutos).
+  const minsArray = rawTimesList.map((r) => r.mins);
+  const minRaw = Math.min(...minsArray);
+  const maxRaw = Math.max(...minsArray);
+
+  let finalMinMins = minRaw;
+  let finalMaxMins = maxRaw;
+  let horaMenorRaw = rawTimesList.find((r) => r.mins === minRaw)?.raw || padTime(minRaw);
+  let horaMayorRaw = rawTimesList.find((r) => r.mins === maxRaw)?.raw || padTime(maxRaw);
+
+  if (maxRaw - minRaw > 720) {
+    // Ajustar cruce de medianoche
+    const adjustedList = rawTimesList.map((r) => {
+      const adjustedMins = r.mins < 720 ? r.mins + 1440 : r.mins;
+      return { ...r, adjustedMins };
+    });
+    const adjMinsArray = adjustedList.map((r) => r.adjustedMins);
+    const minAdj = Math.min(...adjMinsArray);
+    const maxAdj = Math.max(...adjMinsArray);
+
+    finalMinMins = minAdj;
+    finalMaxMins = maxAdj;
+    horaMenorRaw = adjustedList.find((r) => r.adjustedMins === minAdj)?.raw || padTime(minAdj);
+    horaMayorRaw = adjustedList.find((r) => r.adjustedMins === maxAdj)?.raw || padTime(maxAdj);
+  }
+
+  const diffMin = Math.max(0, finalMaxMins - finalMinMins);
+
+  return {
+    horaMenor: horaMenorRaw,
+    horaMayor: horaMayorRaw,
+    tiempoTotalMin: diffMin,
+    duracionFormateada: `${diffMin} min`,
+    detallesHoras: rawTimesList.map((r) => r.raw)
+  };
+}

@@ -5127,11 +5127,12 @@ class LocalDBService {
     let changed = false;
     const isReplace = options?.replace ?? true;
 
-    if (Array.isArray(cloudData.lotes)) {
+    if (Array.isArray(cloudData.lotes) && cloudData.lotes.length > 0) {
       const existingMap = new Map<string, Lote>();
+      const tombstones = getDeletedLotesTombstones();
       (db.lotes || []).forEach((l) => {
-        const c = formatLoteCode(l.LOTE_ID);
-        if (c) existingMap.set(c, l);
+        const c = formatLoteCode(l?.LOTE_ID);
+        if (c && !tombstones.has(c)) existingMap.set(c, l);
       });
       const rankEstado = (est?: string) => {
         const u = (est || "").toUpperCase();
@@ -5143,17 +5144,25 @@ class LocalDBService {
         if (["ANALIZADO", "APTO", "OBSERVADO", "EXPERIMENTAL", "DESAPROBADO"].includes(u)) return 1;
         return 0;
       };
-      const canonicalItems = cloudData.lotes.map((cl) => {
-        const canonical = formatLoteCode(cl.LOTE_ID) || cl.LOTE_ID;
+      cloudData.lotes.forEach((cl) => {
+        const canonical = formatLoteCode(cl?.LOTE_ID) || cl?.LOTE_ID;
+        if (!canonical || tombstones.has(canonical)) return;
         const prev = existingMap.get(canonical);
-        return {
+        const bestEstado =
+          prev && rankEstado(prev.ESTADO_LOTE) > rankEstado(cl.ESTADO_LOTE)
+            ? prev.ESTADO_LOTE
+            : (cl.ESTADO_LOTE || prev?.ESTADO_LOTE || "INGRESADO");
+        existingMap.set(canonical, {
           ...prev,
           ...cl,
           LOTE_ID: canonical,
-          ESTADO_LOTE: cl.ESTADO_LOTE || prev?.ESTADO_LOTE || "INGRESADO"
-        };
+          SACOS: (Number(cl.SACOS) || 0) > 0 ? Number(cl.SACOS) : (Number(prev?.SACOS) || 0),
+          PESO_KG: (Number(cl.PESO_KG) || 0) > 0 ? Number(cl.PESO_KG) : (Number(prev?.PESO_KG) || 0),
+          HUM: (Number(cl.HUM || cl.HUMEDAD) || 0) > 0 ? Number(cl.HUM || cl.HUMEDAD) : (Number(prev?.HUM || prev?.HUMEDAD) || 0),
+          ESTADO_LOTE: bestEstado
+        });
       });
-      db.lotes = canonicalItems;
+      db.lotes = Array.from(existingMap.values());
       changed = true;
     }
 
@@ -5164,64 +5173,132 @@ class LocalDBService {
       if (canonical) validLoteIds.add(canonical);
     });
 
-    if (Array.isArray(cloudData.registroHumedad)) {
-      db.registroHumedad = isReplace
-        ? cloudData.registroHumedad
-        : [...cloudData.registroHumedad];
+    if (Array.isArray(cloudData.registroHumedad) && cloudData.registroHumedad.length > 0) {
+      const map = new Map<string, any>();
+      (db.registroHumedad || []).forEach((item: any) => {
+        const k = formatLoteCode(item?.LOTE_ID) || item?.["ID ANALISIS"];
+        if (k) map.set(k, item);
+      });
+      cloudData.registroHumedad.forEach((item: any) => {
+        const k = formatLoteCode(item?.LOTE_ID) || item?.["ID ANALISIS"];
+        if (k) map.set(k, { ...map.get(k), ...item });
+      });
+      db.registroHumedad = Array.from(map.values());
       changed = true;
     }
 
-    if (Array.isArray(cloudData.analisisHumedo)) {
-      db.analisisHumedo = isReplace
-        ? cloudData.analisisHumedo
-        : [...cloudData.analisisHumedo];
+    if (Array.isArray(cloudData.analisisHumedo) && cloudData.analisisHumedo.length > 0) {
+      const map = new Map<string, any>();
+      (db.analisisHumedo || []).forEach((item: any) => {
+        const k = formatLoteCode(item?.LOTE_ID) || item?.ANALISIS_HUMEDO_ID;
+        if (k) map.set(k, item);
+      });
+      cloudData.analisisHumedo.forEach((item: any) => {
+        const k = formatLoteCode(item?.LOTE_ID) || item?.ANALISIS_HUMEDO_ID;
+        if (k) map.set(k, { ...map.get(k), ...item });
+      });
+      db.analisisHumedo = Array.from(map.values());
       changed = true;
     }
 
-    if (Array.isArray(cloudData.analisisSeco)) {
-      db.analisisSeco = isReplace
-        ? cloudData.analisisSeco
-        : [...cloudData.analisisSeco];
+    if (Array.isArray(cloudData.analisisSeco) && cloudData.analisisSeco.length > 0) {
+      const map = new Map<string, any>();
+      (db.analisisSeco || []).forEach((item: any) => {
+        const k = formatLoteCode(item?.LOTE_ID) || item?.ANALISIS_SECO_ID;
+        if (k) map.set(k, item);
+      });
+      cloudData.analisisSeco.forEach((item: any) => {
+        const k = formatLoteCode(item?.LOTE_ID) || item?.ANALISIS_SECO_ID;
+        if (k) map.set(k, { ...map.get(k), ...item });
+      });
+      db.analisisSeco = Array.from(map.values());
       changed = true;
     }
 
-    if (Array.isArray(cloudData.presecado)) {
-      db.presecado = cloudData.presecado;
+    if (Array.isArray(cloudData.presecado) && cloudData.presecado.length > 0) {
+      const map = new Map<string, any>();
+      (db.presecado || []).forEach((item: any) => {
+        const k = formatLoteCode(item?.LOTE_ID) || item?.PRESECADO_ID;
+        if (k) map.set(k, item);
+      });
+      cloudData.presecado.forEach((item: any) => {
+        const k = formatLoteCode(item?.LOTE_ID) || item?.PRESECADO_ID;
+        if (k) map.set(k, { ...map.get(k), ...item });
+      });
+      db.presecado = Array.from(map.values());
       changed = true;
     }
 
-    if (Array.isArray(cloudData.batchesVaporizado)) {
-      db.batchesVaporizado = isReplace
-        ? cloudData.batchesVaporizado
-        : [...cloudData.batchesVaporizado];
+    if (Array.isArray(cloudData.batchesVaporizado) && cloudData.batchesVaporizado.length > 0) {
+      const map = new Map<string, any>();
+      (db.batchesVaporizado || []).forEach((item: any) => {
+        const k = (item?.BATCH_ID || item?.CORRELATIVO || "").toString().trim().toUpperCase();
+        if (k) map.set(k, item);
+      });
+      cloudData.batchesVaporizado.forEach((item: any) => {
+        const k = (item?.BATCH_ID || item?.CORRELATIVO || "").toString().trim().toUpperCase();
+        if (k) map.set(k, { ...map.get(k), ...item });
+      });
+      db.batchesVaporizado = Array.from(map.values());
       changed = true;
     }
 
-    if (Array.isArray(cloudData.batchLotes)) {
-      db.batchLotes = isReplace
-        ? cloudData.batchLotes
-        : [...cloudData.batchLotes];
+    if (Array.isArray(cloudData.batchLotes) && cloudData.batchLotes.length > 0) {
+      const map = new Map<string, any>();
+      (db.batchLotes || []).forEach((item: any) => {
+        const k = `${item?.BATCH_ID || ""}_${formatLoteCode(item?.LOTE_ID) || item?.LOTE_ID || ""}`;
+        if (k !== "_") map.set(k, item);
+      });
+      cloudData.batchLotes.forEach((item: any) => {
+        const k = `${item?.BATCH_ID || ""}_${formatLoteCode(item?.LOTE_ID) || item?.LOTE_ID || ""}`;
+        if (k !== "_") map.set(k, { ...map.get(k), ...item });
+      });
+      db.batchLotes = Array.from(map.values());
       changed = true;
     }
 
-    if (Array.isArray(cloudData.controlVaporizado)) {
-      db.controlVaporizado = isReplace
-        ? cloudData.controlVaporizado
-        : [...cloudData.controlVaporizado];
+    if (Array.isArray(cloudData.controlVaporizado) && cloudData.controlVaporizado.length > 0) {
+      const map = new Map<string, any>();
+      (db.controlVaporizado || []).forEach((item: any) => {
+        const k = (item?.BATCH_ID || item?.CORRELATIVO || item?.CONTROL_VAPORIZADO_ID || "").toString().trim().toUpperCase();
+        if (k) map.set(k, item);
+      });
+      cloudData.controlVaporizado.forEach((item: any) => {
+        const k = (item?.BATCH_ID || item?.CORRELATIVO || item?.CONTROL_VAPORIZADO_ID || "").toString().trim().toUpperCase();
+        if (k) map.set(k, { ...map.get(k), ...item });
+      });
+      db.controlVaporizado = Array.from(map.values());
       changed = true;
     }
 
-    if (Array.isArray(cloudData.analisisVaporizado)) {
-      db.analisisVaporizado = isReplace
-        ? cloudData.analisisVaporizado
-        : [...cloudData.analisisVaporizado];
+    if (Array.isArray(cloudData.analisisVaporizado) && cloudData.analisisVaporizado.length > 0) {
+      const map = new Map<string, any>();
+      (db.analisisVaporizado || []).forEach((item: any) => {
+        const k = (item?.ANALISIS_VAPORIZADO_ID || item?.BATCH_ID || "").toString().trim().toUpperCase();
+        if (k) map.set(k, item);
+      });
+      cloudData.analisisVaporizado.forEach((item: any) => {
+        const k = (item?.ANALISIS_VAPORIZADO_ID || item?.BATCH_ID || "").toString().trim().toUpperCase();
+        if (k) map.set(k, { ...map.get(k), ...item });
+      });
+      db.analisisVaporizado = Array.from(map.values());
       changed = true;
     }
 
-    if (Array.isArray(cloudData.programacionesOficiales)) {
-      db.programacionesOficiales = isReplace
-        ? cloudData.programacionesOficiales
-        : [...cloudData.programacionesOficiales];
+    if (Array.isArray(cloudData.programacionesOficiales) && cloudData.programacionesOficiales.length > 0) {
+      const progMap = new Map<string, any>();
+      (db.programacionesOficiales || []).forEach((p: any) => {
+        const key = p?.PROGRAMACION_ID || p?.id || p?.fecha || p?.FECHA || p?.batch || p?.CORRELATIVO;
+        if (key) progMap.set(String(key).trim().toUpperCase(), p);
+      });
+      cloudData.programacionesOficiales.forEach((cp: any) => {
+        const key = cp?.PROGRAMACION_ID || cp?.id || cp?.fecha || cp?.FECHA || cp?.batch || cp?.CORRELATIVO;
+        if (key) {
+          const kUpper = String(key).trim().toUpperCase();
+          progMap.set(kUpper, { ...progMap.get(kUpper), ...cp });
+        }
+      });
+      db.programacionesOficiales = Array.from(progMap.values());
       db.programacionApit = db.programacionesOficiales;
       if (typeof window !== "undefined" && window.localStorage) {
         try {

@@ -313,23 +313,7 @@ class CloudSyncService {
     this.notifyStatus();
 
     try {
-      // 0. Reinicio total en cero (v9_clean) en Firestore por única vez para dejar el sistema en 0 listo para subir
-      try {
-        const resetMarkerRef = doc(db, "systemConfig", "clean_reset_v9");
-        const resetSnap = await getDoc(resetMarkerRef);
-        if (!resetSnap.exists()) {
-          await this.purgeAllOperationalData();
-          await setDoc(resetMarkerRef, cleanFirestoreData({
-            id: "clean_reset_v9",
-            version: "v9",
-            purgedAt: new Date().toISOString()
-          }));
-        }
-      } catch (resetErr) {
-        console.warn("[CloudSync] Aviso verificando marcador de reinicio en cero v9:", resetErr);
-      }
-
-      // 0.1 Purgar de Firestore cualquier lote marcado para borrado definitivo ANTES de descargar datos
+      // 0. Purgar de Firestore únicamente lotes explícitamente marcados para eliminación por el usuario (tombstones)
       const tombstones = getDeletedLotesTombstones();
       if (tombstones.size > 0) {
         await Promise.allSettled(
@@ -536,8 +520,8 @@ class CloudSyncService {
           });
         }
 
-        // Sincronizar en localDB reflejando el estado real y exacto de Firestore
-        localDB.mergeFromCloud(cloudData, { replace: true });
+        // Sincronizar en localDB preservando los datos locales existentes (fusión segura no destructiva)
+        localDB.mergeFromCloud(cloudData, { replace: false });
         window.dispatchEvent(new CustomEvent("cloud_data_updated", { detail: { full: true } }));
 
         // Si la reconciliación de flujo corrigió estados desfasados en lotes o batches (ej. C08440 -> PROCESADO, V350 -> FERON), propagar a Firestore

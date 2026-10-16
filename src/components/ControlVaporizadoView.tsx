@@ -1119,7 +1119,7 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
   } = useAutoSaveControlVaporizado(formData, {
     batchId: activeBatchId,
     currentUser,
-    debounceMs: 650,
+    debounceMs: 400,
     onSave: onSaveControl,
     enabled: !!activeBatchId
   });

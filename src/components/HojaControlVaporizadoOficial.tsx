@@ -80,7 +80,7 @@ import {
 import { PlantSheetOCRModal, SeccionOCR, SECCIONES_OCR_INFO } from "./PlantSheetOCRModal";
 import { safeNumVal, parseOptionalNumber } from "../utils/numberUtils";
 import { generateHojaControlVaporizadoPDF } from "../utils/pdfPrintHelper";
-import { ValoresIngresoBatch } from "../utils/batchCalculator";
+import { ValoresIngresoBatch, calcularTiempoBateriaSilosSimultaneo } from "../utils/batchCalculator";
 
 interface HojaControlVaporizadoOficialProps {
   formData: Partial<ControlVaporizado>;
@@ -629,13 +629,14 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
     };
   });
 
-  const totalBateriaSilosSumaMin = silosBateriaDetalle.reduce((acc, s) => acc + s.totalSiloMin, 0);
-  const primerSiloConInicio = silosBateriaDetalle.find(s => s.inicioLlenado);
-  const horaInicioBateriaSilos = primerSiloConInicio?.inicioLlenado || "";
-  const ultimoSiloConFin = [...silosBateriaDetalle].reverse().find(s => s.finDescarga);
-  const horaFinBateriaSilos = ultimoSiloConFin?.finDescarga || "";
-  const duracionSpanBateriaSilos = calculateDuration(horaInicioBateriaSilos, horaFinBateriaSilos);
-  const totalBateriaSilosMin = totalBateriaSilosSumaMin > 0 ? totalBateriaSilosSumaMin : parseNumMins(duracionSpanBateriaSilos);
+  // Cálculo oficial de Batería de Enfriamiento y Reposo (Silos 1 al 5):
+  // Se contabiliza con la diferencia de la hora menor y la hora mayor registrada (independientemente de cada silo)
+  // debido a que las operaciones en los silos ocurren de manera simultánea.
+  const bateriaSimultaneaResult = calcularTiempoBateriaSilosSimultaneo(silosActivosList);
+  const horaInicioBateriaSilos = bateriaSimultaneaResult.horaMenor;
+  const horaFinBateriaSilos = bateriaSimultaneaResult.horaMayor;
+  const duracionSpanBateriaSilos = bateriaSimultaneaResult.duracionFormateada;
+  const totalBateriaSilosMin = bateriaSimultaneaResult.tiempoTotalMin;
 
   const duracionDescargaAReposo1Calc = calculateDuration(
     horaFinInyeccionVapor,
@@ -1990,7 +1991,21 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
   const handleGuardarTodo = () => {
     handleGuardarHistoricoManual();
     onSave();
+    setOcrSuccessToast("💾 Ficha de control de vaporizado guardada y sincronizada correctamente.");
+    setTimeout(() => setOcrSuccessToast(null), 3500);
   };
+
+  // Atajo de teclado rápido (Ctrl+S / Cmd+S) para guardar inmediatamente la hoja de control
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        handleGuardarTodo();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onSave]);
 
   const handlePrint = () => {
     try {
@@ -3590,7 +3605,7 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
             <div className="space-y-2">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1 bg-slate-100 p-2 rounded-lg border border-slate-250">
                 <div className="space-y-0.5">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-[11px] font-black text-slate-800 uppercase tracking-wide">
                       Batería de Enfriamiento y Reposo (Silos 1 al 5)
                     </span>
@@ -3603,9 +3618,27 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                         Pase Único
                       </span>
                     )}
+
+                    {/* Badge destacado de Tiempo Real Simultáneo de la Batería */}
+                    <div 
+                      className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-indigo-950 text-indigo-100 border border-indigo-500/60 shadow-xs"
+                      title="Tiempo real contabilizado por diferencia de la hora menor y la hora mayor registrada entre todos los silos (acciones simultáneas)"
+                    >
+                      <Clock className="w-3 h-3 text-indigo-400" />
+                      <span className="text-[9.5px] font-bold text-indigo-300">T. Real Batería:</span>
+                      <span className="text-[10px] font-black text-white font-mono">{totalBateriaSilosMin > 0 ? `${totalBateriaSilosMin} min` : "0 min"}</span>
+                      {horaInicioBateriaSilos && horaFinBateriaSilos && horaInicioBateriaSilos !== horaFinBateriaSilos && (
+                        <span className="text-[8.5px] text-indigo-200 font-mono">
+                          ({horaInicioBateriaSilos} ➔ {horaFinBateriaSilos})
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <p className="text-[10px] text-slate-600">
                     Control de las 3 fases críticas: <strong className="text-amber-900">1. Llenado (Exclusa)</strong> ➔ <strong className="text-slate-900">2. Reposo Térmico en Silo</strong> ➔ <strong className="text-blue-900">3. Descarga y Calidad</strong>
+                    <span className="text-[9px] text-indigo-700 font-medium ml-2 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-200">
+                      ⚡ Tiempo contabilizado por hora menor ({horaInicioBateriaSilos || "--:--"}) y mayor ({horaFinBateriaSilos || "--:--"}) por simultaneidad de silos
+                    </span>
                   </p>
                 </div>
 
@@ -4237,8 +4270,8 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                   <span className="text-[10px] text-indigo-300 block font-bold uppercase tracking-tight">3. BATERÍA SILOS</span>
                   <span className="text-xs font-black text-white">{totalBateriaSilosMin > 0 ? `${totalBateriaSilosMin} min` : "0 min"}</span>
                 </div>
-                <span className="text-[9px] text-indigo-300/90 block mt-0.5 font-medium truncate" title="Tiempo acumulado de todos los silos en llenado, reposo y enfriamiento/descarga">
-                  {horaInicioBateriaSilos ? `${horaInicioBateriaSilos} - ${horaFinBateriaSilos || "..."}` : "Total todos los silos"}
+                <span className="text-[9px] text-indigo-300/90 block mt-0.5 font-medium truncate" title="Tiempo de batería contabilizado por diferencia de la hora menor y mayor registrada entre todos los silos (acciones simultáneas)">
+                  {horaInicioBateriaSilos ? `${horaInicioBateriaSilos} - ${horaFinBateriaSilos || "..."}` : "Acciones simultáneas"}
                 </span>
               </div>
 

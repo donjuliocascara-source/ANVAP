@@ -37,7 +37,7 @@ export function useAutoSaveControlVaporizado(
   const {
     batchId,
     currentUser,
-    debounceMs = 700,
+    debounceMs = 400,
     onSave,
     enabled = true
   } = options;
@@ -134,6 +134,15 @@ export function useAutoSaveControlVaporizado(
           second: "2-digit"
         });
         setLastSavedTime(timeStr);
+
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("control_vaporizado_saved", {
+              detail: { batchId: targetBatchId, timestamp: timeStr }
+            })
+          );
+        }
+
         return true;
       } catch (err: any) {
         console.error("[AutoSave] Error sincronizando con BD:", err);
@@ -174,10 +183,10 @@ export function useAutoSaveControlVaporizado(
     }
   }, [batchId, saveLocalDraftSync]);
 
-  // Flush pending changes on component unmount (when switching app tabs) or browser tab visibility change
+  // Flush pending changes on component unmount (when switching app tabs), visibility change or beforeunload
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "hidden" && hasPendingChangesRef.current && formDataRef.current) {
+    const handleFlush = () => {
+      if (hasPendingChangesRef.current && formDataRef.current) {
         if (debounceTimerRef.current) {
           clearTimeout(debounceTimerRef.current);
           debounceTimerRef.current = null;
@@ -186,9 +195,39 @@ export function useAutoSaveControlVaporizado(
       }
     };
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        handleFlush();
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      if (hasPendingChangesRef.current && formDataRef.current) {
+        const targetId = formDataRef.current.BATCH_ID || prevBatchIdRef.current;
+        if (targetId) {
+          saveLocalDraftSync(formDataRef.current, targetId);
+          try {
+            localDB.saveControlVaporizado(
+              {
+                ...formDataRef.current,
+                BATCH_ID: targetId,
+                OPERADOR: formDataRef.current.OPERADOR || currentUserRef.current?.nombre || "Operador de Planta"
+              },
+              currentUserRef.current?.nombre || "Operador"
+            );
+          } catch {
+            // ignore
+          }
+        }
+      }
+    };
+
     window.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
     return () => {
       window.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
         debounceTimerRef.current = null;
