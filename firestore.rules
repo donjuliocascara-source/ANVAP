@@ -1,0 +1,9 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Permitir lectura y escritura completa para todas las colecciones y documentos de planta
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

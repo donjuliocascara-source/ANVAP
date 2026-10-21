@@ -1,0 +1,100 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --color-slate-750: #293548;
+  --color-slate-850: #162032;
+}
+
+@layer base {
+  html,
+  body {
+    background-color: #020617;
+    color: #f8fafc;
+    color-scheme: dark;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  input,
+  select,
+  textarea {
+    color-scheme: dark;
+  }
+
+  table,
+  td,
+  th,
+  .font-mono {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Official Plant Sheet & Modal Print Rules */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 6mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    height: auto !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Omitir logos en documentos PDF e impresiones */
+  .pdf-no-logo,
+  .molino-logo,
+  [data-pdf-logo="true"],
+  img[alt*="logo" i],
+  svg[aria-label*="logo" i] {
+    display: none !important;
+  }
+
+  /* When printing an isolated sheet/modal, hide everything except the target and its ancestors */
+  body.printing-isolated-sheet > *:not(.print-isolated-ancestor):not(.print-isolated-target) {
+    display: none !important;
+  }
+
+  body.printing-isolated-sheet .print-isolated-ancestor > *:not(.print-isolated-ancestor):not(.print-isolated-target) {
+    display: none !important;
+  }
+
+  body.printing-isolated-sheet .print-isolated-ancestor {
+    position: static !important;
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  body.printing-isolated-sheet .print-isolated-target {
+    position: static !important;
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+  }
+
+  #plant-control-official-sheet {
+    min-width: 0 !important;
+    width: 100% !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: 1px solid #94a3b8 !important;
+  }
+}
