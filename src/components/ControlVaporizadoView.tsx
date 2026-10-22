@@ -739,9 +739,9 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
   const [showCierreModal, setShowCierreModal] = useState(false);
   const [bannerNotice, setBannerNotice] = useState<{ type: "success" | "error" | "info"; msg: string } | null>(null);
 
-  // Permisos según rol
+  // Permisos: En Control Vaporizado, operarios de vaporizado, supervisores y jefes pueden Cerrar & Liquidar Batch sin restricción
   const userRole = (currentUser?.rol || "OPERARIO") as UserRole;
-  const canCerrarBatch = tienePermiso(userRole, "cerrar_aprobar_batch");
+  const canCerrarBatch = true;
   const canOperarPiso = tienePermiso(userRole, "operar_autoclave_piso");
 
   useEffect(() => {
@@ -1119,13 +1119,6 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
   };
 
   const handleAbrirCierreModal = () => {
-    if (!canCerrarBatch) {
-      setBannerNotice({
-        type: "error",
-        msg: obtenerMensajeRestriccion("cerrar_aprobar_batch")
-      });
-      return;
-    }
     if (selectedBatch) {
       const ctrlExistente = controles.find(c => 
         c.BATCH_ID === selectedBatch.BATCH_ID || 
@@ -1151,14 +1144,6 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
   // Handler: Liquidación de Vaporizado en Planta (solo conformidades y observaciones - Análisis de Descarga Pendiente)
   const handleConfirmarCierreTotal = async () => {
     if (!selectedBatch) return;
-
-    if (!canCerrarBatch) {
-      setBannerNotice({
-        type: "error",
-        msg: obtenerMensajeRestriccion("cerrar_aprobar_batch")
-      });
-      return;
-    }
 
     if (!conformidadCierre || !conformidadDescarga) {
       setBannerNotice({
@@ -1406,14 +1391,10 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
             <button
               id="btn-abrir-cierre-batch"
               onClick={handleAbrirCierreModal}
-              className={`px-3.5 py-2 rounded-xl text-white font-black text-xs shadow-lg flex items-center gap-1.5 transition-all cursor-pointer ${
-                canCerrarBatch
-                  ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-95"
-                  : "bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-750"
-              }`}
-              title={canCerrarBatch ? (isBatchEvaluado ? "Cerrar el Batch Completamente (Estado: CERRADO)" : "Cerrar y Liquidar Batch (Estado: VAPORIZADO)") : "Permiso exclusivo de Jefatura y Supervisión"}
+              className="px-3.5 py-2 rounded-xl text-white font-black text-xs shadow-lg flex items-center gap-1.5 transition-all cursor-pointer bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-95 shadow-emerald-950/40 ring-1 ring-emerald-400/40"
+              title={isBatchEvaluado ? "Cerrar el Batch Completamente (Estado: CERRADO)" : "Cerrar y Liquidar Batch en Planta (Estado: VAPORIZADO)"}
             >
-              <Lock className={`w-4 h-4 ${canCerrarBatch ? "text-white" : "text-amber-400"}`} />
+              <CheckCircle2 className="w-4 h-4 text-white" />
               <span>{isBatchEvaluado ? "Cerrar Batch Completamente" : "Cerrar & Liquidar Batch"}</span>
             </button>
           )}

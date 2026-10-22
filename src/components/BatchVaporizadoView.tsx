@@ -212,7 +212,7 @@ export const BatchVaporizadoView: React.FC<BatchVaporizadoViewProps> = ({
   const userRole = (currentUser?.rol || "OPERARIO") as UserRole;
   const canProgramarBatch = tienePermiso(userRole, "crear_programacion_batch");
   const canAjustarParametros = tienePermiso(userRole, "editar_receta_autoclave");
-  const canCerrarBatch = tienePermiso(userRole, "cerrar_aprobar_batch");
+  const canCerrarBatch = tienePermiso(currentUser || userRole, "cerrar_aprobar_batch");
 
   const todasLasVariedades = useMemo(() => {
     const setVar = new Set<string>();

@@ -304,7 +304,7 @@ export const MATRIZ_PERMISOS: Record<UserRole, PermisosRol> = {
       editar_receta_autoclave: false, // Ver hoja de datos de vaporizado
       operar_autoclave_piso: false,
       control_secadoras_piso: false,
-      cerrar_aprobar_batch: false, // Solo Jefe de Vaporizado
+      cerrar_aprobar_batch: true, // Cierre y liquidación habilitado
       registrar_prueba_coccion: true, // Cocción
       modificar_pesos_algoritmo: false,
       modificar_criterios_evaluacion: false,
@@ -314,8 +314,7 @@ export const MATRIZ_PERMISOS: Record<UserRole, PermisosRol> = {
       gestionar_usuarios: false
     },
     restriccionesClave: [
-      "Facultado para: Subir lotes de acopio, subir análisis de descarga y registrar pruebas de cocción.",
-      "Restringido: Cierre formal de batches (exclusivo de Jefatura de Vaporizado).",
+      "Facultado para: Subir lotes de acopio, subir análisis de descarga, cerrar batches y registrar pruebas de cocción.",
       "Modo de consulta en programación y hoja de control de vaporizado."
     ],
     vistasPrincipales: [
@@ -355,7 +354,7 @@ export const MATRIZ_PERMISOS: Record<UserRole, PermisosRol> = {
       editar_receta_autoclave: false, // Ver hoja de datos de vaporizado
       operar_autoclave_piso: false,
       control_secadoras_piso: false,
-      cerrar_aprobar_batch: false, // Solo Jefe de Vaporizado
+      cerrar_aprobar_batch: true, // Cierre y liquidación habilitado
       registrar_prueba_coccion: true, // Cocción
       modificar_pesos_algoritmo: false,
       modificar_criterios_evaluacion: true,
@@ -366,8 +365,7 @@ export const MATRIZ_PERMISOS: Record<UserRole, PermisosRol> = {
     },
     restriccionesClave: [
       "Restringido: Subida y modificación de lotes en recepción (exclusivo Jefe de Acopio / Operaciones).",
-      "Restringido: Cierre formal de batches (exclusivo de Jefatura de Vaporizado).",
-      "Facultado para: Subir análisis de descarga y registrar cocción."
+      "Facultado para: Subir análisis de descarga, registrar cocción y cerrar batches en planta."
     ],
     vistasPrincipales: [
       "Paso 5: Análisis Descarga (Subir)",
@@ -402,7 +400,7 @@ export const MATRIZ_PERMISOS: Record<UserRole, PermisosRol> = {
       editar_receta_autoclave: false, // Solo Jefe o Programador
       operar_autoclave_piso: true,
       control_secadoras_piso: true,
-      cerrar_aprobar_batch: false, // Solo Jefe de Planta
+      cerrar_aprobar_batch: true, // Habilitado para supervisores
       registrar_prueba_coccion: false,
       modificar_pesos_algoritmo: false,
       modificar_criterios_evaluacion: false,
@@ -412,7 +410,7 @@ export const MATRIZ_PERMISOS: Record<UserRole, PermisosRol> = {
       gestionar_usuarios: false
     },
     restriccionesClave: [
-      "Restringido: Cierre formal y aprobación ejecutiva de batches (requiere Jefe de Vaporizado).",
+      "Facultado para: Cierre y liquidación de batches en planta, control de autoclaves y secadoras.",
       "Restringido: Modificación de fórmulas, pesos o configuración del sistema.",
       "Restringido: Emisión de dictámenes de calidad de laboratorio de materia prima."
     ],
@@ -445,7 +443,7 @@ export const MATRIZ_PERMISOS: Record<UserRole, PermisosRol> = {
       editar_receta_autoclave: false,
       operar_autoclave_piso: false,
       control_secadoras_piso: false,
-      cerrar_aprobar_batch: false,
+      cerrar_aprobar_batch: true,
       registrar_prueba_coccion: true,
       modificar_pesos_algoritmo: false,
       modificar_criterios_evaluacion: false,
@@ -488,7 +486,7 @@ export const MATRIZ_PERMISOS: Record<UserRole, PermisosRol> = {
       editar_receta_autoclave: false,
       operar_autoclave_piso: false,
       control_secadoras_piso: false,
-      cerrar_aprobar_batch: false,
+      cerrar_aprobar_batch: true,
       registrar_prueba_coccion: true,
       modificar_pesos_algoritmo: false,
       modificar_criterios_evaluacion: false,
@@ -529,7 +527,7 @@ export const MATRIZ_PERMISOS: Record<UserRole, PermisosRol> = {
       editar_receta_autoclave: false,
       operar_autoclave_piso: false,
       control_secadoras_piso: false,
-      cerrar_aprobar_batch: false,
+      cerrar_aprobar_batch: true,
       registrar_prueba_coccion: true,
       modificar_pesos_algoritmo: false,
       modificar_criterios_evaluacion: false,
@@ -568,7 +566,7 @@ export const MATRIZ_PERMISOS: Record<UserRole, PermisosRol> = {
       editar_receta_autoclave: false,
       operar_autoclave_piso: true,
       control_secadoras_piso: true,
-      cerrar_aprobar_batch: false,
+      cerrar_aprobar_batch: true,
       registrar_prueba_coccion: false,
       modificar_pesos_algoritmo: false,
       modificar_criterios_evaluacion: false,
@@ -608,7 +606,7 @@ export const MATRIZ_PERMISOS: Record<UserRole, PermisosRol> = {
       editar_receta_autoclave: false,
       operar_autoclave_piso: true,
       control_secadoras_piso: true,
-      cerrar_aprobar_batch: false,
+      cerrar_aprobar_batch: true,
       registrar_prueba_coccion: false,
       modificar_pesos_algoritmo: false,
       modificar_criterios_evaluacion: false,
@@ -762,6 +760,29 @@ export function obtenerMatrizPermisos(): Record<UserRole, PermisosRol> {
             };
           }
         }
+
+        // Garantizar que la acción cerrar_aprobar_batch esté siempre permitida para operarios, supervisores y jefes
+        const rolesCierrePermitido: UserRole[] = [
+          "OPERARIO",
+          "OPERADOR",
+          "SUPERVISOR",
+          "JEFE_VAPORIZADO",
+          "JEFE_PLANTA",
+          "JEFE_ACOPIO",
+          "JEFE_CALIDAD",
+          "CALIDAD",
+          "CONTROL_CALIDAD",
+          "ANALISTA_CALIDAD",
+          "PROGRAMADOR",
+          "ADMINISTRADOR",
+          "ADMIN"
+        ];
+        rolesCierrePermitido.forEach((r) => {
+          if (merged[r]?.acciones) {
+            merged[r].acciones.cerrar_aprobar_batch = true;
+          }
+        });
+
         return merged;
       }
     }
@@ -934,7 +955,7 @@ export function obtenerMensajeRestriccion(accion: PermisoAccion): string {
     case "editar_receta_autoclave":
       return "Acción restringida: La creación y modificación de recetas es exclusiva de Jefatura de Vaporizado.";
     case "cerrar_aprobar_batch":
-      return "Acción restringida: Solo el Jefe de Vaporizado puede cerrar el Batch formalmente.";
+      return "Acción restringida: El cierre y liquidación del batch requiere perfil de Planta (Operario de Vaporizado, Supervisor o Jefatura).";
     case "registrar_prueba_coccion":
       return "Acción restringida: El registro de pruebas de cocción y organoléptico corresponde a Control de Calidad.";
     case "gestionar_usuarios":

@@ -2123,9 +2123,9 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
               type="button"
               onClick={onCerrarLiquidarBatch}
               className="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-lg text-xs font-black flex items-center gap-1.5 shadow-lg transition-colors cursor-pointer"
-              title="Cerrar y liquidar batch en planta (Conformidad de Cierre, Descarga y Observaciones - Análisis de Descarga queda Pendiente)"
+              title="Cerrar y liquidar batch en planta (Operarios de Vaporizado, Supervisores y Jefes)"
             >
-              <Lock className="w-4 h-4" />
+              <CheckCircle2 className="w-4 h-4" />
               <span>Cerrar & Liquidar Batch</span>
             </button>
           )}
