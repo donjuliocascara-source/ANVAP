@@ -283,6 +283,8 @@ export interface BatchVaporizado {
   ALARMA_PESO_DESCARGA_ACTIVA?: boolean;
   ALARMA_PESO_DESCARGA_ACEPTADA?: boolean;
   SUSTENTO_ALARMA_PESO_DESCARGA?: string;
+  updatedAt?: string;
+  [key: string]: any;
 }
 
 export interface SacaBigBagItem {
@@ -339,6 +341,8 @@ export interface BatchLote {
   QUEBRADO_PCT?: number;
   TIPO_SERVICIO?: string;
   OBSERVACIONES?: string;
+  updatedAt?: string;
+  [key: string]: any;
 }
 
 export type SiloEstado = "DISPONIBLE" | "LLENADO" | "REPOSO" | "DESCARGA" | "COMPLETADO" | string;

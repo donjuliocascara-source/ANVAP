@@ -133,6 +133,9 @@ export interface ProgramacionBatchOficial {
   parametrosDeterminados: ParametrosOperativosBatch;
   observacion: string;
   estado: "PROGRAMADO" | "EN PROCESO" | "VAPORIZADO" | "FINALIZADO" | "OBSERVADO";
+  updatedAt?: string;
+  originalBatch?: string;
+  originalId?: string;
 }
 
 const STORAGE_KEY_PROGRAMACIONES_OFICIALES = "molino_programaciones_batch_oficiales_v4";
@@ -686,13 +689,17 @@ export function cargarProgramacionesOficiales(): ProgramacionBatchOficial[] {
       if (!existing) {
         pMap.set(key, p);
       } else {
-        const exLen = Array.isArray(existing.filasLote) ? existing.filasLote.length : 0;
-        const newLen = Array.isArray(p.filasLote) ? p.filasLote.length : 0;
-        pMap.set(key, newLen >= exLen ? { ...existing, ...p } : { ...p, ...existing });
+        const existingTime = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+        const pTime = p.updatedAt ? new Date(p.updatedAt).getTime() : 0;
+        if (existingTime >= pTime) {
+          pMap.set(key, { ...p, ...existing });
+        } else {
+          pMap.set(key, { ...existing, ...p });
+        }
       }
     };
 
-    for (const kName of [STORAGE_KEY_PROGRAMACIONES_OFICIALES, "programaciones_batch_oficial_v1"]) {
+    for (const kName of [STORAGE_KEY_PROGRAMACIONES_OFICIALES, "molino_programaciones_batch_oficiales_v3", "programaciones_batch_oficial_v1"]) {
       const saved = localStorage.getItem(kName);
       if (saved) {
         try {
@@ -875,6 +882,7 @@ export function guardarProgramacionesOficiales(progs: ProgramacionBatchOficial[]
     const ordenadas = ordenarProgramacionesDeArribaHaciaAbajo(sinV200);
     const serialized = JSON.stringify(ordenadas);
     localStorage.setItem(STORAGE_KEY_PROGRAMACIONES_OFICIALES, serialized);
+    localStorage.setItem("molino_programaciones_batch_oficiales_v3", serialized);
     localStorage.setItem("programaciones_batch_oficial_v1", serialized);
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("programaciones-oficiales-updated", { detail: ordenadas }));

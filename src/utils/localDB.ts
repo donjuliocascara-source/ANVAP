@@ -144,6 +144,16 @@ export function cleanRecord<T extends Record<string, any>>(obj: T): T {
   return result as T;
 }
 
+export function normalizeBatchKey(code?: string): string {
+  if (!code) return "";
+  return code
+    .toString()
+    .trim()
+    .toUpperCase()
+    .replace(/^(BATCH|BAT|B|LOTE|COD)[\s\-_:]*/i, "")
+    .replace(/[\s\-_]/g, "");
+}
+
 export interface LocalDatabaseSchema {
   lotes: Lote[];
   registroHumedad: RegistroHumedad[];
@@ -931,7 +941,7 @@ export function deduplicateAndMigrateLotes(db: LocalDatabaseSchema): void {
         const k = normalizeBatchKey(p?.batch || p?.id);
         if (k) pMap.set(k, p);
       });
-      for (const lsKey of ["molino_programaciones_batch_oficiales_v3", "programaciones_batch_oficial_v1"]) {
+      for (const lsKey of ["molino_programaciones_batch_oficiales_v4", "molino_programaciones_batch_oficiales_v3", "programaciones_batch_oficial_v1"]) {
         const raw = window.localStorage.getItem(lsKey);
         if (raw) {
           const parsed = JSON.parse(raw);
@@ -943,9 +953,14 @@ export function deduplicateAndMigrateLotes(db: LocalDatabaseSchema): void {
               if (!existing) {
                 pMap.set(k, p);
               } else {
-                const exFilas = Array.isArray(existing.filasLote) ? existing.filasLote.length : 0;
-                const newFilas = Array.isArray(p.filasLote) ? p.filasLote.length : 0;
-                pMap.set(k, newFilas >= exFilas ? { ...existing, ...p } : { ...p, ...existing });
+                const existingTime = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+                const pTime = p.updatedAt ? new Date(p.updatedAt).getTime() : 0;
+                if (existingTime >= pTime) {
+                  // In-memory or existing batch was updated more recently; keep existing edits
+                  pMap.set(k, { ...p, ...existing });
+                } else {
+                  pMap.set(k, { ...existing, ...p });
+                }
               }
             });
           }
@@ -3579,15 +3594,43 @@ class LocalDBService {
 
   public updateBatch(batchId: string, patch: Partial<BatchVaporizado>, user: string = "Operador"): BatchVaporizado | null {
     const db = this.load();
-    const idx = db.batchesVaporizado.findIndex(b => b.BATCH_ID === batchId || b.CORRELATIVO === batchId);
-    if (idx === -1) return null;
-    db.batchesVaporizado[idx] = {
-      ...db.batchesVaporizado[idx],
-      ...patch
+    const rawTarget = (batchId || "").toString().trim().toUpperCase();
+    const normTarget = rawTarget.replace(/^(BATCH|BAT|B)[\s\-_:]*/i, "").replace(/[\s\-_]/g, "");
+    const matchesTarget = (val?: string) => {
+      if (!val) return false;
+      const u = val.toString().trim().toUpperCase();
+      if (u === rawTarget) return true;
+      const n = u.replace(/^(BATCH|BAT|B)[\s\-_:]*/i, "").replace(/[\s\-_]/g, "");
+      return Boolean(normTarget && n === normTarget);
     };
+
+    const idx = db.batchesVaporizado.findIndex(b => matchesTarget(b.BATCH_ID) || matchesTarget(b.CORRELATIVO));
+    if (idx !== -1) {
+      db.batchesVaporizado[idx] = {
+        ...db.batchesVaporizado[idx],
+        ...patch,
+        updatedAt: new Date().toISOString()
+      };
+    }
+
+    if (Array.isArray(db.programacionesOficiales)) {
+      const pIdx = db.programacionesOficiales.findIndex((p: any) => matchesTarget(p?.batch) || matchesTarget(p?.id));
+      if (pIdx !== -1) {
+        const pObj = db.programacionesOficiales[pIdx];
+        if (patch.FECHA_PROGRAMADA) pObj.fecha = patch.FECHA_PROGRAMADA;
+        if (patch.TURNO) pObj.turno = patch.TURNO.toUpperCase().includes("NOCHE") ? "NOCHE" : "DIA";
+        if (patch.OBSERVACIONES !== undefined) pObj.observacion = patch.OBSERVACIONES;
+        if (patch.CLIENTE) pObj.clientePrincipal = patch.CLIENTE;
+        if (patch.VARIEDAD) pObj.variedadPrincipal = patch.VARIEDAD;
+        pObj.updatedAt = new Date().toISOString();
+        db.programacionesOficiales[pIdx] = { ...pObj };
+        db.programacionApit = db.programacionesOficiales;
+      }
+    }
+
     this.addAuditLog(`Actualización de Batch ${batchId}`, user);
     this.persist();
-    return db.batchesVaporizado[idx];
+    return idx !== -1 ? db.batchesVaporizado[idx] : null;
   }
 
   public deleteBatch(batchId: string, user: string = "Operador", force: boolean = false): boolean {
@@ -4653,9 +4696,29 @@ class LocalDBService {
     const db = this.load();
     if (!db.programacionesOficiales) db.programacionesOficiales = [];
     const id = prog.id || `PROG-BATCH-${Date.now()}`;
-    const progObj = { ...prog, id };
+    const nowIso = new Date().toISOString();
+    const progObj = { 
+      ...prog, 
+      id,
+      updatedAt: prog.updatedAt || nowIso
+    };
 
-    const idx = db.programacionesOficiales.findIndex(p => p.id === id || (prog.batch && p.batch === prog.batch));
+    const targetBatch = (prog.batch || "").toString().trim().toUpperCase();
+    const targetOriginalBatch = (prog.originalBatch || prog.originalBatchCode || "").toString().trim().toUpperCase();
+    const targetId = id.toString().trim().toUpperCase();
+    const targetOriginalId = (prog.originalId || "").toString().trim().toUpperCase();
+
+    const idx = db.programacionesOficiales.findIndex((p: any) => {
+      const pId = (p?.id || "").toString().trim().toUpperCase();
+      const pBatch = (p?.batch || "").toString().trim().toUpperCase();
+      return (
+        pId === targetId ||
+        (targetOriginalId && pId === targetOriginalId) ||
+        (targetBatch && pBatch === targetBatch) ||
+        (targetOriginalBatch && pBatch === targetOriginalBatch)
+      );
+    });
+
     if (idx !== -1) {
       db.programacionesOficiales[idx] = progObj;
     } else {
@@ -4668,17 +4731,78 @@ class LocalDBService {
       });
     }
     db.programacionApit = db.programacionesOficiales;
-    deduplicateAndMigrateLotes(db);
+
+    // Sincronizar en batchesVaporizado y batchLotes para que la edición se refleje en todo el sistema
+    if (progObj.batch) {
+      if (!Array.isArray(db.batchesVaporizado)) db.batchesVaporizado = [];
+      const bIdx = db.batchesVaporizado.findIndex(b => 
+        (b.BATCH_ID && b.BATCH_ID.toUpperCase() === targetBatch) ||
+        (targetOriginalBatch && b.BATCH_ID && b.BATCH_ID.toUpperCase() === targetOriginalBatch) ||
+        (b.CORRELATIVO && b.CORRELATIVO.toUpperCase() === targetBatch)
+      );
+      const batchPayload: Partial<BatchVaporizado> = {
+        BATCH_ID: progObj.batch,
+        CORRELATIVO: progObj.batch,
+        FECHA_PROGRAMADA: progObj.fecha,
+        TURNO: progObj.turno === "DIA" ? "Turno Día" : "Turno Noche",
+        CLIENTE: progObj.clientePrincipal,
+        VARIEDAD: progObj.variedadPrincipal,
+        TOTAL_SACOS: progObj.totalSacosProg,
+        TOTAL_PESO_KG: progObj.pesoTotalKg,
+        PESO_TOTAL_KG: progObj.pesoTotalKg,
+        TON_PROGRAMADAS: Number(((progObj.pesoTotalKg || 0) / 1000).toFixed(2)),
+        OBSERVACIONES: progObj.observacion,
+        updatedAt: nowIso
+      };
+      if (bIdx !== -1) {
+        db.batchesVaporizado[bIdx] = { ...db.batchesVaporizado[bIdx], ...batchPayload };
+      }
+
+      if (Array.isArray(progObj.filasLote) && progObj.filasLote.length > 0) {
+        if (!Array.isArray(db.batchLotes)) db.batchLotes = [];
+        progObj.filasLote.forEach((f: any, fIdx: number) => {
+          const lId = f.loteId || f.LOTE_ID;
+          if (!lId) return;
+          const blIdx = db.batchLotes.findIndex(bl => 
+            (bl.BATCH_ID === progObj.batch || (targetOriginalBatch && bl.BATCH_ID === targetOriginalBatch)) &&
+            bl.LOTE_ID === lId
+          );
+          const blItem = {
+            BATCH_LOTE_ID: `BL-${progObj.batch}-${lId}-${fIdx + 1}`,
+            BATCH_ID: progObj.batch,
+            LOTE_ID: lId,
+            SACOS: f.sacProg || f.sacos,
+            PESO_KG: f.pesoProg || f.peso,
+            ORDEN: fIdx + 1,
+            CLIENTE: f.cliente || progObj.clientePrincipal,
+            VARIEDAD: f.variedad || progObj.variedadPrincipal,
+            ESTADO: "PROGRAMADO",
+            TIPO_SERVICIO: f.tipoServicio || progObj.tipoServicio,
+            updatedAt: nowIso
+          };
+          if (blIdx !== -1) {
+            db.batchLotes[blIdx] = { ...db.batchLotes[blIdx], ...blItem };
+          } else {
+            db.batchLotes.push(blItem);
+          }
+        });
+      }
+    }
+
+    // Guardar en localStorage ANTES de deduplicateAndMigrateLotes para que la versión recién editada prevalezca
     if (typeof window !== "undefined" && window.localStorage) {
       try {
         const serialized = JSON.stringify(db.programacionesOficiales);
         window.localStorage.setItem("programaciones_batch_oficial_v1", serialized);
         window.localStorage.setItem("molino_programaciones_batch_oficiales_v3", serialized);
+        window.localStorage.setItem("molino_programaciones_batch_oficiales_v4", serialized);
         window.dispatchEvent(new CustomEvent("programaciones-oficiales-updated", { detail: db.programacionesOficiales }));
       } catch {
         // ignore
       }
     }
+
+    deduplicateAndMigrateLotes(db);
     this.persist();
     return progObj;
   }
@@ -5469,14 +5593,37 @@ class LocalDBService {
       }
       case "programaciones": {
         const cloudProgs = items || [];
-        db.programacionesOficiales = cloudProgs;
-        db.programacionApit = cloudProgs;
+        const progMap = new Map<string, any>();
+        (db.programacionesOficiales || []).forEach((p: any) => {
+          const k = normalizeBatchKey(p?.batch || p?.id || p?.PROGRAMACION_ID);
+          if (k) progMap.set(k, p);
+        });
+        cloudProgs.forEach((cp: any) => {
+          const k = normalizeBatchKey(cp?.batch || cp?.id || cp?.PROGRAMACION_ID);
+          if (!k) return;
+          const localItem = progMap.get(k);
+          if (!localItem) {
+            progMap.set(k, cp);
+          } else {
+            const localTime = localItem.updatedAt ? new Date(localItem.updatedAt).getTime() : 0;
+            const cloudTime = cp.updatedAt ? new Date(cp.updatedAt).getTime() : 0;
+            if (localTime > cloudTime) {
+              progMap.set(k, { ...cp, ...localItem });
+            } else {
+              progMap.set(k, { ...localItem, ...cp });
+            }
+          }
+        });
+        const mergedProgs = Array.from(progMap.values());
+        db.programacionesOficiales = mergedProgs;
+        db.programacionApit = mergedProgs;
         if (typeof window !== "undefined" && window.localStorage) {
           try {
-            const serialized = JSON.stringify(cloudProgs);
+            const serialized = JSON.stringify(mergedProgs);
             window.localStorage.setItem("programaciones_batch_oficial_v1", serialized);
             window.localStorage.setItem("molino_programaciones_batch_oficiales_v3", serialized);
-            window.dispatchEvent(new CustomEvent("programaciones-oficiales-updated", { detail: cloudProgs }));
+            window.localStorage.setItem("molino_programaciones_batch_oficiales_v4", serialized);
+            window.dispatchEvent(new CustomEvent("programaciones-oficiales-updated", { detail: mergedProgs }));
           } catch {
             // ignore
           }
@@ -5667,7 +5814,18 @@ class LocalDBService {
         const key = cp?.PROGRAMACION_ID || cp?.id || cp?.fecha || cp?.FECHA || cp?.batch || cp?.CORRELATIVO;
         if (key) {
           const kUpper = String(key).trim().toUpperCase();
-          progMap.set(kUpper, { ...progMap.get(kUpper), ...cp });
+          const localItem = progMap.get(kUpper);
+          if (!localItem) {
+            progMap.set(kUpper, cp);
+          } else {
+            const localTime = localItem.updatedAt ? new Date(localItem.updatedAt).getTime() : 0;
+            const cloudTime = cp.updatedAt ? new Date(cp.updatedAt).getTime() : 0;
+            if (localTime > cloudTime) {
+              progMap.set(kUpper, { ...cp, ...localItem });
+            } else {
+              progMap.set(kUpper, { ...localItem, ...cp });
+            }
+          }
         }
       });
       db.programacionesOficiales = Array.from(progMap.values());
@@ -5677,6 +5835,7 @@ class LocalDBService {
           const serialized = JSON.stringify(db.programacionesOficiales);
           window.localStorage.setItem("programaciones_batch_oficial_v1", serialized);
           window.localStorage.setItem("molino_programaciones_batch_oficiales_v3", serialized);
+          window.localStorage.setItem("molino_programaciones_batch_oficiales_v4", serialized);
           window.dispatchEvent(new CustomEvent("programaciones-oficiales-updated", { detail: db.programacionesOficiales }));
         } catch {
           // ignore

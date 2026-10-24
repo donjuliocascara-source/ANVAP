@@ -437,9 +437,13 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [batchToQuickEdit, setBatchToQuickEdit] = useState<ProgramacionBatchOficial | null>(null);
   const [quickEditData, setQuickEditData] = useState<{
+    batch: string;
     caso: string;
     fecha: string;
     turno: "DIA" | "NOCHE";
+    clientePrincipal: string;
+    variedadPrincipal: string;
+    filasLote: LoteProgramacionFila[];
     modalidadPases: "1_PASE" | "2_PASES";
     presionBar: number;
     velExclusa: number;
@@ -453,9 +457,13 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
     velExclusaPase2: number;
     observacion: string;
   }>({
+    batch: "",
     caso: "",
     fecha: "",
     turno: "DIA",
+    clientePrincipal: "",
+    variedadPrincipal: "",
+    filasLote: [],
     modalidadPases: "1_PASE",
     presionBar: 0.35,
     velExclusa: 4,
@@ -1961,6 +1969,8 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
 
     const progObj: ProgramacionBatchOficial = {
       id: editingProgId || `PROG-BATCH-${Date.now()}`,
+      originalBatch: editingOriginalBatchCode || undefined,
+      originalId: editingProgId || undefined,
       caso: casoNombre.trim() || batchCorrelativo || "Batch",
       fecha: fechaProg,
       turno: turnoProg,
@@ -1987,7 +1997,8 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
         velExclusaPase2: velExclPase2Det
       },
       observacion: observacionProg || (promedios.ph < 14.5 ? "LOTE CN HUMEDAD BAJA" : ""),
-      estado: forzar ? "OBSERVADO" : "PROGRAMADO"
+      estado: forzar ? "OBSERVADO" : "PROGRAMADO",
+      updatedAt: new Date().toISOString()
     };
 
     setProgramaciones(prev => {
@@ -2290,9 +2301,13 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
     setBatchToQuickEdit(prog);
     const pDet = prog.parametrosDeterminados;
     setQuickEditData({
-      caso: prog.caso,
-      fecha: prog.fecha,
-      turno: prog.turno,
+      batch: prog.batch || "",
+      caso: prog.caso || "",
+      fecha: prog.fecha || new Date().toISOString().split("T")[0],
+      turno: prog.turno || "DIA",
+      clientePrincipal: prog.clientePrincipal || "",
+      variedadPrincipal: prog.variedadPrincipal || "",
+      filasLote: Array.isArray(prog.filasLote) ? prog.filasLote.map(f => ({ ...f })) : [],
       modalidadPases: pDet?.modalidadPases || "1_PASE",
       presionBar: pDet?.presionBar ?? 0.35,
       velExclusa: pDet?.velExclusa ?? 4,
@@ -2311,11 +2326,31 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
   const handleGuardarEdicionRapida = async () => {
     if (!batchToQuickEdit) return;
 
+    const originalBatch = batchToQuickEdit.batch;
+    const newBatch = (quickEditData.batch || originalBatch).trim().toUpperCase();
+    const nowIso = new Date().toISOString();
+
+    const filasParaGuardar = quickEditData.filasLote && quickEditData.filasLote.length > 0
+      ? quickEditData.filasLote
+      : (batchToQuickEdit.filasLote || []);
+
+    const { totalSacosProg, pesoTotalKg, promedios } = calcularPromediosPonderadosBatch(filasParaGuardar);
+
     const progActualizado: ProgramacionBatchOficial = {
       ...batchToQuickEdit,
-      caso: quickEditData.caso,
-      fecha: quickEditData.fecha,
+      id: batchToQuickEdit.id,
+      batch: newBatch,
+      originalBatch: originalBatch,
+      originalId: batchToQuickEdit.id,
+      caso: quickEditData.caso.trim() || batchToQuickEdit.caso,
+      fecha: quickEditData.fecha || batchToQuickEdit.fecha,
       turno: quickEditData.turno,
+      clientePrincipal: quickEditData.clientePrincipal || batchToQuickEdit.clientePrincipal,
+      variedadPrincipal: quickEditData.variedadPrincipal || batchToQuickEdit.variedadPrincipal,
+      filasLote: filasParaGuardar,
+      totalSacosProg: totalSacosProg || batchToQuickEdit.totalSacosProg,
+      pesoTotalKg: pesoTotalKg || batchToQuickEdit.pesoTotalKg,
+      promedios: promedios || batchToQuickEdit.promedios,
       parametrosDeterminados: {
         modalidadPases: quickEditData.modalidadPases,
         presionBar: quickEditData.modalidadPases === "2_PASES" ? quickEditData.presionPase2 : quickEditData.presionBar,
@@ -2329,11 +2364,12 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
         velExclusaPase1: quickEditData.velExclusaPase1,
         velExclusaPase2: quickEditData.velExclusaPase2
       },
-      observacion: quickEditData.observacion
+      observacion: quickEditData.observacion,
+      updatedAt: nowIso
     };
 
     setProgramaciones(prev => {
-      const idx = prev.findIndex(p => p.id === progActualizado.id || p.batch === progActualizado.batch);
+      const idx = prev.findIndex(p => p.id === progActualizado.id || p.batch === originalBatch || p.batch === newBatch);
       let next: ProgramacionBatchOficial[];
       if (idx >= 0) {
         next = [...prev];
@@ -2346,15 +2382,29 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
     });
 
     try {
-      localDB.saveProgramacionOficial(progActualizado);
+      localDB.saveProgramacionOficial(progActualizado, currentUser?.nombre || "Operador");
       cloudSyncService.syncProgramacion(progActualizado).catch(err => {
         console.warn("Aviso sincronizando programación rápida:", err);
       });
+      if (originalBatch !== newBatch) {
+        try {
+          localDB.deleteBatch(originalBatch, currentUser?.nombre || "Operador", true);
+        } catch {
+          // ignore
+        }
+      }
       localDB.updateBatch(progActualizado.batch, {
         FECHA_PROGRAMADA: progActualizado.fecha,
         TURNO: progActualizado.turno === "DIA" ? "Turno Día" : "Turno Noche",
-        OBSERVACIONES: progActualizado.observacion
+        OBSERVACIONES: progActualizado.observacion,
+        CLIENTE: progActualizado.clientePrincipal,
+        VARIEDAD: progActualizado.variedadPrincipal,
+        TOTAL_SACOS: progActualizado.totalSacosProg,
+        TOTAL_PESO_KG: progActualizado.pesoTotalKg,
+        PESO_TOTAL_KG: progActualizado.pesoTotalKg,
+        TON_PROGRAMADAS: Number(((progActualizado.pesoTotalKg || 0) / 1000).toFixed(2))
       }, currentUser?.nombre);
+      await recargarProgramaciones();
       if (onRefreshData) {
         onRefreshData();
       }
@@ -2363,7 +2413,7 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
     }
 
     setBatchToQuickEdit(null);
-    setNotifMensaje(`✅ Batch ${progActualizado.batch} (${progActualizado.caso}) actualizado correctamente.`);
+    setNotifMensaje(`✅ Batch ${progActualizado.batch} (${progActualizado.caso}) actualizado y guardado correctamente.`);
     setTimeout(() => setNotifMensaje(null), 4000);
   };
 
@@ -3003,10 +3053,11 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
                                       <button
                                         type="button"
                                         onClick={() => handleAbrirEdicionRapida(prog)}
-                                        title="Edición Rápida (Parámetros y Observaciones)"
-                                        className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-slate-700 transition-colors cursor-pointer"
+                                        title="Editar Parámetros, Datos y Lotes del Batch"
+                                        className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-cyan-950 text-cyan-400 hover:text-cyan-300 border border-cyan-800/60 font-bold text-[10px] flex items-center gap-1 transition-all cursor-pointer"
                                       >
                                         <Sliders className="w-3.5 h-3.5" />
+                                        <span>Ajustar</span>
                                       </button>
                                       <button
                                         type="button"
@@ -5921,53 +5972,167 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
         </div>
       )}
 
-      {/* MODAL DE EDICIÓN RÁPIDA (PARÁMETROS Y OBSERVACIONES) */}
+      {/* MODAL DE EDICIÓN DE BATCH PROGRAMADO (DATOS, PARÁMETROS Y OBSERVACIONES) */}
       {batchToQuickEdit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="bg-slate-900 border-2 border-cyan-500/50 rounded-2xl p-6 max-w-lg w-full shadow-2xl space-y-4">
+          <div className="bg-slate-900 border-2 border-cyan-500/50 rounded-2xl p-6 max-w-2xl w-full max-h-[92vh] overflow-y-auto shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center gap-3 text-cyan-400">
                 <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30">
                   <Sliders className="w-6 h-6 text-cyan-400" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white">Edición Rápida de Parámetros</h3>
-                  <p className="text-xs text-slate-400">Batch {batchToQuickEdit.batch} ({batchToQuickEdit.caso})</p>
+                  <h3 className="text-base font-bold text-white">Editar Batch Programado</h3>
+                  <p className="text-xs text-slate-400">Modificar datos, parámetros y asignación del Batch {batchToQuickEdit.batch} ({batchToQuickEdit.caso})</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setBatchToQuickEdit(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-3 text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-slate-400 block mb-1 font-semibold">BACTH</label>
-                  <input
-                    type="text"
-                    value={quickEditData.caso}
-                    onChange={(e) => setQuickEditData(prev => ({ ...prev, caso: e.target.value }))}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold"
-                  />
+            <div className="space-y-4 text-xs">
+              {/* Identificación del Batch */}
+              <div className="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800 space-y-3">
+                <div className="text-[11px] font-bold text-amber-400 uppercase tracking-wider">
+                  Identificación & Programación de Turno
                 </div>
-                <div>
-                  <label className="text-slate-400 block mb-1 font-semibold">Turno</label>
-                  <select
-                    value={quickEditData.turno}
-                    onChange={(e) => setQuickEditData(prev => ({ ...prev, turno: e.target.value as "DIA" | "NOCHE" }))}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold"
-                  >
-                    <option value="DIA">Turno Día</option>
-                    <option value="NOCHE">Turno Noche</option>
-                  </select>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="text-slate-400 block mb-1 font-semibold">Código Vaporizado (Batch)</label>
+                    <input
+                      type="text"
+                      value={quickEditData.batch}
+                      onChange={(e) => setQuickEditData(prev => ({ ...prev, batch: e.target.value.toUpperCase() }))}
+                      placeholder="ej. V350"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-amber-400 font-mono font-black text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-slate-400 block mb-1 font-semibold">Caso / Nombre Batch</label>
+                    <input
+                      type="text"
+                      value={quickEditData.caso}
+                      onChange={(e) => setQuickEditData(prev => ({ ...prev, caso: e.target.value }))}
+                      placeholder="ej. 1 o BATCH 1"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-slate-400 block mb-1 font-semibold">Fecha Programada</label>
+                    <input
+                      type="date"
+                      value={quickEditData.fecha}
+                      onChange={(e) => setQuickEditData(prev => ({ ...prev, fecha: e.target.value }))}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                  <div>
+                    <label className="text-slate-400 block mb-1 font-semibold">Turno</label>
+                    <select
+                      value={quickEditData.turno}
+                      onChange={(e) => setQuickEditData(prev => ({ ...prev, turno: e.target.value as "DIA" | "NOCHE" }))}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold cursor-pointer"
+                    >
+                      <option value="DIA">Turno Día</option>
+                      <option value="NOCHE">Turno Noche</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-slate-400 block mb-1 font-semibold">Cliente Principal</label>
+                    <input
+                      type="text"
+                      value={quickEditData.clientePrincipal}
+                      onChange={(e) => setQuickEditData(prev => ({ ...prev, clientePrincipal: e.target.value }))}
+                      placeholder="Cliente"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-200"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-slate-400 block mb-1 font-semibold">Variedad Principal</label>
+                    <input
+                      type="text"
+                      value={quickEditData.variedadPrincipal}
+                      onChange={(e) => setQuickEditData(prev => ({ ...prev, variedadPrincipal: e.target.value }))}
+                      placeholder="Variedad"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-200"
+                    />
+                  </div>
                 </div>
               </div>
 
+              {/* Lotes Asignados al Batch (si existen) */}
+              {quickEditData.filasLote && quickEditData.filasLote.length > 0 && (
+                <div className="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="text-[11px] font-bold text-cyan-400 uppercase tracking-wider">
+                      Lotes Programados ({quickEditData.filasLote.length})
+                    </div>
+                    <div className="text-[11px] font-mono text-slate-300">
+                      Total Sacos: <span className="font-bold text-amber-300">{quickEditData.filasLote.reduce((acc, f) => acc + (f.sacProg || 0), 0)}</span> | 
+                      Total Peso: <span className="font-bold text-amber-300">{(quickEditData.filasLote.reduce((acc, f) => acc + (f.pesoProg || 0), 0) / 1000).toFixed(1)} TN</span>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto rounded-lg border border-slate-800">
+                    <table className="w-full text-left text-[11px] text-slate-200">
+                      <thead className="bg-slate-900 text-slate-400 font-bold uppercase text-[9px]">
+                        <tr>
+                          <th className="py-1.5 px-2">Lote</th>
+                          <th className="py-1.5 px-2">Cliente</th>
+                          <th className="py-1.5 px-2">Variedad</th>
+                          <th className="py-1.5 px-2 text-center">P(H)</th>
+                          <th className="py-1.5 px-2 text-center">Sacos Prog.</th>
+                          <th className="py-1.5 px-2 text-center">Peso Prog. (kg)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800 font-mono">
+                        {quickEditData.filasLote.map((f, fIdx) => (
+                          <tr key={f.loteId || fIdx} className="hover:bg-slate-900/50">
+                            <td className="py-1.5 px-2 font-bold text-cyan-400">{f.loteId}</td>
+                            <td className="py-1.5 px-2 font-sans truncate max-w-[120px] text-slate-300">{f.cliente || quickEditData.clientePrincipal}</td>
+                            <td className="py-1.5 px-2 font-sans text-slate-300">{f.variedad || quickEditData.variedadPrincipal}</td>
+                            <td className="py-1.5 px-2 text-center text-cyan-300">{f.ph}%</td>
+                            <td className="py-1 px-2 text-center">
+                              <input
+                                type="number"
+                                min={1}
+                                value={f.sacProg}
+                                onChange={(e) => {
+                                  const val = parseInt(e.target.value, 10) || 0;
+                                  setQuickEditData(prev => {
+                                    const nextFilas = [...prev.filasLote];
+                                    const pesoPorSaco = f.sacos > 0 && f.peso > 0 ? (f.peso / f.sacos) : 50;
+                                    nextFilas[fIdx] = {
+                                      ...f,
+                                      sacProg: val,
+                                      pesoProg: Math.round(val * pesoPorSaco)
+                                    };
+                                    return { ...prev, filasLote: nextFilas };
+                                  });
+                                }}
+                                className="w-20 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-center font-bold text-amber-300"
+                              />
+                            </td>
+                            <td className="py-1.5 px-2 text-center text-slate-300 font-bold">
+                              {(f.pesoProg || 0).toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Parámetros Operativos */}
               <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="text-[11px] font-bold text-amber-400 uppercase tracking-wider">
@@ -6149,7 +6314,7 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-800">
+            <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-800">
               <button
                 type="button"
                 onClick={() => {
@@ -6174,10 +6339,10 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
                 <button
                   type="button"
                   onClick={handleGuardarEdicionRapida}
-                  className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-lg shadow-cyan-600/30 transition-all active:scale-95 cursor-pointer"
+                  className="px-5 py-2.5 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white font-black rounded-xl text-xs flex items-center gap-1.5 shadow-lg shadow-cyan-600/30 transition-all active:scale-95 cursor-pointer"
                 >
-                  <Save className="w-3.5 h-3.5" />
-                  <span>Guardar Parámetros</span>
+                  <Save className="w-4 h-4" />
+                  <span>Guardar Cambios del Batch</span>
                 </button>
               </div>
             </div>
