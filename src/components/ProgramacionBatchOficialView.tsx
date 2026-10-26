@@ -23,6 +23,7 @@ import {
   extraerDatosCalidadLote, 
   generarSiguienteCorrelativoV,
   generarSiguienteNombreBatch,
+  calcularSiguienteNumeroBatch,
   obtenerInfoLoteEnBatches,
   validarSacosYPesoLotesProgramacion,
   calcularSaldoDisponibleLoteParaBatch,
@@ -263,7 +264,7 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
   // Builder Form State
   const [editingProgId, setEditingProgId] = useState<string | null>(null);
   const [editingOriginalBatchCode, setEditingOriginalBatchCode] = useState<string | null>(null);
-  const [casoNombre, setCasoNombre] = useState<string>("1");
+  const [casoNombre, setCasoNombre] = useState<string>(() => calcularSiguienteNumeroBatch(cargarProgramacionesOficiales(), batches));
   const [fechaProg, setFechaProg] = useState<string>(new Date().toISOString().split("T")[0]);
   const [turnoProg, setTurnoProg] = useState<"DIA" | "NOCHE">("DIA");
   const [batchCorrelativo, setBatchCorrelativo] = useState<string>("");
@@ -557,23 +558,18 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
     recargarProgramaciones();
   }, [recargarProgramaciones, batches, lotesSincronizados]);
 
-  // Asegurar que al entrar a modo armador exista el número secuencial de Batch en casoNombre si está vacío
+  // Asegurar que al entrar a modo armador el campo BATCH siga correlativamente del anterior y no registre como 1
   useEffect(() => {
     if (viewMode === "armador" && !editingProgId) {
-      const existentesCasos = [
-        ...(programaciones || []).map(p => p.caso),
-        ...(batches || []).map(b => (b as any).CASO || (b as any).NOMBRE_LOTE || "")
-      ];
-      const ultimaProg = (programaciones && programaciones.length > 0)
-        ? programaciones[programaciones.length - 1]
-        : null;
-      if (!casoNombre || !casoNombre.trim() || !/^\d+$/.test(casoNombre.trim())) {
-        const nextCaso = generarSiguienteNombreBatch(existentesCasos, ultimaProg?.caso);
+      const nextCaso = calcularSiguienteNumeroBatch(programaciones, batches);
+      const casoYaExiste = (programaciones || []).some(p => (p.caso || "").trim().toLowerCase() === (casoNombre || "").trim().toLowerCase());
+      
+      // Si está vacío, o si estamos armando un nuevo batch desde cero (filasLote vacías) y tiene valor "1" cuando ya existen otros o coincide con uno existente
+      if (!casoNombre || !casoNombre.trim() || (filasLote.length === 0 && ((casoNombre === "1" && nextCaso !== "1") || casoYaExiste))) {
         setCasoNombre(nextCaso);
       }
-      // El código de vaporizado no se autogenera; lo define el usuario.
     }
-  }, [viewMode, editingProgId, casoNombre, programaciones, batches]);
+  }, [viewMode, editingProgId, programaciones, batches, filasLote.length]);
 
   const activePrioConfig = useMemo(() => {
     return priorizacionConfig || cargarConfiguracionPriorizacion();
@@ -841,6 +837,7 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
         ...(batches || []).map(b => b.CORRELATIVO || b.BATCH_ID)
       ];
       const nextV = generarSiguienteCorrelativoV(existentes);
+      const nextCasoProg = calcularSiguienteNumeroBatch(programaciones, batches);
 
       // Caso 1: Solicitud explícita de Auto-Llenado (botón especial capacidad máxima)
       if (initialLoteIds.includes("AUTO_LLENAR")) {
@@ -907,7 +904,7 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
         }
 
         setEditingProgId(null);
-        setCasoNombre(`Batch ${nextV}`);
+        setCasoNombre(nextCasoProg);
         setFechaProg(new Date().toISOString().split("T")[0]);
         setTurnoProg("DIA");
         setBatchCorrelativo(nextV);
@@ -926,12 +923,12 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
         setVelExclPase1Det(6);
         setVelExclPase2Det(6);
         setViewMode("armador");
-        setNotifMensaje(`⚡ Batch auto-llenado con ${nuevasFilas.length} lote(s) (${(pesoAcumulado / 1000).toFixed(1)} TN).`);
+        setNotifMensaje(`⚡ Batch ${nextCasoProg} auto-llenado con ${nuevasFilas.length} lote(s) (${(pesoAcumulado / 1000).toFixed(1)} TN).`);
         setTimeout(() => setNotifMensaje(null), 4000);
       } else if (initialLoteIds.includes("nuevo-batch") || initialLoteIds.includes("crear-batch") || initialLoteIds.includes("armador")) {
         // Creación de Nuevo Batch -> Espacios vacíos sin lotes predeterminados
         setEditingProgId(null);
-        setCasoNombre(`Batch ${nextV}`);
+        setCasoNombre(nextCasoProg);
         setFechaProg(new Date().toISOString().split("T")[0]);
         setTurnoProg("DIA");
         setBatchCorrelativo(nextV);
@@ -950,7 +947,7 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
         setVelExclPase1Det(4);
         setVelExclPase2Det(4);
         setViewMode("armador");
-        setNotifMensaje(`✨ Armador Oficial listo para nuevo Batch ${nextV} (Espacios vacíos).`);
+        setNotifMensaje(`✨ Armador Oficial listo para nuevo Batch ${nextCasoProg} (Espacios vacíos).`);
         setTimeout(() => setNotifMensaje(null), 3500);
       } else {
         // Caso 3: Lotes específicos seleccionados por el usuario (ordenados de arriba hacia abajo según prioridad)
@@ -1017,7 +1014,7 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
         }
 
         setEditingProgId(null);
-        setCasoNombre(`Batch ${nextV}`);
+        setCasoNombre(nextCasoProg);
         setFechaProg(new Date().toISOString().split("T")[0]);
         setTurnoProg("DIA");
         setBatchCorrelativo(nextV);
@@ -1036,7 +1033,7 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
         setVelExclPase1Det(4);
         setVelExclPase2Det(4);
         setViewMode("armador");
-        setNotifMensaje(`✨ ${nuevasFilas.length} lote(s) cargado(s) al Batch ${nextV}.`);
+        setNotifMensaje(`✨ ${nuevasFilas.length} lote(s) cargado(s) al Batch ${nextCasoProg}.`);
         setTimeout(() => setNotifMensaje(null), 3500);
       }
 
@@ -1290,18 +1287,7 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
 
   // Open builder for a brand new batch - Espacios Vacíos
   const handleIniciarNuevoBatch = () => {
-    const existentes = [
-      ...(programaciones || []).map(p => p.batch),
-      ...(batches || []).map(b => b.CORRELATIVO || b.BATCH_ID)
-    ];
-    const existentesCasos = [
-      ...(programaciones || []).map(p => p.caso),
-      ...(batches || []).map(b => (b as any).CASO || (b as any).NOMBRE_LOTE || b.CORRELATIVO || "")
-    ];
-    const ultimaProg = (programaciones && programaciones.length > 0)
-      ? programaciones[programaciones.length - 1]
-      : null;
-    const nextCaso = generarSiguienteNombreBatch(existentesCasos, ultimaProg?.caso);
+    const nextCaso = calcularSiguienteNumeroBatch(programaciones, batches);
 
     setEditingProgId(null);
     setEditingOriginalBatchCode(null);
@@ -1332,6 +1318,15 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
 
   // Add lot to current builder with interactive validations (Single client + deviation tolerances + NO REPETICIÓN)
   const handleAgregarLoteAlBatch = (loteId: string) => {
+    // Al programar el primer lote de un nuevo batch, asegurar correlativo progresivo del anterior
+    if (filasLote.length === 0 && !editingProgId) {
+      const nextProg = calcularSiguienteNumeroBatch(programaciones, batches);
+      const casoYaExiste = (programaciones || []).some(p => (p.caso || "").trim().toLowerCase() === (casoNombre || "").trim().toLowerCase());
+      if (!casoNombre || !casoNombre.trim() || casoYaExiste || (casoNombre === "1" && nextProg !== "1")) {
+        setCasoNombre(nextProg);
+      }
+    }
+
     // 0.1 REGLA ESTRICTA: NO REPETIR DENTRO DEL MISMO BATCH
     if (filasLote.some(f => f.loteId.trim().toLowerCase() === (loteId || "").trim().toLowerCase())) {
       setDialogModal({
@@ -1971,7 +1966,7 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
       id: editingProgId || `PROG-BATCH-${Date.now()}`,
       originalBatch: editingOriginalBatchCode || undefined,
       originalId: editingProgId || undefined,
-      caso: casoNombre.trim() || batchCorrelativo || "Batch",
+      caso: casoNombre.replace(/\(?PARTE\s*\d+\)?/gi, "").trim() || calcularSiguienteNumeroBatch(programaciones, batches) || "1",
       fecha: fechaProg,
       turno: turnoProg,
       batch: batchCorrelativo,
@@ -2139,8 +2134,17 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
         lotesCount: loteIdsProg.length
       });
 
+      // Calcular inmediatamente el siguiente número correlativo de batch para que el próximo lote no empiece en 1
+      const progActualizadas = [...programaciones.filter(p => p.id !== progObj.id && p.batch !== progObj.batch), progObj];
+      const nextProgCaso = calcularSiguienteNumeroBatch(progActualizadas, batches);
+
       setEditingProgId(null);
       setEditingOriginalBatchCode(null);
+      setCasoNombre(nextProgCaso);
+      setFilasLote([]);
+      setSelectedLoteIdsInArmador([]);
+      setBatchCorrelativo("");
+      setObservacionProg("");
       setViewMode("resumen");
     } catch (e: any) {
       console.error("Error al sincronizar batch con backend:", e);
@@ -2257,7 +2261,7 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Duplicate batch for next shift (e.g. V202-1 -> V202-2)
+  // Duplicate batch for next shift / next part (e.g. V202-1 -> V202-2)
   const handleDuplicarParaSiguienteTurno = (prog: ProgramacionBatchOficial) => {
     const nextTurno: "DIA" | "NOCHE" = prog.turno === "DIA" ? "NOCHE" : "DIA";
     let nextBatch = `${prog.batch}-2`;
@@ -2267,9 +2271,12 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
       nextBatch = prog.batch.replace("-2", "-3");
     }
 
+    // Al generar PARTE 2 en una V, en el Batch no se genera "PARTE 2", sino que continúa sumando progresivamente
+    const nextCaso = calcularSiguienteNumeroBatch(programaciones, batches);
+
     setEditingProgId(null);
     setEditingOriginalBatchCode(null);
-    setCasoNombre(`${prog.caso} (PARTE 2)`);
+    setCasoNombre(nextCaso);
     setFechaProg(prog.fecha);
     setTurnoProg(nextTurno);
     setBatchCorrelativo(nextBatch);
@@ -2291,7 +2298,7 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
     setVelExclPase2Det(pDet?.velExclusaPase2 ?? (pDet?.velExclusa ?? 6));
 
     setViewMode("armador");
-    setNotifMensaje(`📑 Batch duplicado como ${nextBatch} (${prog.caso} PARTE 2) para el turno ${nextTurno}.`);
+    setNotifMensaje(`📑 Batch ${nextBatch} (Batch ${nextCaso}) preparado para el turno ${nextTurno}.`);
     setTimeout(() => setNotifMensaje(null), 4000);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -3492,8 +3499,11 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
                                   ...(batches || []).map(b => b.CORRELATIVO || b.BATCH_ID)
                                 ];
                                 const nextV = generarSiguienteCorrelativoV(existentes);
+                                const nextCasoProg = calcularSiguienteNumeroBatch(programaciones, batches);
                                 if (!batchCorrelativo) setBatchCorrelativo(nextV);
-                                if (!casoNombre) setCasoNombre(`Batch ${nextV}`);
+                                if (!casoNombre || (filasLote.length === 0 && (casoNombre === "1" && nextCasoProg !== "1"))) {
+                                  setCasoNombre(nextCasoProg);
+                                }
                                 setViewMode("armador");
                                 handleAgregarLoteAlBatch(l.LOTE_ID);
                               };
@@ -4535,7 +4545,12 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
                 {filasLote.length > 0 && (
                   <button
                     type="button"
-                    onClick={() => setFilasLote([])}
+                    onClick={() => {
+                      setFilasLote([]);
+                      if (!editingProgId) {
+                        setCasoNombre(calcularSiguienteNumeroBatch(programaciones, batches));
+                      }
+                    }}
                     className="px-2.5 py-1 bg-slate-800 hover:bg-rose-950 text-slate-400 hover:text-rose-300 border border-slate-700 hover:border-rose-700 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
                   >
                     Vaciar Formulario
@@ -4659,7 +4674,10 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
                     type="text"
                     value={casoNombre}
                     onChange={e => {
-                      const raw = e.target.value.replace(/^(BATCH|BACTH|Batch|bacth|B)[\s\-_:]*/i, "").trim();
+                      const raw = e.target.value
+                        .replace(/^(BATCH|BACTH|Batch|bacth|B)[\s\-_:]*/i, "")
+                        .replace(/\(?PARTE\s*\d+\)?/gi, "")
+                        .trim();
                       setCasoNombre(raw);
                     }}
                     placeholder="ej. 1"
@@ -5841,17 +5859,8 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
               <button
                 id="btn-modal-crear-otro-batch"
                 onClick={() => {
-                  const ultimoCaso = batchCreadoPrompt.caso;
                   setBatchCreadoPrompt(null);
-                  const existentes = [
-                    ...(programaciones || []).map(p => p.batch),
-                    ...(batches || []).map(b => b.CORRELATIVO || b.BATCH_ID)
-                  ];
-                  const existentesCasos = [
-                    ...(programaciones || []).map(p => p.caso),
-                    ...(batches || []).map(b => (b as any).CASO || (b as any).NOMBRE_LOTE || b.CORRELATIVO || "")
-                  ];
-                  const nextCaso = generarSiguienteNombreBatch(existentesCasos, ultimoCaso);
+                  const nextCaso = calcularSiguienteNumeroBatch(programaciones, batches);
 
                   setEditingProgId(null);
                   setEditingOriginalBatchCode(null);

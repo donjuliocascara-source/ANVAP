@@ -631,35 +631,115 @@ export function generarSiguienteCorrelativoV(existentes: string[] = []): string 
 }
 
 /**
- * Genera el siguiente nombre o identificador correlativo de BATCH (ej. Batch 1 -> Batch 2, BACTH 01 -> BACTH 02)
- * siguiendo correlativamente del anterior o del máximo existente.
+ * Extrae el número secuencial de un identificador de Batch / Caso.
+ * Ignora códigos de vaporizado puros (ej: V350, V-01) y sufijos de parte (ej: PARTE 2).
+ */
+export function extraerNumeroBatch(val?: string | number | null): number | null {
+  if (val === undefined || val === null) return null;
+  const s = String(val).trim();
+  if (!s) return null;
+
+  // Ignorar códigos de autoclave/vaporizado puros como V350, V-01, V350-2
+  if (/^V\s*[-_]?\s*\d+(?:\s*-\s*\d+)?$/i.test(s)) {
+    return null;
+  }
+
+  // Si tiene anotaciones heredadas tipo "1 (PARTE 2)", representaba correlativo progresivo (1 + 1 = 2)
+  const matchConParte = s.match(/(\d+)\s*\(?PARTE\s*(\d+)\)?/i);
+  if (matchConParte) {
+    const base = parseInt(matchConParte[1], 10);
+    const parte = parseInt(matchConParte[2], 10);
+    if (!isNaN(base) && !isNaN(parte) && parte > 1) {
+      return base + (parte - 1);
+    }
+  }
+
+  // Quitar anotaciones como "(PARTE 2)" para no confundir la parte con el número de batch
+  const sinParte = s.replace(/\(?PARTE\s*\d+\)?/gi, "").trim();
+
+  // Buscar coincidencia con prefijos típicos: BATCH 2, CASO 2, BACTH 02, o solo número
+  const matchPrefijo = sinParte.match(/(?:BATCH|BACTH|CASO|B|#)?\s*(\d+)/i);
+  if (matchPrefijo) {
+    const num = parseInt(matchPrefijo[1], 10);
+    if (!isNaN(num) && num > 0 && num < 100000) {
+      return num;
+    }
+  }
+
+  const matchCualquiera = sinParte.match(/(\d+)/);
+  if (matchCualquiera) {
+    const num = parseInt(matchCualquiera[1], 10);
+    if (!isNaN(num) && num > 0 && num < 100000) {
+      return num;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Genera el siguiente número progresivo de BATCH (ej. Batch 1 -> Batch 2 -> Batch 3...)
+ * siguiendo de forma progresiva con el anterior y considerando el máximo de todos los batches existentes.
  */
 export function generarSiguienteNombreBatch(
   existentesCasos: string[] = [],
   ultimoCaso?: string,
   _codigoVaporizadoSiguiente?: string
 ): string {
-  // 1. Si se proporciona el último caso/batch creado, extraer solo el número y avanzar
-  if (ultimoCaso && ultimoCaso.trim()) {
-    const trimmed = ultimoCaso.trim();
-    const match = trimmed.match(/(\d+)/);
-    if (match) {
-      const nextNum = parseInt(match[1], 10) + 1;
-      return String(nextNum);
+  let maxNum = 0;
+
+  const registrar = (val?: string | number | null) => {
+    const n = extraerNumeroBatch(val);
+    if (n !== null && n > maxNum) {
+      maxNum = n;
+    }
+  };
+
+  // 1. Escanear todos los casos existentes provistos
+  if (Array.isArray(existentesCasos)) {
+    for (const item of existentesCasos) {
+      registrar(item);
     }
   }
 
-  // 2. Si no, calcular el máximo de los números existentes
-  let maxNum = 0;
-  for (const item of existentesCasos) {
-    if (!item) continue;
-    const s = item.toString().trim();
-    const match = s.match(/(\d+)/);
-    if (match) {
-      const n = parseInt(match[1], 10);
-      if (!isNaN(n) && n > maxNum && n < 100000) {
-        maxNum = n;
+  // 2. Escanear último caso si fue provisto
+  if (ultimoCaso) {
+    registrar(ultimoCaso);
+  }
+
+  // 3. Fallback inteligente y exhaustivo sobre almacenamiento local
+  if (typeof window !== "undefined" && window.localStorage) {
+    for (const k of [STORAGE_KEY_PROGRAMACIONES_OFICIALES, "molino_programaciones_batch_oficiales_v3", "programaciones_batch_oficial_v1"]) {
+      try {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((p: any) => {
+              registrar(p?.caso);
+              registrar(p?.id);
+            });
+          }
+        }
+      } catch {
+        // ignore
       }
+    }
+
+    try {
+      const rawDb = localStorage.getItem("arroz_apit_local_db_v9_clean");
+      if (rawDb) {
+        const parsedDb = JSON.parse(rawDb);
+        if (Array.isArray(parsedDb?.batchesVaporizado)) {
+          parsedDb.batchesVaporizado.forEach((b: any) => {
+            registrar(b?.CASO);
+            registrar(b?.NOMBRE_LOTE);
+            registrar(b?.BATCH_ID);
+          });
+        }
+      }
+    } catch {
+      // ignore
     }
   }
 
@@ -668,6 +748,29 @@ export function generarSiguienteNombreBatch(
   }
 
   return "1";
+}
+
+/**
+ * Calcula el siguiente número secuencial de Batch a partir de las listas de programaciones y batches.
+ */
+export function calcularSiguienteNumeroBatch(
+  programaciones?: ProgramacionBatchOficial[],
+  batches?: any[]
+): string {
+  const casos: string[] = [];
+  if (Array.isArray(programaciones)) {
+    programaciones.forEach(p => {
+      if (p?.caso) casos.push(String(p.caso));
+    });
+  }
+  if (Array.isArray(batches)) {
+    batches.forEach(b => {
+      if (b?.CASO) casos.push(String(b.CASO));
+      if (b?.NOMBRE_LOTE) casos.push(String(b.NOMBRE_LOTE));
+      if (b?.BATCH_ID) casos.push(String(b.BATCH_ID));
+    });
+  }
+  return generarSiguienteNombreBatch(casos);
 }
 
 /**
