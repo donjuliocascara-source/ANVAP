@@ -62,7 +62,8 @@ import {
   DEFAULT_PERFILES_SECADO, 
   DEFAULT_RECETA_SECADO,
   DEFAULT_ETAPA_ENFRIAMIENTO_FINAL,
-  createEmptyParametrosPaddy
+  createEmptyParametrosPaddy,
+  createEmptyMateriaPrima
 } from "../utils/plantSheetDefaults";
 import { 
   cargarProgramacionesOficiales,
@@ -1167,7 +1168,7 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
   const handleStageMateriaPrimaChange = (
     stageKey: "etapaReposo1" | "etapaEnfriamiento" | "etapaReposo2" | "etapaEnfriamientoFinal",
     rowIdx: number,
-    field: "qPct" | "trizPct" | "blGrad",
+    field: "qPct" | "trizPct" | "blGrad" | "ri" | "rb" | "bli" | "blp" | "qiPct" | "qbPct",
     val: any
   ) => {
     const baseList = stageKey === "etapaReposo1" ? etapaReposo1 :
@@ -1785,7 +1786,7 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
       fecha: lastDate,
       horaInicio: "",
       humedad: "",
-      materiaPrima: { qPct: undefined, trizPct: undefined, blGrad: undefined },
+      materiaPrima: createEmptyMateriaPrima(),
       modificaciones: { mod1: "", mod2: "", mod3: "" }
     };
 
@@ -4484,18 +4485,18 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                     <th className="border-r border-amber-200 py-1 px-1 w-12">Tº PROG.</th>
                     <th className="border-r border-amber-200 py-1 px-1 w-14">A1</th>
                     <th className="border-r border-amber-200 py-1 px-1 w-14">A2</th>
-                    <th className="border-r border-amber-200 py-0.5 px-1" colSpan={3}>CONTROL DE M.PRIMA</th>
-                    <th className="py-0.5 px-1" colSpan={3}>MODIFICACIONES</th>
+                    <th className="border-r border-amber-200 py-0.5 px-1" colSpan={7}>CONTROL DE M.PRIMA</th>
                     <th className="w-6 print:hidden"></th>
                   </tr>
                   <tr className="bg-amber-50 border-b border-amber-300 font-semibold text-slate-700 text-center text-[9px]">
                     <th colSpan={13} className="border-r border-amber-200"></th>
-                    <th className="border-r border-amber-200 py-0.5 px-0.5 w-12">Q%</th>
+                    <th className="border-r border-amber-200 py-0.5 px-0.5 w-10">RI</th>
+                    <th className="border-r border-amber-200 py-0.5 px-0.5 w-10">RB</th>
+                    <th className="border-r border-amber-200 py-0.5 px-0.5 w-10">BLI</th>
+                    <th className="border-r border-amber-200 py-0.5 px-0.5 w-10">BLP</th>
+                    <th className="border-r border-amber-200 py-0.5 px-0.5 w-10">QI%</th>
+                    <th className="border-r border-amber-200 py-0.5 px-0.5 w-10">QB%</th>
                     <th className="border-r border-amber-200 py-0.5 px-0.5 w-10">%TRIZ</th>
-                    <th className="border-r border-amber-200 py-0.5 px-0.5 w-12">BL°</th>
-                    <th className="border-r border-amber-200 py-0.5 px-0.5 w-12">01 TIEMP</th>
-                    <th className="border-r border-amber-200 py-0.5 px-0.5 w-12">02 TIEMP</th>
-                    <th className="border-r border-amber-200 py-0.5 px-0.5 w-14">03 MODIF</th>
                     <th className="print:hidden"></th>
                   </tr>
                 </thead>
@@ -4646,9 +4647,59 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                         <input
                           type="number"
                           step="0.1"
-                          value={row.materiaPrima?.qPct !== undefined ? row.materiaPrima.qPct : ""}
+                          value={row.materiaPrima?.ri !== undefined ? row.materiaPrima.ri : ""}
                           placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaReposo1", idx, "qPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                          onChange={(e) => handleStageMateriaPrimaChange("etapaReposo1", idx, "ri", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                        />
+                      </td>
+                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40">
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={row.materiaPrima?.rb !== undefined ? row.materiaPrima.rb : ""}
+                          placeholder=""
+                          onChange={(e) => handleStageMateriaPrimaChange("etapaReposo1", idx, "rb", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                        />
+                      </td>
+                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40">
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={row.materiaPrima?.bli !== undefined ? row.materiaPrima.bli : ""}
+                          placeholder=""
+                          onChange={(e) => handleStageMateriaPrimaChange("etapaReposo1", idx, "bli", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                        />
+                      </td>
+                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40">
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={row.materiaPrima?.blp !== undefined ? row.materiaPrima.blp : (row.materiaPrima?.blGrad !== undefined ? row.materiaPrima.blGrad : "")}
+                          placeholder=""
+                          onChange={(e) => handleStageMateriaPrimaChange("etapaReposo1", idx, "blp", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                        />
+                      </td>
+                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40">
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={row.materiaPrima?.qiPct !== undefined ? row.materiaPrima.qiPct : ""}
+                          placeholder=""
+                          onChange={(e) => handleStageMateriaPrimaChange("etapaReposo1", idx, "qiPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                        />
+                      </td>
+                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40">
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={row.materiaPrima?.qbPct !== undefined ? row.materiaPrima.qbPct : (row.materiaPrima?.qPct !== undefined ? row.materiaPrima.qPct : "")}
+                          placeholder=""
+                          onChange={(e) => handleStageMateriaPrimaChange("etapaReposo1", idx, "qbPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
                           className="w-full text-center outline-none bg-transparent text-[9px]"
                         />
                       </td>
@@ -4659,44 +4710,6 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                           value={row.materiaPrima?.trizPct !== undefined ? row.materiaPrima.trizPct : ""}
                           placeholder=""
                           onChange={(e) => handleStageMateriaPrimaChange("etapaReposo1", idx, "trizPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40">
-                        <input
-                          type="number"
-                          step="0.1"
-                          value={row.materiaPrima?.blGrad !== undefined ? row.materiaPrima.blGrad : ""}
-                          placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaReposo1", idx, "blGrad", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
-                        />
-                      </td>
-                      {/* Modificaciones */}
-                      <td className="border-r border-amber-200 py-0.5 px-0.5">
-                        <input
-                          type="text"
-                          value={row.modificaciones?.mod1 ?? ""}
-                          placeholder=""
-                          onChange={(e) => handleStageModificacionesChange("etapaReposo1", idx, "mod1", e.target.value)}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5">
-                        <input
-                          type="text"
-                          value={row.modificaciones?.mod2 ?? ""}
-                          placeholder=""
-                          onChange={(e) => handleStageModificacionesChange("etapaReposo1", idx, "mod2", e.target.value)}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5">
-                        <input
-                          type="text"
-                          value={row.modificaciones?.mod3 ?? ""}
-                          placeholder=""
-                          onChange={(e) => handleStageModificacionesChange("etapaReposo1", idx, "mod3", e.target.value)}
                           className="w-full text-center outline-none bg-transparent text-[9px]"
                         />
                       </td>
@@ -4770,18 +4783,18 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                     <th className="border-r border-sky-200 py-1 px-1 w-12">Tº PROG.</th>
                     <th className="border-r border-sky-200 py-1 px-1 w-14">A1</th>
                     <th className="border-r border-sky-200 py-1 px-1 w-14">A2</th>
-                    <th className="border-r border-sky-200 py-0.5 px-1" colSpan={3}>CONTROL DE M.PRIMA</th>
-                    <th className="py-0.5 px-1" colSpan={3}>MODIFICACIONES</th>
+                    <th className="border-r border-sky-200 py-0.5 px-1" colSpan={7}>CONTROL DE M.PRIMA</th>
                     <th className="w-6 print:hidden"></th>
                   </tr>
                   <tr className="bg-sky-50 border-b border-sky-300 font-semibold text-slate-700 text-center text-[9px]">
                     <th colSpan={13} className="border-r border-sky-200"></th>
-                    <th className="border-r border-sky-200 py-0.5 px-0.5 w-12">Q%</th>
+                    <th className="border-r border-sky-200 py-0.5 px-0.5 w-10">RI</th>
+                    <th className="border-r border-sky-200 py-0.5 px-0.5 w-10">RB</th>
+                    <th className="border-r border-sky-200 py-0.5 px-0.5 w-10">BLI</th>
+                    <th className="border-r border-sky-200 py-0.5 px-0.5 w-10">BLP</th>
+                    <th className="border-r border-sky-200 py-0.5 px-0.5 w-10">QI%</th>
+                    <th className="border-r border-sky-200 py-0.5 px-0.5 w-10">QB%</th>
                     <th className="border-r border-sky-200 py-0.5 px-0.5 w-10">%TRIZ</th>
-                    <th className="border-r border-sky-200 py-0.5 px-0.5 w-12">BL°</th>
-                    <th className="border-r border-sky-200 py-0.5 px-0.5 w-12">01 TIEMP</th>
-                    <th className="border-r border-sky-200 py-0.5 px-0.5 w-12">02 TIEMP</th>
-                    <th className="border-r border-sky-200 py-0.5 px-0.5 w-14">03 MODIF</th>
                     <th className="print:hidden"></th>
                   </tr>
                 </thead>
@@ -4941,9 +4954,59 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                         <input
                           type="number"
                           step="0.1"
-                          value={row.materiaPrima?.qPct !== undefined ? row.materiaPrima.qPct : ""}
+                          value={row.materiaPrima?.ri !== undefined ? row.materiaPrima.ri : ""}
                           placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamiento", idx, "qPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                          onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamiento", idx, "ri", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                        />
+                      </td>
+                      <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40">
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={row.materiaPrima?.rb !== undefined ? row.materiaPrima.rb : ""}
+                          placeholder=""
+                          onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamiento", idx, "rb", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                        />
+                      </td>
+                      <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40">
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={row.materiaPrima?.bli !== undefined ? row.materiaPrima.bli : ""}
+                          placeholder=""
+                          onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamiento", idx, "bli", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                        />
+                      </td>
+                      <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40">
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={row.materiaPrima?.blp !== undefined ? row.materiaPrima.blp : (row.materiaPrima?.blGrad !== undefined ? row.materiaPrima.blGrad : "")}
+                          placeholder=""
+                          onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamiento", idx, "blp", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                        />
+                      </td>
+                      <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40">
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={row.materiaPrima?.qiPct !== undefined ? row.materiaPrima.qiPct : ""}
+                          placeholder=""
+                          onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamiento", idx, "qiPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                        />
+                      </td>
+                      <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40">
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={row.materiaPrima?.qbPct !== undefined ? row.materiaPrima.qbPct : (row.materiaPrima?.qPct !== undefined ? row.materiaPrima.qPct : "")}
+                          placeholder=""
+                          onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamiento", idx, "qbPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
                           className="w-full text-center outline-none bg-transparent text-[9px]"
                         />
                       </td>
@@ -4954,44 +5017,6 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                           value={row.materiaPrima?.trizPct !== undefined ? row.materiaPrima.trizPct : ""}
                           placeholder=""
                           onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamiento", idx, "trizPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
-                        />
-                      </td>
-                      <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40">
-                        <input
-                          type="number"
-                          step="0.1"
-                          value={row.materiaPrima?.blGrad !== undefined ? row.materiaPrima.blGrad : ""}
-                          placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamiento", idx, "blGrad", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
-                        />
-                      </td>
-                      {/* Modificaciones */}
-                      <td className="border-r border-sky-200 py-0.5 px-0.5">
-                        <input
-                          type="text"
-                          value={row.modificaciones?.mod1 ?? ""}
-                          placeholder=""
-                          onChange={(e) => handleStageModificacionesChange("etapaEnfriamiento", idx, "mod1", e.target.value)}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
-                        />
-                      </td>
-                      <td className="border-r border-sky-200 py-0.5 px-0.5">
-                        <input
-                          type="text"
-                          value={row.modificaciones?.mod2 ?? ""}
-                          placeholder=""
-                          onChange={(e) => handleStageModificacionesChange("etapaEnfriamiento", idx, "mod2", e.target.value)}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
-                        />
-                      </td>
-                      <td className="border-r border-sky-200 py-0.5 px-0.5">
-                        <input
-                          type="text"
-                          value={row.modificaciones?.mod3 ?? ""}
-                          placeholder=""
-                          onChange={(e) => handleStageModificacionesChange("etapaEnfriamiento", idx, "mod3", e.target.value)}
                           className="w-full text-center outline-none bg-transparent text-[9px]"
                         />
                       </td>
@@ -5140,18 +5165,18 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                     <th className="border-r border-amber-200 py-1 px-1 w-12">Tº PROG.</th>
                     <th className="border-r border-amber-200 py-1 px-1 w-14">A1</th>
                     <th className="border-r border-amber-200 py-1 px-1 w-14">A2</th>
-                    <th className="border-r border-amber-200 py-0.5 px-1" colSpan={3}>CONTROL DE M.PRIMA</th>
-                    <th className="py-0.5 px-1" colSpan={3}>MODIFICACIONES</th>
+                    <th className="border-r border-amber-200 py-0.5 px-1" colSpan={7}>CONTROL DE M.PRIMA</th>
                     <th className="w-6 print:hidden"></th>
                   </tr>
                   <tr className="bg-amber-50 border-b border-amber-300 font-semibold text-slate-700 text-center text-[9px]">
                     <th colSpan={13} className="border-r border-amber-200"></th>
-                    <th className="border-r border-amber-200 py-0.5 px-0.5 w-12">Q%</th>
+                    <th className="border-r border-amber-200 py-0.5 px-0.5 w-10">RI</th>
+                    <th className="border-r border-amber-200 py-0.5 px-0.5 w-10">RB</th>
+                    <th className="border-r border-amber-200 py-0.5 px-0.5 w-10">BLI</th>
+                    <th className="border-r border-amber-200 py-0.5 px-0.5 w-10">BLP</th>
+                    <th className="border-r border-amber-200 py-0.5 px-0.5 w-10">QI%</th>
+                    <th className="border-r border-amber-200 py-0.5 px-0.5 w-10">QB%</th>
                     <th className="border-r border-amber-200 py-0.5 px-0.5 w-10">%TRIZ</th>
-                    <th className="border-r border-amber-200 py-0.5 px-0.5 w-12">BL°</th>
-                    <th className="border-r border-amber-200 py-0.5 px-0.5 w-12">01 TIEMP</th>
-                    <th className="border-r border-amber-200 py-0.5 px-0.5 w-12">02 TIEMP</th>
-                    <th className="border-r border-amber-200 py-0.5 px-0.5 w-14">03 MODIF</th>
                     <th className="print:hidden"></th>
                   </tr>
                 </thead>
@@ -5311,9 +5336,59 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                         <input
                           type="number"
                           step="0.1"
-                          value={row.materiaPrima?.qPct !== undefined ? row.materiaPrima.qPct : ""}
+                          value={row.materiaPrima?.ri !== undefined ? row.materiaPrima.ri : ""}
                           placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaReposo2", idx, "qPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                          onChange={(e) => handleStageMateriaPrimaChange("etapaReposo2", idx, "ri", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                        />
+                      </td>
+                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40">
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={row.materiaPrima?.rb !== undefined ? row.materiaPrima.rb : ""}
+                          placeholder=""
+                          onChange={(e) => handleStageMateriaPrimaChange("etapaReposo2", idx, "rb", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                        />
+                      </td>
+                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40">
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={row.materiaPrima?.bli !== undefined ? row.materiaPrima.bli : ""}
+                          placeholder=""
+                          onChange={(e) => handleStageMateriaPrimaChange("etapaReposo2", idx, "bli", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                        />
+                      </td>
+                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40">
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={row.materiaPrima?.blp !== undefined ? row.materiaPrima.blp : (row.materiaPrima?.blGrad !== undefined ? row.materiaPrima.blGrad : "")}
+                          placeholder=""
+                          onChange={(e) => handleStageMateriaPrimaChange("etapaReposo2", idx, "blp", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                        />
+                      </td>
+                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40">
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={row.materiaPrima?.qiPct !== undefined ? row.materiaPrima.qiPct : ""}
+                          placeholder=""
+                          onChange={(e) => handleStageMateriaPrimaChange("etapaReposo2", idx, "qiPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                        />
+                      </td>
+                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40">
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={row.materiaPrima?.qbPct !== undefined ? row.materiaPrima.qbPct : (row.materiaPrima?.qPct !== undefined ? row.materiaPrima.qPct : "")}
+                          placeholder=""
+                          onChange={(e) => handleStageMateriaPrimaChange("etapaReposo2", idx, "qbPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
                           className="w-full text-center outline-none bg-transparent text-[9px]"
                         />
                       </td>
@@ -5324,44 +5399,6 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                           value={row.materiaPrima?.trizPct !== undefined ? row.materiaPrima.trizPct : ""}
                           placeholder=""
                           onChange={(e) => handleStageMateriaPrimaChange("etapaReposo2", idx, "trizPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40">
-                        <input
-                          type="number"
-                          step="0.1"
-                          value={row.materiaPrima?.blGrad !== undefined ? row.materiaPrima.blGrad : ""}
-                          placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaReposo2", idx, "blGrad", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
-                        />
-                      </td>
-                      {/* Modificaciones */}
-                      <td className="border-r border-amber-200 py-0.5 px-0.5">
-                        <input
-                          type="text"
-                          value={row.modificaciones?.mod1 ?? ""}
-                          placeholder=""
-                          onChange={(e) => handleStageModificacionesChange("etapaReposo2", idx, "mod1", e.target.value)}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5">
-                        <input
-                          type="text"
-                          value={row.modificaciones?.mod2 ?? ""}
-                          placeholder=""
-                          onChange={(e) => handleStageModificacionesChange("etapaReposo2", idx, "mod2", e.target.value)}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5">
-                        <input
-                          type="text"
-                          value={row.modificaciones?.mod3 ?? ""}
-                          placeholder=""
-                          onChange={(e) => handleStageModificacionesChange("etapaReposo2", idx, "mod3", e.target.value)}
                           className="w-full text-center outline-none bg-transparent text-[9px]"
                         />
                       </td>
@@ -5804,8 +5841,7 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                       <th className="border-r border-slate-300 py-1 px-1 w-12" rowSpan={2}>Tº PROG.</th>
                       <th className="border-r border-slate-300 py-1 px-1 w-14" rowSpan={2}>A1</th>
                       <th className="border-r border-slate-300 py-1 px-1 w-14" rowSpan={2}>A2</th>
-                      <th className="border-r border-slate-300 py-0.5 px-1" colSpan={3}>CONTROL DE M.PRIMA</th>
-                      <th className={`${recetaLayoutMode === "lateral_derecha" ? "border-r border-slate-300" : ""} py-0.5 px-1`} colSpan={3}>MODIFICACIONES</th>
+                      <th className={`${recetaLayoutMode === "lateral_derecha" ? "border-r border-slate-300" : ""} py-0.5 px-1`} colSpan={7}>CONTROL DE M.PRIMA</th>
                       {recetaLayoutMode === "lateral_derecha" && (
                         <th colSpan={3} className="border-l-2 border-emerald-700 bg-[#28541e] text-white py-1 px-1.5 text-[9px] font-bold">
                           <div className="flex items-center justify-between gap-1">
@@ -5835,13 +5871,13 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                       <th className="border-r border-slate-300 py-0.5 px-0.5 w-12 bg-amber-50 text-amber-950 font-bold text-[9px]">H3</th>
                       <th className="border-r border-slate-300 py-0.5 px-0.5 w-12 bg-amber-50 text-amber-950 font-bold text-[9px]">H4</th>
                       {/* Subcolumnas de CONTROL DE M.PRIMA */}
-                      <th className="border-r border-slate-300 py-0.5 px-0.5 w-12">Q%</th>
-                      <th className="border-r border-slate-300 py-0.5 px-0.5 w-10">%TRIZ</th>
-                      <th className="border-r border-slate-300 py-0.5 px-0.5 w-12">BL°</th>
-                      {/* Subcolumnas de MODIFICACIONES */}
-                      <th className="border-r border-slate-300 py-0.5 px-0.5 w-12">01 TIEMP</th>
-                      <th className="border-r border-slate-300 py-0.5 px-0.5 w-12">02 TIEMP</th>
-                      <th className={`${recetaLayoutMode === "lateral_derecha" ? "border-r border-slate-300" : ""} py-0.5 px-0.5 w-14`}>03 MODIF</th>
+                      <th className="border-r border-slate-300 py-0.5 px-0.5 w-10">RI</th>
+                      <th className="border-r border-slate-300 py-0.5 px-0.5 w-10">RB</th>
+                      <th className="border-r border-slate-300 py-0.5 px-0.5 w-10">BLI</th>
+                      <th className="border-r border-slate-300 py-0.5 px-0.5 w-10">BLP</th>
+                      <th className="border-r border-slate-300 py-0.5 px-0.5 w-10">QI%</th>
+                      <th className="border-r border-slate-300 py-0.5 px-0.5 w-10">QB%</th>
+                      <th className={`${recetaLayoutMode === "lateral_derecha" ? "border-r border-slate-300" : ""} py-0.5 px-0.5 w-10`}>%TRIZ</th>
                       {recetaLayoutMode === "lateral_derecha" && (
                         <>
                           <th className="border-l-2 border-emerald-700 border-r border-emerald-800/40 py-0.5 px-0.5 w-9 bg-emerald-950 text-emerald-200 font-bold text-[7.5px]">MIN</th>
@@ -6320,16 +6356,81 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                           <input
                             type="number"
                             step="0.1"
-                            value={perfil.materiaPrima?.qPct !== undefined ? perfil.materiaPrima.qPct : ""}
+                            value={perfil.materiaPrima?.ri !== undefined ? perfil.materiaPrima.ri : ""}
                             placeholder=""
                             onChange={(e) => {
                               const cur = perfil.materiaPrima || {};
-                              handlePerfilSecadoChange(idx, "materiaPrima", { ...cur, qPct: e.target.value === "" ? undefined : parseFloat(e.target.value) });
+                              handlePerfilSecadoChange(idx, "materiaPrima", { ...cur, ri: e.target.value === "" ? undefined : parseFloat(e.target.value) });
                             }}
                             className="w-full text-center outline-none bg-transparent text-[9px]"
                           />
                         </td>
                         <td className="border-r border-slate-300 py-0.5 px-0.5 bg-slate-50">
+                          <input
+                            type="number"
+                            step="0.1"
+                            value={perfil.materiaPrima?.rb !== undefined ? perfil.materiaPrima.rb : ""}
+                            placeholder=""
+                            onChange={(e) => {
+                              const cur = perfil.materiaPrima || {};
+                              handlePerfilSecadoChange(idx, "materiaPrima", { ...cur, rb: e.target.value === "" ? undefined : parseFloat(e.target.value) });
+                            }}
+                            className="w-full text-center outline-none bg-transparent text-[9px]"
+                          />
+                        </td>
+                        <td className="border-r border-slate-300 py-0.5 px-0.5 bg-slate-50">
+                          <input
+                            type="number"
+                            step="0.1"
+                            value={perfil.materiaPrima?.bli !== undefined ? perfil.materiaPrima.bli : ""}
+                            placeholder=""
+                            onChange={(e) => {
+                              const cur = perfil.materiaPrima || {};
+                              handlePerfilSecadoChange(idx, "materiaPrima", { ...cur, bli: e.target.value === "" ? undefined : parseFloat(e.target.value) });
+                            }}
+                            className="w-full text-center outline-none bg-transparent text-[9px]"
+                          />
+                        </td>
+                        <td className="border-r border-slate-300 py-0.5 px-0.5 bg-slate-50">
+                          <input
+                            type="number"
+                            step="0.1"
+                            value={perfil.materiaPrima?.blp !== undefined ? perfil.materiaPrima.blp : (perfil.materiaPrima?.blGrad !== undefined ? perfil.materiaPrima.blGrad : "")}
+                            placeholder=""
+                            onChange={(e) => {
+                              const cur = perfil.materiaPrima || {};
+                              handlePerfilSecadoChange(idx, "materiaPrima", { ...cur, blp: e.target.value === "" ? undefined : parseFloat(e.target.value) });
+                            }}
+                            className="w-full text-center outline-none bg-transparent text-[9px]"
+                          />
+                        </td>
+                        <td className="border-r border-slate-300 py-0.5 px-0.5 bg-slate-50">
+                          <input
+                            type="number"
+                            step="0.1"
+                            value={perfil.materiaPrima?.qiPct !== undefined ? perfil.materiaPrima.qiPct : ""}
+                            placeholder=""
+                            onChange={(e) => {
+                              const cur = perfil.materiaPrima || {};
+                              handlePerfilSecadoChange(idx, "materiaPrima", { ...cur, qiPct: e.target.value === "" ? undefined : parseFloat(e.target.value) });
+                            }}
+                            className="w-full text-center outline-none bg-transparent text-[9px]"
+                          />
+                        </td>
+                        <td className="border-r border-slate-300 py-0.5 px-0.5 bg-slate-50">
+                          <input
+                            type="number"
+                            step="0.1"
+                            value={perfil.materiaPrima?.qbPct !== undefined ? perfil.materiaPrima.qbPct : (perfil.materiaPrima?.qPct !== undefined ? perfil.materiaPrima.qPct : "")}
+                            placeholder=""
+                            onChange={(e) => {
+                              const cur = perfil.materiaPrima || {};
+                              handlePerfilSecadoChange(idx, "materiaPrima", { ...cur, qbPct: e.target.value === "" ? undefined : parseFloat(e.target.value) });
+                            }}
+                            className="w-full text-center outline-none bg-transparent text-[9px]"
+                          />
+                        </td>
+                        <td className={`${recetaLayoutMode === "lateral_derecha" ? "border-r border-slate-300" : ""} py-0.5 px-0.5 bg-slate-50`}>
                           <input
                             type="number"
                             step="0.1"
@@ -6338,56 +6439,6 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                             onChange={(e) => {
                               const cur = perfil.materiaPrima || {};
                               handlePerfilSecadoChange(idx, "materiaPrima", { ...cur, trizPct: e.target.value === "" ? undefined : parseFloat(e.target.value) });
-                            }}
-                            className="w-full text-center outline-none bg-transparent text-[9px]"
-                          />
-                        </td>
-                        <td className="border-r border-slate-300 py-0.5 px-0.5 bg-slate-50">
-                          <input
-                            type="number"
-                            step="0.1"
-                            value={perfil.materiaPrima?.blGrad !== undefined ? perfil.materiaPrima.blGrad : ""}
-                            placeholder=""
-                            onChange={(e) => {
-                              const cur = perfil.materiaPrima || {};
-                              handlePerfilSecadoChange(idx, "materiaPrima", { ...cur, blGrad: e.target.value === "" ? undefined : parseFloat(e.target.value) });
-                            }}
-                            className="w-full text-center outline-none bg-transparent text-[9px]"
-                          />
-                        </td>
-                        {/* Modificaciones */}
-                        <td className="border-r border-slate-300 py-0.5 px-0.5">
-                          <input
-                            type="text"
-                            value={perfil.modificaciones?.mod1 ?? ""}
-                            placeholder=""
-                            onChange={(e) => {
-                              const cur = perfil.modificaciones || {};
-                              handlePerfilSecadoChange(idx, "modificaciones", { ...cur, mod1: e.target.value });
-                            }}
-                            className="w-full text-center outline-none bg-transparent text-[9px]"
-                          />
-                        </td>
-                        <td className="border-r border-slate-300 py-0.5 px-0.5">
-                          <input
-                            type="text"
-                            value={perfil.modificaciones?.mod2 ?? ""}
-                            placeholder=""
-                            onChange={(e) => {
-                              const cur = perfil.modificaciones || {};
-                              handlePerfilSecadoChange(idx, "modificaciones", { ...cur, mod2: e.target.value });
-                            }}
-                            className="w-full text-center outline-none bg-transparent text-[9px]"
-                          />
-                        </td>
-                        <td className={`${recetaLayoutMode === "lateral_derecha" ? "border-r border-slate-300" : ""} py-0.5 px-0.5`}>
-                          <input
-                            type="text"
-                            value={perfil.modificaciones?.mod3 ?? ""}
-                            placeholder=""
-                            onChange={(e) => {
-                              const cur = perfil.modificaciones || {};
-                              handlePerfilSecadoChange(idx, "modificaciones", { ...cur, mod3: e.target.value });
                             }}
                             className="w-full text-center outline-none bg-transparent text-[9px]"
                           />
@@ -6602,18 +6653,18 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                     <th className="border-r border-teal-200 py-1 px-1 w-12">Tº PROG.</th>
                     <th className="border-r border-teal-200 py-1 px-1 w-14">A1</th>
                     <th className="border-r border-teal-200 py-1 px-1 w-14">A2</th>
-                    <th className="border-r border-teal-200 py-0.5 px-1" colSpan={3}>CONTROL DE M.PRIMA</th>
-                    <th className="py-0.5 px-1" colSpan={3}>MODIFICACIONES</th>
+                    <th className="border-r border-teal-200 py-0.5 px-1" colSpan={7}>CONTROL DE M.PRIMA</th>
                     <th className="w-6 print:hidden"></th>
                   </tr>
                   <tr className="bg-teal-50 border-b border-teal-300 font-semibold text-slate-700 text-center text-[9px]">
                     <th colSpan={13} className="border-r border-teal-200"></th>
-                    <th className="border-r border-teal-200 py-0.5 px-0.5 w-12">Q%</th>
+                    <th className="border-r border-teal-200 py-0.5 px-0.5 w-10">RI</th>
+                    <th className="border-r border-teal-200 py-0.5 px-0.5 w-10">RB</th>
+                    <th className="border-r border-teal-200 py-0.5 px-0.5 w-10">BLI</th>
+                    <th className="border-r border-teal-200 py-0.5 px-0.5 w-10">BLP</th>
+                    <th className="border-r border-teal-200 py-0.5 px-0.5 w-10">QI%</th>
+                    <th className="border-r border-teal-200 py-0.5 px-0.5 w-10">QB%</th>
                     <th className="border-r border-teal-200 py-0.5 px-0.5 w-10">%TRIZ</th>
-                    <th className="border-r border-teal-200 py-0.5 px-0.5 w-12">BL°</th>
-                    <th className="border-r border-teal-200 py-0.5 px-0.5 w-12">01 TIEMP</th>
-                    <th className="border-r border-teal-200 py-0.5 px-0.5 w-12">02 TIEMP</th>
-                    <th className="border-r border-teal-200 py-0.5 px-0.5 w-14">03 MODIF</th>
                     <th className="print:hidden"></th>
                   </tr>
                 </thead>
@@ -6764,9 +6815,59 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                         <input
                           type="number"
                           step="0.1"
-                          value={row.materiaPrima?.qPct !== undefined ? row.materiaPrima.qPct : ""}
+                          value={row.materiaPrima?.ri !== undefined ? row.materiaPrima.ri : ""}
                           placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamientoFinal", idx, "qPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                          onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamientoFinal", idx, "ri", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                        />
+                      </td>
+                      <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40">
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={row.materiaPrima?.rb !== undefined ? row.materiaPrima.rb : ""}
+                          placeholder=""
+                          onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamientoFinal", idx, "rb", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                        />
+                      </td>
+                      <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40">
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={row.materiaPrima?.bli !== undefined ? row.materiaPrima.bli : ""}
+                          placeholder=""
+                          onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamientoFinal", idx, "bli", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                        />
+                      </td>
+                      <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40">
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={row.materiaPrima?.blp !== undefined ? row.materiaPrima.blp : (row.materiaPrima?.blGrad !== undefined ? row.materiaPrima.blGrad : "")}
+                          placeholder=""
+                          onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamientoFinal", idx, "blp", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                        />
+                      </td>
+                      <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40">
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={row.materiaPrima?.qiPct !== undefined ? row.materiaPrima.qiPct : ""}
+                          placeholder=""
+                          onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamientoFinal", idx, "qiPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                        />
+                      </td>
+                      <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40">
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={row.materiaPrima?.qbPct !== undefined ? row.materiaPrima.qbPct : (row.materiaPrima?.qPct !== undefined ? row.materiaPrima.qPct : "")}
+                          placeholder=""
+                          onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamientoFinal", idx, "qbPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
                           className="w-full text-center outline-none bg-transparent text-[9px]"
                         />
                       </td>
@@ -6777,44 +6878,6 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                           value={row.materiaPrima?.trizPct !== undefined ? row.materiaPrima.trizPct : ""}
                           placeholder=""
                           onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamientoFinal", idx, "trizPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
-                        />
-                      </td>
-                      <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40">
-                        <input
-                          type="number"
-                          step="0.1"
-                          value={row.materiaPrima?.blGrad !== undefined ? row.materiaPrima.blGrad : ""}
-                          placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamientoFinal", idx, "blGrad", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
-                        />
-                      </td>
-                      {/* Modificaciones */}
-                      <td className="border-r border-teal-200 py-0.5 px-0.5">
-                        <input
-                          type="text"
-                          value={row.modificaciones?.mod1 ?? ""}
-                          placeholder=""
-                          onChange={(e) => handleStageModificacionesChange("etapaEnfriamientoFinal", idx, "mod1", e.target.value)}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
-                        />
-                      </td>
-                      <td className="border-r border-teal-200 py-0.5 px-0.5">
-                        <input
-                          type="text"
-                          value={row.modificaciones?.mod2 ?? ""}
-                          placeholder=""
-                          onChange={(e) => handleStageModificacionesChange("etapaEnfriamientoFinal", idx, "mod2", e.target.value)}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
-                        />
-                      </td>
-                      <td className="border-r border-teal-200 py-0.5 px-0.5">
-                        <input
-                          type="text"
-                          value={row.modificaciones?.mod3 ?? ""}
-                          placeholder=""
-                          onChange={(e) => handleStageModificacionesChange("etapaEnfriamientoFinal", idx, "mod3", e.target.value)}
                           className="w-full text-center outline-none bg-transparent text-[9px]"
                         />
                       </td>

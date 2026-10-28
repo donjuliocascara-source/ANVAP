@@ -183,6 +183,20 @@ export function createEmptySilosPlant(): SiloControlPlant[] {
   }));
 }
 
+export function createEmptyMateriaPrima() {
+  return {
+    ri: undefined as any,
+    rb: undefined as any,
+    bli: undefined as any,
+    blp: undefined as any,
+    qiPct: undefined as any,
+    qbPct: undefined as any,
+    trizPct: undefined as any,
+    qPct: undefined as any,
+    blGrad: undefined as any
+  };
+}
+
 /**
  * Etapas de Reposo 1, Enfriamiento y Reposo 2 previo al Secado
  */
@@ -209,7 +223,7 @@ export function createEmptyEtapaReposo1(fechaStr?: string): PerfilSecadoPlant[] 
       tempProgramada: undefined as any,
       a1: undefined as any,
       a2: undefined as any,
-      materiaPrima: { qPct: undefined, trizPct: undefined, blGrad: undefined },
+      materiaPrima: createEmptyMateriaPrima(),
       modificaciones: { mod1: "", mod2: "", mod3: "" }
     },
     {
@@ -228,7 +242,7 @@ export function createEmptyEtapaReposo1(fechaStr?: string): PerfilSecadoPlant[] 
       tempProgramada: undefined as any,
       a1: undefined as any,
       a2: undefined as any,
-      materiaPrima: { qPct: undefined, trizPct: undefined, blGrad: undefined },
+      materiaPrima: createEmptyMateriaPrima(),
       modificaciones: { mod1: "", mod2: "", mod3: "" }
     }
   ];
@@ -257,7 +271,7 @@ export function createEmptyEtapaEnfriamiento(fechaStr?: string): PerfilSecadoPla
       tempProgramada: undefined as any,
       a1: undefined as any,
       a2: undefined as any,
-      materiaPrima: { qPct: undefined, trizPct: undefined, blGrad: undefined },
+      materiaPrima: createEmptyMateriaPrima(),
       modificaciones: { mod1: "", mod2: "", mod3: "" }
     },
     {
@@ -276,7 +290,7 @@ export function createEmptyEtapaEnfriamiento(fechaStr?: string): PerfilSecadoPla
       tempProgramada: undefined as any,
       a1: undefined as any,
       a2: undefined as any,
-      materiaPrima: { qPct: undefined, trizPct: undefined, blGrad: undefined },
+      materiaPrima: createEmptyMateriaPrima(),
       modificaciones: { mod1: "", mod2: "", mod3: "" }
     }
   ];
@@ -305,7 +319,7 @@ export function createEmptyEtapaReposo2(fechaStr?: string): PerfilSecadoPlant[] 
       tempProgramada: undefined as any,
       a1: undefined as any,
       a2: undefined as any,
-      materiaPrima: { qPct: undefined, trizPct: undefined, blGrad: undefined },
+      materiaPrima: createEmptyMateriaPrima(),
       modificaciones: { mod1: "", mod2: "", mod3: "" }
     },
     {
@@ -324,7 +338,7 @@ export function createEmptyEtapaReposo2(fechaStr?: string): PerfilSecadoPlant[] 
       tempProgramada: undefined as any,
       a1: undefined as any,
       a2: undefined as any,
-      materiaPrima: { qPct: undefined, trizPct: undefined, blGrad: undefined },
+      materiaPrima: createEmptyMateriaPrima(),
       modificaciones: { mod1: "", mod2: "", mod3: "" }
     }
   ];
@@ -362,7 +376,7 @@ export function createEmptyPerfilesSecado(fechaStr?: string): PerfilSecadoPlant[
     tempProgramada: undefined as any,
     a1: undefined as any,
     a2: undefined as any,
-    materiaPrima: { qPct: undefined, trizPct: undefined, blGrad: undefined },
+    materiaPrima: createEmptyMateriaPrima(),
     modificaciones: { mod1: "", mod2: "", mod3: "" }
   }));
 }
@@ -406,7 +420,7 @@ export function createEmptyEtapaEnfriamientoFinal(fechaStr?: string): PerfilSeca
       tempProgramada: undefined as any,
       a1: undefined as any,
       a2: undefined as any,
-      materiaPrima: { qPct: undefined, trizPct: undefined, blGrad: undefined },
+      materiaPrima: createEmptyMateriaPrima(),
       modificaciones: { mod1: "", mod2: "", mod3: "" }
     },
     {
@@ -425,7 +439,7 @@ export function createEmptyEtapaEnfriamientoFinal(fechaStr?: string): PerfilSeca
       tempProgramada: undefined as any,
       a1: undefined as any,
       a2: undefined as any,
-      materiaPrima: { qPct: undefined, trizPct: undefined, blGrad: undefined },
+      materiaPrima: createEmptyMateriaPrima(),
       modificaciones: { mod1: "", mod2: "", mod3: "" }
     }
   ];

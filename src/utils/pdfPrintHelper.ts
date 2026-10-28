@@ -1221,9 +1221,9 @@ export function generateHojaControlVaporizadoPDF(params: {
     startY: currentY,
     margin: { left: margin, right: margin },
     head: [
-      [{ content: `6. REGISTRO DE CONTROL DE PROCESO DE VAPORIZADO — ETAPA DE SECADO (${(perfilesSecado || []).filter((p: any) => p.tipoRegistro !== "REPOSO").length} PERFILES)`, colSpan: 21, styles: { fillColor: [122, 24, 24], textColor: [255, 255, 255], fontStyle: "bold", halign: "left" } }],
+      [{ content: `6. REGISTRO DE CONTROL DE PROCESO DE VAPORIZADO — ETAPA DE SECADO (${(perfilesSecado || []).filter((p: any) => p.tipoRegistro !== "REPOSO").length} PERFILES)`, colSpan: 25, styles: { fillColor: [122, 24, 24], textColor: [255, 255, 255], fontStyle: "bold", halign: "left" } }],
       [
-        "FECHA", "PERFIL", "H. INICIO", "T° GRANO", "T° TERM", "T° LASER", "T° AMB", "H.R%", "H1", "H2", "H3", "H4", "HUMEDAD", "GRAD.", "TIEMPO", "T° PROG", "Q%", "%TRIZ", "BL°", "RECETA MIN", "RECETA T°"
+        "FECHA", "PERFIL", "H. INICIO", "T° GRANO", "T° TERM", "T° LASER", "T° AMB", "H.R%", "H1", "H2", "H3", "H4", "HUMEDAD", "GRAD.", "TIEMPO", "T° PROG", "RI", "RB", "BLI", "BLP", "QI%", "QB%", "%TRIZ", "RECETA MIN", "RECETA T°"
       ]
     ],
     body: (perfilesSecado || []).map((p: any, idx: number) => {
@@ -1237,7 +1237,7 @@ export function generateHojaControlVaporizadoPDF(params: {
           p.fecha || fecha,
           { content: "⏸️ REPOSO", styles: { fontStyle: "bold", fillColor: [254, 243, 199], textColor: [180, 83, 9] } },
           p.horaInicio || "--:--",
-          { content: `Fin: ${p.horaFin || "--:--"} | Duración: ${dur} | T°Grano:${grano} (Term:${term}, Las:${las}) | H:${hum} | MOTIVO CALIDAD: ${p.motivoReposo || "Equilibrado de grano por calidad"}`, colSpan: 18, styles: { halign: "left", fontStyle: "italic", fillColor: [254, 252, 232], textColor: [120, 53, 15] } }
+          { content: `Fin: ${p.horaFin || "--:--"} | Duración: ${dur} | T°Grano:${grano} (Term:${term}, Las:${las}) | H:${hum} | MOTIVO CALIDAD: ${p.motivoReposo || "Equilibrado de grano por calidad"}`, colSpan: 22, styles: { halign: "left", fontStyle: "italic", fillColor: [254, 252, 232], textColor: [120, 53, 15] } }
         ];
       }
 
@@ -1270,9 +1270,13 @@ export function generateHojaControlVaporizadoPDF(params: {
         { content: displayGrad, styles: { fontStyle: "bold", fillColor: [241, 245, 249] } },
         p.tiempoMin ?? "-",
         p.tempProgramada ?? "-",
-        p.materiaPrima?.qPct ?? "-",
+        p.materiaPrima?.ri ?? "-",
+        p.materiaPrima?.rb ?? "-",
+        p.materiaPrima?.bli ?? "-",
+        p.materiaPrima?.blp ?? p.materiaPrima?.blGrad ?? "-",
+        p.materiaPrima?.qiPct ?? "-",
+        p.materiaPrima?.qbPct ?? p.materiaPrima?.qPct ?? "-",
         p.materiaPrima?.trizPct ?? "-",
-        p.materiaPrima?.blGrad ?? "-",
         { content: rec.tiempo ? `${rec.tiempo}m` : "-", styles: { fillColor: [236, 253, 245], fontStyle: "bold" } },
         { content: rec.temp ? `${rec.temp}°C` : "-", styles: { fillColor: [254, 242, 242], fontStyle: "bold", textColor: [153, 27, 27] } }
       ];

@@ -110,24 +110,154 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
   // 1. batchesProgramadosActivos: SOLO los batches que han sido programados y están activos (NO cerrados), ordenados de arriba hacia abajo.
   // 2. batchesCerradosHistorial: Los batches que ya han sido cerrados (CERRADO / TERMINADO), para la lista "Historial de Batch".
   const { batchesProgramadosActivos, batchesCerradosHistorial, allBatches } = useMemo(() => {
-    const progs = progsOficialesList.length > 0 ? progsOficialesList : cargarProgramacionesOficiales();
+    // 1. Cargar todas las programaciones oficiales (activas, archivadas y guardadas en localStorage)
+    const progsMap = new Map<string, any>();
+    if (Array.isArray(progsOficialesList) && progsOficialesList.length > 0) {
+      progsOficialesList.forEach((p) => {
+        const k = (p.batch || p.id || "").trim().toUpperCase();
+        if (k) progsMap.set(k, p);
+      });
+    }
+    try {
+      const officialProgs = cargarProgramacionesOficiales();
+      officialProgs.forEach((p) => {
+        const k = (p.batch || p.id || "").trim().toUpperCase();
+        if (k && !progsMap.has(k)) progsMap.set(k, p);
+      });
+    } catch {}
+
+    if (typeof window !== "undefined" && window.localStorage) {
+      for (const lsKey of ["molino_programaciones_batch_oficiales_v4", "molino_programaciones_batch_oficiales_v3", "programaciones_batch_oficial_v1"]) {
+        try {
+          const raw = window.localStorage.getItem(lsKey);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              parsed.forEach((p: any) => {
+                const k = (p.batch || p.id || "").trim().toUpperCase();
+                if (k && !progsMap.has(k)) progsMap.set(k, p);
+              });
+            }
+          }
+        } catch {}
+      }
+    }
+    const allProgs = Array.from(progsMap.values());
+
+    // 2. Batches en memoria y en base de datos local
     const dbBatches = localDB.getBatches() || [];
+    const dbControles = localDB.getControlVaporizado() || [];
     const combinedRawBatches = [...batches];
-    dbBatches.forEach((dbB) => {
-      const k1 = (dbB.CORRELATIVO || "").trim().toUpperCase();
-      const k2 = (dbB.BATCH_ID || "").trim().toUpperCase();
+
+    const addBatchIfMissing = (rawB: Partial<BatchVaporizado>, defaultState: string = "PROGRAMADO") => {
+      const k1 = (rawB.CORRELATIVO || "").trim().toUpperCase();
+      const k2 = (rawB.BATCH_ID || "").trim().toUpperCase();
+      if (!k1 && !k2) return;
       const exists = combinedRawBatches.some((b) => {
         const b1 = (b.CORRELATIVO || "").trim().toUpperCase();
         const b2 = (b.BATCH_ID || "").trim().toUpperCase();
         return (k1 && (b1 === k1 || b2 === k1)) || (k2 && (b1 === k2 || b2 === k2));
       });
-      if (!exists) combinedRawBatches.push(dbB);
+      if (!exists) {
+        combinedRawBatches.push({
+          BATCH_ID: rawB.BATCH_ID || rawB.CORRELATIVO || k1 || k2,
+          CORRELATIVO: rawB.CORRELATIVO || rawB.BATCH_ID || k1 || k2,
+          FECHA_PROGRAMADA: rawB.FECHA_PROGRAMADA || new Date().toISOString().split("T")[0],
+          EQUIPO: rawB.EQUIPO || "APIT",
+          ESTADO_BATCH: (rawB.ESTADO_BATCH as any) || defaultState,
+          TON_PROGRAMADAS: rawB.TON_PROGRAMADAS || 18,
+          TON_PROCESADAS: rawB.TON_PROCESADAS || 18,
+          PESO_TOTAL_KG: rawB.PESO_TOTAL_KG || 18000,
+          CLIENTE: rawB.CLIENTE || "MOLINO SAN PEDRO S.A.C.",
+          VARIEDAD: rawB.VARIEDAD || "TINAJONES",
+          TURNO: rawB.TURNO || "Turno Día",
+          OPERADOR: rawB.OPERADOR || "Pedro Huamán",
+          OBSERVACIONES: rawB.OBSERVACIONES || "",
+          ...rawB
+        } as BatchVaporizado);
+      }
+    };
+
+    dbBatches.forEach((b) => addBatchIfMissing(b));
+
+    // Agregar batches que ya tienen ficha guardada o liquidada en dbControles (ej: V366, V368)
+    dbControles.forEach((c) => {
+      const bCode = (c.BATCH_ID || c.CORRELATIVO || "").trim();
+      if (bCode) {
+        const isLiq = Boolean(c.liquidado) || c.ESTADO_PROCESO === "LIQUIDADO" || c.ESTADO_PROCESO === "VAPORIZADO";
+        addBatchIfMissing({
+          BATCH_ID: bCode,
+          CORRELATIVO: c.CORRELATIVO || bCode,
+          CLIENTE: c.CLIENTE || (c.datosIngreso as any)?.cliente,
+          VARIEDAD: c.VARIEDAD || c.datosIngreso?.variedad,
+          ESTADO_BATCH: isLiq ? "VAPORIZADO" : ((c.ESTADO_PROCESO as any) || "CERRADO"),
+          cerroCompletamente: Boolean((c as any).cerroCompletamente || isLiq),
+          liquidado: Boolean(isLiq),
+          PESO_TOTAL_KG: c.datosIngreso?.pesoKg || (c.TON_PROCESADAS ? c.TON_PROCESADAS * 1000 : 18000)
+        } as any, "VAPORIZADO");
+      }
     });
 
-    const isClosedState = (est?: string, cerroComp?: boolean) => {
-      if (cerroComp) return true;
+    if (Array.isArray(controles)) {
+      controles.forEach((c) => {
+        const bCode = (c.BATCH_ID || c.CORRELATIVO || "").trim();
+        if (bCode) {
+          const isLiq = Boolean(c.liquidado) || c.ESTADO_PROCESO === "LIQUIDADO" || c.ESTADO_PROCESO === "VAPORIZADO";
+          addBatchIfMissing({
+            BATCH_ID: bCode,
+            CORRELATIVO: c.CORRELATIVO || bCode,
+            CLIENTE: c.CLIENTE || (c.datosIngreso as any)?.cliente,
+            VARIEDAD: c.VARIEDAD || c.datosIngreso?.variedad,
+            ESTADO_BATCH: isLiq ? "VAPORIZADO" : ((c.ESTADO_PROCESO as any) || "CERRADO"),
+            cerroCompletamente: Boolean((c as any).cerroCompletamente || isLiq),
+            liquidado: Boolean(isLiq),
+            PESO_TOTAL_KG: c.datosIngreso?.pesoKg || (c.TON_PROCESADAS ? c.TON_PROCESADAS * 1000 : 18000)
+          } as any, "VAPORIZADO");
+        }
+      });
+    }
+
+    // Escanear borradores en localStorage (ej: apit_draft_ctrl_V366, apit_draft_ctrl_V368)
+    if (typeof window !== "undefined" && window.localStorage) {
+      try {
+        for (let i = 0; i < window.localStorage.length; i++) {
+          const key = window.localStorage.key(i);
+          if (key && key.startsWith("apit_draft_ctrl_")) {
+            const rawCode = key.replace("apit_draft_ctrl_", "").trim();
+            if (rawCode && rawCode !== "undefined" && rawCode !== "null") {
+              let draftObj: any = null;
+              try {
+                draftObj = JSON.parse(window.localStorage.getItem(key) || "{}");
+              } catch {}
+              const isLiq = Boolean(draftObj?.liquidado) || draftObj?.ESTADO_PROCESO === "LIQUIDADO" || draftObj?.ESTADO_PROCESO === "VAPORIZADO";
+              addBatchIfMissing({
+                BATCH_ID: rawCode,
+                CORRELATIVO: draftObj?.CORRELATIVO || rawCode,
+                CLIENTE: draftObj?.CLIENTE || draftObj?.datosIngreso?.cliente,
+                VARIEDAD: draftObj?.VARIEDAD || draftObj?.datosIngreso?.variedad,
+                ESTADO_BATCH: isLiq ? "VAPORIZADO" : (draftObj?.ESTADO_PROCESO || "CERRADO"),
+                cerroCompletamente: Boolean(draftObj?.cerroCompletamente || isLiq),
+                liquidado: Boolean(isLiq)
+              } as any, "CERRADO");
+            }
+          }
+        }
+      } catch {}
+    }
+
+    const isClosedState = (est?: string, cerroComp?: boolean, liquidado?: boolean) => {
+      if (cerroComp || liquidado) return true;
       const s = (est || "").toString().trim().toUpperCase();
-      return s === "CERRADO" || s === "TERMINADO" || s === "FINALIZADO" || s === "COMPLETADO";
+      return (
+        s === "CERRADO" ||
+        s === "TERMINADO" ||
+        s === "FINALIZADO" ||
+        s === "COMPLETADO" ||
+        s === "VAPORIZADO" ||
+        s === "LIQUIDADO" ||
+        s === "ANALISIS_FINAL" ||
+        s === "EVALUADO"
+      );
     };
 
     const closedKeys = new Set<string>();
@@ -146,28 +276,34 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
           return lEst === "CERRADO" || Boolean((foundLote as any)?.cerroCompletamente);
         });
 
-      if (isClosedState(b.ESTADO_BATCH, (b as any).cerroCompletamente) || allLotesClosed) {
+      if (isClosedState(b.ESTADO_BATCH, (b as any).cerroCompletamente, (b as any).liquidado) || allLotesClosed) {
         if (k1) closedKeys.add(k1);
         if (k2) closedKeys.add(k2);
+      }
+    });
+
+    [...dbControles, ...(controles || [])].forEach((c) => {
+      const est = (c?.ESTADO_PROCESO || "").toString().trim().toUpperCase();
+      if (c?.liquidado || (c as any)?.cerroCompletamente || isClosedState(est)) {
+        if (c.BATCH_ID) closedKeys.add(c.BATCH_ID.trim().toUpperCase());
+        if (c.CORRELATIVO) closedKeys.add(c.CORRELATIVO.trim().toUpperCase());
       }
     });
 
     const activeMap = new Map<string, BatchVaporizado>();
     const closedMap = new Map<string, BatchVaporizado>();
 
-    // 1. Agregar programaciones oficiales activas (solo las que no están cerradas)
-    progs.forEach((p, idx) => {
+    // 1. Clasificar programaciones oficiales
+    allProgs.forEach((p, idx) => {
       const bCode = (p.batch || p.id || `V${200 + idx}`).trim();
       const bKey = bCode.toUpperCase();
-      if (isClosedState(p.estado) || closedKeys.has(bKey)) {
-        return;
-      }
-      activeMap.set(bKey, {
+      const isProgClosed = isClosedState(p.estado, (p as any).cerroCompletamente, (p as any).liquidado) || closedKeys.has(bKey);
+      const batchItem: BatchVaporizado = {
         BATCH_ID: bCode,
         CORRELATIVO: bCode,
         FECHA_PROGRAMADA: p.fecha || new Date().toISOString().split("T")[0],
         EQUIPO: "APIT",
-        ESTADO_BATCH: (p.estado as any) || "PROGRAMADO",
+        ESTADO_BATCH: isProgClosed ? ((p.estado as any) || "CERRADO") : ((p.estado as any) || "PROGRAMADO"),
         TON_PROGRAMADAS: (p.pesoTotalKg || 18000) / 1000,
         TON_PROCESADAS: (p.pesoTotalKg || 18000) / 1000,
         PESO_TOTAL_KG: p.pesoTotalKg || 18000,
@@ -175,11 +311,18 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
         VARIEDAD: p.variedadPrincipal || "TINAJONES",
         TURNO: p.turno === "DIA" ? "Turno Día" : "Turno Noche",
         OPERADOR: "Pedro Huamán",
-        OBSERVACIONES: p.observacion || ""
-      });
+        OBSERVACIONES: p.observacion || "",
+        ...(isProgClosed ? { cerroCompletamente: true } : {})
+      };
+
+      if (isProgClosed) {
+        closedMap.set(bKey, batchItem);
+      } else {
+        activeMap.set(bKey, batchItem);
+      }
     });
 
-    // 2. Clasificar batches guardados en activos (programados) vs historial (cerrados)
+    // 2. Clasificar batches combinados en activos (programados) vs historial (cerrados/guardados)
     combinedRawBatches.forEach((b) => {
       const key1 = (b.CORRELATIVO || "").trim().toUpperCase();
       const key2 = (b.BATCH_ID || "").trim().toUpperCase();
@@ -187,7 +330,7 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
       if (!primaryKey) return;
 
       const isClosed =
-        isClosedState(b.ESTADO_BATCH, (b as any).cerroCompletamente) ||
+        isClosedState(b.ESTADO_BATCH, (b as any).cerroCompletamente, (b as any).liquidado) ||
         (key1 && closedKeys.has(key1)) ||
         (key2 && closedKeys.has(key2));
 
@@ -209,7 +352,7 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
           ...b,
           BATCH_ID: b.BATCH_ID || b.CORRELATIVO || primaryKey,
           CORRELATIVO: b.CORRELATIVO || b.BATCH_ID || primaryKey,
-          ESTADO_BATCH: "CERRADO",
+          ESTADO_BATCH: b.ESTADO_BATCH || "CERRADO",
           CLIENTE: b.CLIENTE || bLotes[0]?.CLIENTE || firstLoteObj?.CLIENTE || existingClosed?.CLIENTE || "MOLINO SAN PEDRO S.A.C.",
           VARIEDAD: b.VARIEDAD || bLotes[0]?.VARIEDAD || firstLoteObj?.VARIEDAD || existingClosed?.VARIEDAD || "TINAJONES",
           PESO_TOTAL_KG: b.PESO_TOTAL_KG || (b as any).TOTAL_PESO_KG || sumKg || existingClosed?.PESO_TOTAL_KG || 18000
@@ -246,33 +389,44 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
       batchesCerradosHistorial: sortedCerrados,
       allBatches: [...sortedActivos, ...sortedCerrados]
     };
-  }, [batches, progsOficialesList, batchLotes, lotes]);
+  }, [batches, progsOficialesList, batchLotes, lotes, controles]);
 
   const [selectedBatchId, setSelectedBatchId] = useState<string>(() => {
     if (initialBatchId) return initialBatchId;
     try {
       const lastSavedBatch = localStorage.getItem("apit_last_selected_batch_ctrl");
       if (lastSavedBatch) {
-        // Por defecto en Batch Activo solo restaurar si pertenece a un batch programado activo
+        const lastUpper = lastSavedBatch.trim().toUpperCase();
         const matchActive = batchesProgramadosActivos.find(
           (b) =>
-            b.BATCH_ID.toUpperCase() === lastSavedBatch.toUpperCase() ||
-            (b.CORRELATIVO && b.CORRELATIVO.toUpperCase() === lastSavedBatch.toUpperCase())
+            b.BATCH_ID.toUpperCase() === lastUpper ||
+            (b.CORRELATIVO && b.CORRELATIVO.toUpperCase() === lastUpper)
         );
         if (matchActive) return matchActive.BATCH_ID;
+
+        const matchClosed = batchesCerradosHistorial.find(
+          (b) =>
+            b.BATCH_ID.toUpperCase() === lastUpper ||
+            (b.CORRELATIVO && b.CORRELATIVO.toUpperCase() === lastUpper)
+        );
+        if (matchClosed) return matchClosed.BATCH_ID;
       }
     } catch {
       // ignore storage errors
     }
-    return batchesProgramadosActivos[0]?.BATCH_ID || "";
+    return batchesProgramadosActivos[0]?.BATCH_ID || batchesCerradosHistorial[0]?.BATCH_ID || "";
   });
 
-  // Si hay batches activos programados y aún no hay ningún batch seleccionado, seleccionar el primero en cola (arriba)
+  // Si aún no hay ningún batch seleccionado, seleccionar el primero disponible
   useEffect(() => {
-    if (!selectedBatchId && batchesProgramadosActivos.length > 0) {
-      setSelectedBatchId(batchesProgramadosActivos[0].BATCH_ID);
+    if (!selectedBatchId) {
+      if (batchesProgramadosActivos.length > 0) {
+        setSelectedBatchId(batchesProgramadosActivos[0].BATCH_ID);
+      } else if (batchesCerradosHistorial.length > 0) {
+        setSelectedBatchId(batchesCerradosHistorial[0].BATCH_ID);
+      }
     }
-  }, [batchesProgramadosActivos, selectedBatchId]);
+  }, [batchesProgramadosActivos, batchesCerradosHistorial, selectedBatchId]);
 
   useEffect(() => {
     if (selectedBatchId) {
@@ -286,16 +440,24 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
 
   const selectedBatch = useMemo(() => {
     if (!selectedBatchId) {
-      return batchesProgramadosActivos[0] || undefined;
+      return batchesProgramadosActivos[0] || batchesCerradosHistorial[0] || undefined;
     }
+    const sIdUpper = selectedBatchId.trim().toUpperCase();
+    const cleanSId = sIdUpper.replace(/[^A-Z0-9]/g, "");
     return (
-      allBatches.find(
-        (b) =>
-          b.BATCH_ID.toUpperCase() === selectedBatchId.toUpperCase() ||
-          (b.CORRELATIVO && b.CORRELATIVO.toUpperCase() === selectedBatchId.toUpperCase())
-      ) || batchesProgramadosActivos[0] || undefined
+      allBatches.find((b) => {
+        const bId = (b.BATCH_ID || "").trim().toUpperCase();
+        const bCorr = (b.CORRELATIVO || "").trim().toUpperCase();
+        if (bId === sIdUpper || bCorr === sIdUpper) return true;
+        const cleanBId = bId.replace(/[^A-Z0-9]/g, "");
+        const cleanBCorr = bCorr.replace(/[^A-Z0-9]/g, "");
+        return Boolean(cleanSId && (cleanBId === cleanSId || cleanBCorr === cleanSId));
+      }) ||
+      batchesProgramadosActivos[0] ||
+      batchesCerradosHistorial[0] ||
+      undefined
     );
-  }, [allBatches, batchesProgramadosActivos, selectedBatchId]);
+  }, [allBatches, batchesProgramadosActivos, batchesCerradosHistorial, selectedBatchId]);
 
   const isSelectedFromActive = useMemo(() => {
     if (!selectedBatch) return false;
@@ -325,16 +487,32 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
     const tCorr = (targetCorrStr || selectedBatch?.CORRELATIVO || tBatch).trim().toUpperCase();
     if (!tId && !tBatch && !tCorr) return undefined;
 
+    const cleanAlpha = (s?: string) => (s || "").toString().toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const cleanNum = (s?: string) => (s || "").toString().replace(/\D/g, "");
+
+    const targets = [tId, tBatch, tCorr].filter(Boolean);
+
     const matchesCtrl = (c?: Partial<ControlVaporizado> | null) => {
       if (!c) return false;
       const cId = (c.BATCH_ID || "").trim().toUpperCase();
       const cCorr = (c.CORRELATIVO || "").trim().toUpperCase();
       const cCod = (c.datosIngreso?.codigo || "").trim().toUpperCase();
-      return Boolean(
-        (tId && (cId === tId || cCorr === tId || cCod === tId)) ||
-        (tBatch && (cId === tBatch || cCorr === tBatch || cCod === tBatch)) ||
-        (tCorr && (cId === tCorr || cCorr === tCorr || cCod === tCorr))
-      );
+      const cInterno = ((c as any).CODIGO_INTERNO || "").trim().toUpperCase();
+
+      const candidates = [cId, cCorr, cCod, cInterno].filter(Boolean);
+
+      for (const t of targets) {
+        if (candidates.includes(t)) return true;
+        const cleanT = cleanAlpha(t);
+        const numT = cleanNum(t);
+        for (const cand of candidates) {
+          const cleanC = cleanAlpha(cand);
+          if (cleanT && cleanC && cleanT === cleanC) return true;
+          const numC = cleanNum(cand);
+          if (numT && numC && numT === numC && numT.length >= 2) return true;
+        }
+      }
+      return false;
     };
 
     const fromProps = controles.find(matchesCtrl);
@@ -347,16 +525,38 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
         `apit_draft_ctrl_${tId}`,
         `apit_draft_ctrl_${tBatch}`,
         `apit_draft_ctrl_${targetCorrStr || selectedBatch?.CORRELATIVO || ""}`,
-        `apit_draft_ctrl_${tCorr}`
+        `apit_draft_ctrl_${tCorr}`,
+        `apit_draft_ctrl_${cleanAlpha(tId)}`,
+        `apit_draft_ctrl_${cleanAlpha(tBatch)}`
       ]));
       for (const key of draftKeys) {
         if (!key || key === "apit_draft_ctrl_") continue;
         const raw = localStorage.getItem(key);
         if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed && typeof parsed === "object" && matchesCtrl(parsed)) {
-            fromDraft = parsed;
-            break;
+          try {
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === "object" && matchesCtrl(parsed)) {
+              fromDraft = parsed;
+              break;
+            }
+          } catch {}
+        }
+      }
+
+      if (!fromDraft && typeof window !== "undefined" && window.localStorage) {
+        for (let i = 0; i < window.localStorage.length; i++) {
+          const k = window.localStorage.key(i);
+          if (k && k.startsWith("apit_draft_ctrl_")) {
+            const raw = window.localStorage.getItem(k);
+            if (raw) {
+              try {
+                const parsed = JSON.parse(raw);
+                if (parsed && typeof parsed === "object" && matchesCtrl(parsed)) {
+                  fromDraft = parsed;
+                  break;
+                }
+              } catch {}
+            }
           }
         }
       }
@@ -1297,12 +1497,12 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
             }`}
           >
             <label htmlFor="select-batch-control" className="text-xs text-slate-300 font-bold whitespace-nowrap flex items-center gap-1.5">
-              <span className={`w-2 h-2 rounded-full ${batchesProgramadosActivos.length > 0 ? "bg-amber-400 animate-pulse" : "bg-slate-500"}`} />
-              Batch Activo:
+              <span className={`w-2 h-2 rounded-full ${batchesProgramadosActivos.length > 0 ? "bg-amber-400 animate-pulse" : "bg-emerald-400"}`} />
+              Batch Activo / Selector:
             </label>
             <select
               id="select-batch-control"
-              value={isSelectedFromActive && selectedBatch ? selectedBatch.BATCH_ID : ""}
+              value={selectedBatch ? selectedBatch.BATCH_ID : (selectedBatchId || "")}
               onChange={(e) => {
                 const val = e.target.value;
                 if (val) {
@@ -1312,21 +1512,28 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
                   }
                 }
               }}
-              className="bg-slate-900 border border-slate-600 rounded-lg px-2.5 py-1 text-xs text-amber-300 font-black cursor-pointer min-w-[200px]"
+              className="bg-slate-900 border border-slate-600 rounded-lg px-2.5 py-1 text-xs text-amber-300 font-black cursor-pointer min-w-[220px]"
             >
-              {batchesProgramadosActivos.length === 0 ? (
-                <option value="">Sin batch programado activo</option>
-              ) : (
-                <>
-                  {!isSelectedFromActive && (
-                    <option value="">-- Seleccionar batch programado ({batchesProgramadosActivos.length}) --</option>
-                  )}
+              {batchesProgramadosActivos.length > 0 && (
+                <optgroup label="📋 Batches Activos (En Proceso / Pendientes)">
                   {batchesProgramadosActivos.map((b, idx) => (
-                    <option key={b.BATCH_ID} value={b.BATCH_ID}>
+                    <option key={`act-${b.BATCH_ID}`} value={b.BATCH_ID}>
                       {idx + 1}° · {b.CORRELATIVO || b.BATCH_ID} - {b.CLIENTE ? `${b.CLIENTE.substring(0, 18)}` : (b.ESTADO_BATCH || "PROGRAMADO")} ({b.VARIEDAD || "TINAJONES"})
                     </option>
                   ))}
-                </>
+                </optgroup>
+              )}
+              {batchesCerradosHistorial.length > 0 && (
+                <optgroup label="🗂️ Batches Cerrados / Guardados (Historial)">
+                  {batchesCerradosHistorial.map((b) => (
+                    <option key={`cerr-${b.BATCH_ID}`} value={b.BATCH_ID}>
+                      ✓ {b.CORRELATIVO || b.BATCH_ID} - {b.CLIENTE ? `${b.CLIENTE.substring(0, 18)}` : "CERRADO"} ({b.VARIEDAD || "TINAJONES"}) [{b.ESTADO_BATCH || "GUARDADO"}]
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {batchesProgramadosActivos.length === 0 && batchesCerradosHistorial.length === 0 && (
+                <option value="">Sin batches registrados</option>
               )}
             </select>
           </div>
@@ -1364,11 +1571,11 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
                   <option value="">
                     {isSelectedFromHistorial
                       ? "-- Cambiar batch del historial --"
-                      : `-- Ver historial de batch (${batchesCerradosHistorial.length} cerrados) --`}
+                      : `-- Ver historial de batch (${batchesCerradosHistorial.length} cerrados/guardados) --`}
                   </option>
                   {batchesCerradosHistorial.map((b) => (
                     <option key={b.BATCH_ID} value={b.BATCH_ID}>
-                      {b.CORRELATIVO || b.BATCH_ID} - {b.CLIENTE ? `${b.CLIENTE.substring(0, 18)}` : "CERRADO"} ({b.VARIEDAD || "TINAJONES"}) [CERRADO]
+                      ✓ {b.CORRELATIVO || b.BATCH_ID} - {b.CLIENTE ? `${b.CLIENTE.substring(0, 18)}` : "CERRADO"} ({b.VARIEDAD || "TINAJONES"}) [{b.ESTADO_BATCH || "CERRADO"}]
                     </option>
                   ))}
                 </>

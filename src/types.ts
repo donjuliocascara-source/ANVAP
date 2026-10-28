@@ -430,6 +430,12 @@ export interface PerfilSecadoPlant {
     qPct?: number;
     trizPct?: number;
     blGrad?: number;
+    ri?: number;
+    rb?: number;
+    bli?: number;
+    blp?: number;
+    qiPct?: number;
+    qbPct?: number;
   };
   modificaciones?: {
     mod1Tiemp?: string;
