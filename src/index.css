@@ -31,25 +31,36 @@
   }
 
   /* Eliminar flechas de subir/bajar (spin buttons / steppers) en inputs de celdas de materia prima y tablas */
+  input.no-spin,
   input[type="number"].no-spin,
+  input[data-no-spin="true"],
   input[type="number"][data-no-spin="true"],
   [data-no-spin="true"],
+  [data-no-spin="true"] input,
+  .no-spin-inputs input,
   .no-spin-inputs input[type="number"],
+  td[data-materia-prima="true"] input,
   td[data-materia-prima="true"] input[type="number"] {
     -moz-appearance: textfield !important;
     appearance: textfield !important;
   }
 
+  input.no-spin::-webkit-outer-spin-button,
+  input.no-spin::-webkit-inner-spin-button,
   input[type="number"].no-spin::-webkit-outer-spin-button,
   input[type="number"].no-spin::-webkit-inner-spin-button,
+  input[data-no-spin="true"]::-webkit-outer-spin-button,
+  input[data-no-spin="true"]::-webkit-inner-spin-button,
   input[type="number"][data-no-spin="true"]::-webkit-outer-spin-button,
   input[type="number"][data-no-spin="true"]::-webkit-inner-spin-button,
   [data-no-spin="true"]::-webkit-outer-spin-button,
   [data-no-spin="true"]::-webkit-inner-spin-button,
-  .no-spin-inputs input[type="number"]::-webkit-outer-spin-button,
-  .no-spin-inputs input[type="number"]::-webkit-inner-spin-button,
-  td[data-materia-prima="true"] input[type="number"]::-webkit-outer-spin-button,
-  td[data-materia-prima="true"] input[type="number"]::-webkit-inner-spin-button {
+  [data-no-spin="true"] input::-webkit-outer-spin-button,
+  [data-no-spin="true"] input::-webkit-inner-spin-button,
+  .no-spin-inputs input::-webkit-outer-spin-button,
+  .no-spin-inputs input::-webkit-inner-spin-button,
+  td[data-materia-prima="true"] input::-webkit-outer-spin-button,
+  td[data-materia-prima="true"] input::-webkit-inner-spin-button {
     -webkit-appearance: none !important;
     margin: 0 !important;
   }

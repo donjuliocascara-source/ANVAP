@@ -4603,34 +4603,46 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                       <td className="border-r border-amber-200 py-0.5 px-0.5">
                         <input
                           type="number"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.tempGrano !== undefined ? row.tempGrano : ""}
                           placeholder="--"
                           onChange={(e) => handleStageRowChange("etapaReposo1", idx, "tempGrano", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center font-semibold outline-none bg-transparent"
+                          className="w-full text-center font-semibold outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
                       <td className="border-r border-amber-200 py-0.5 px-0.5">
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.tempAmbiente !== undefined ? row.tempAmbiente : ""}
                           placeholder="--"
                           onChange={(e) => handleStageRowChange("etapaReposo1", idx, "tempAmbiente", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent"
+                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
                       <td className="border-r border-amber-200 py-0.5 px-0.5">
                         <input
                           type="number"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.humedadRelativa !== undefined ? row.humedadRelativa : ""}
                           placeholder="--"
                           onChange={(e) => handleStageRowChange("etapaReposo1", idx, "humedadRelativa", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent"
+                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
                       <td className="border-r border-amber-200 py-0.5 px-0.5 font-black text-amber-950 bg-amber-100">
                         <input
                           type="text"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.humedad ?? ""}
                           placeholder="%"
                           onChange={(e) => handleStageRowChange("etapaReposo1", idx, "humedad", e.target.value)}
@@ -4641,37 +4653,49 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.tempReal !== undefined ? row.tempReal : ""}
                           placeholder="--"
                           onChange={(e) => handleStageRowChange("etapaReposo1", idx, "tempReal", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent"
+                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
                       <td className="border-r border-amber-200 py-0.5 px-0.5">
                         <input
                           type="number"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.tempProgramada !== undefined ? row.tempProgramada : ""}
                           placeholder="--"
                           onChange={(e) => handleStageRowChange("etapaReposo1", idx, "tempProgramada", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent"
+                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
                       <td className="border-r border-amber-200 py-0.5 px-0.5">
                         <input
                           type="number"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.a1 !== undefined ? row.a1 : ""}
                           placeholder="-"
                           onChange={(e) => handleStageRowChange("etapaReposo1", idx, "a1", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent"
+                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
                       <td className="border-r border-amber-200 py-0.5 px-0.5">
                         <input
                           type="number"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.a2 !== undefined ? row.a2 : ""}
                           placeholder="-"
                           onChange={(e) => handleStageRowChange("etapaReposo1", idx, "a2", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent"
+                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
                       {/* Materia Prima */}
@@ -4922,34 +4946,46 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                       <td className="border-r border-sky-200 py-0.5 px-0.5">
                         <input
                           type="number"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.tempGrano !== undefined ? row.tempGrano : ""}
                           placeholder="--"
                           onChange={(e) => handleStageRowChange("etapaEnfriamiento", idx, "tempGrano", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center font-semibold outline-none bg-transparent"
+                          className="w-full text-center font-semibold outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
                       <td className="border-r border-sky-200 py-0.5 px-0.5">
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.tempAmbiente !== undefined ? row.tempAmbiente : ""}
                           placeholder="--"
                           onChange={(e) => handleStageRowChange("etapaEnfriamiento", idx, "tempAmbiente", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent"
+                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
                       <td className="border-r border-sky-200 py-0.5 px-0.5">
                         <input
                           type="number"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.humedadRelativa !== undefined ? row.humedadRelativa : ""}
                           placeholder="--"
                           onChange={(e) => handleStageRowChange("etapaEnfriamiento", idx, "humedadRelativa", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent"
+                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
                       <td className="border-r border-sky-200 py-0.5 px-0.5 font-black text-sky-950 bg-sky-100">
                         <input
                           type="text"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.humedad ?? ""}
                           placeholder="%"
                           onChange={(e) => handleStageRowChange("etapaEnfriamiento", idx, "humedad", e.target.value)}
@@ -4960,15 +4996,21 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.tempReal !== undefined ? row.tempReal : ""}
                           placeholder="--"
                           onChange={(e) => handleStageRowChange("etapaEnfriamiento", idx, "tempReal", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent"
+                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
                       <td className="border-r border-sky-200 py-0.5 px-0.5 bg-cyan-50 font-bold text-sky-900">
                         <input
                           type="text"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.tiempoMin !== undefined ? row.tiempoMin : ""}
                           placeholder={duracionEnfriamientoCalc || "--"}
                           onChange={(e) => handleStageRowChange("etapaEnfriamiento", idx, "tiempoMin", e.target.value)}
@@ -4978,28 +5020,37 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                       <td className="border-r border-sky-200 py-0.5 px-0.5">
                         <input
                           type="number"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.tempProgramada !== undefined ? row.tempProgramada : ""}
                           placeholder="--"
                           onChange={(e) => handleStageRowChange("etapaEnfriamiento", idx, "tempProgramada", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent"
+                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
                       <td className="border-r border-sky-200 py-0.5 px-0.5">
                         <input
                           type="number"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.a1 !== undefined ? row.a1 : ""}
                           placeholder="-"
                           onChange={(e) => handleStageRowChange("etapaEnfriamiento", idx, "a1", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent"
+                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
                       <td className="border-r border-sky-200 py-0.5 px-0.5">
                         <input
                           type="number"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.a2 !== undefined ? row.a2 : ""}
                           placeholder="-"
                           onChange={(e) => handleStageRowChange("etapaEnfriamiento", idx, "a2", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent"
+                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
                       {/* Materia Prima */}
@@ -5325,34 +5376,46 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                       <td className="border-r border-amber-200 py-0.5 px-0.5">
                         <input
                           type="number"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.tempGrano !== undefined ? row.tempGrano : ""}
                           placeholder="--"
                           onChange={(e) => handleStageRowChange("etapaReposo2", idx, "tempGrano", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center font-semibold outline-none bg-transparent"
+                          className="w-full text-center font-semibold outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
                       <td className="border-r border-amber-200 py-0.5 px-0.5">
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.tempAmbiente !== undefined ? row.tempAmbiente : ""}
                           placeholder="--"
                           onChange={(e) => handleStageRowChange("etapaReposo2", idx, "tempAmbiente", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent"
+                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
                       <td className="border-r border-amber-200 py-0.5 px-0.5">
                         <input
                           type="number"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.humedadRelativa !== undefined ? row.humedadRelativa : ""}
                           placeholder="--"
                           onChange={(e) => handleStageRowChange("etapaReposo2", idx, "humedadRelativa", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent"
+                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
                       <td className="border-r border-amber-200 py-0.5 px-0.5 font-black text-amber-950 bg-amber-100">
                         <input
                           type="text"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.humedad ?? ""}
                           placeholder="%"
                           onChange={(e) => handleStageRowChange("etapaReposo2", idx, "humedad", e.target.value)}
@@ -5363,15 +5426,21 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.tempReal !== undefined ? row.tempReal : ""}
                           placeholder="--"
                           onChange={(e) => handleStageRowChange("etapaReposo2", idx, "tempReal", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent"
+                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
                       <td className="border-r border-amber-200 py-0.5 px-0.5 bg-yellow-50 font-bold text-amber-900">
                         <input
                           type="text"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.tiempoMin !== undefined ? row.tiempoMin : ""}
                           placeholder={duracionReposo2Calc || "--"}
                           onChange={(e) => handleStageRowChange("etapaReposo2", idx, "tiempoMin", e.target.value)}
@@ -5381,28 +5450,37 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                       <td className="border-r border-amber-200 py-0.5 px-0.5">
                         <input
                           type="number"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.tempProgramada !== undefined ? row.tempProgramada : ""}
                           placeholder="--"
                           onChange={(e) => handleStageRowChange("etapaReposo2", idx, "tempProgramada", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent"
+                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
                       <td className="border-r border-amber-200 py-0.5 px-0.5">
                         <input
                           type="number"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.a1 !== undefined ? row.a1 : ""}
                           placeholder="-"
                           onChange={(e) => handleStageRowChange("etapaReposo2", idx, "a1", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent"
+                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
                       <td className="border-r border-amber-200 py-0.5 px-0.5">
                         <input
                           type="number"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.a2 !== undefined ? row.a2 : ""}
                           placeholder="-"
                           onChange={(e) => handleStageRowChange("etapaReposo2", idx, "a2", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent"
+                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
                       {/* Materia Prima */}
@@ -6108,40 +6186,52 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                                   <input
                                     type="number"
                                     step="0.1"
+                                    data-no-spin="true"
+                                    onWheel={handlePreventNumberSpinWheel}
+                                    onKeyDown={handlePreventNumberSpinKey}
                                     value={perfil.tempGrano !== undefined ? perfil.tempGrano : ""}
                                     placeholder="°C"
                                     onChange={(e) => handleReposoChange(idx, "tempGrano", e.target.value)}
-                                    className="w-10 text-center font-bold text-emerald-900 text-[8.5px] bg-emerald-50/60 border border-emerald-200 rounded px-0.5 outline-none"
+                                    className="w-10 text-center font-bold text-emerald-900 text-[8.5px] bg-emerald-50/60 border border-emerald-200 rounded px-0.5 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                                     title="T° Grano registrada por computadora al salir del reposo"
                                   />
                                   <span className="text-[8px] font-bold text-emerald-950 ml-0.5">Term:</span>
                                   <input
                                     type="number"
                                     step="0.1"
+                                    data-no-spin="true"
+                                    onWheel={handlePreventNumberSpinWheel}
+                                    onKeyDown={handlePreventNumberSpinKey}
                                     value={perfil.tempTermocupla !== undefined ? perfil.tempTermocupla : ""}
                                     placeholder="°C"
                                     onChange={(e) => handleReposoChange(idx, "tempTermocupla", e.target.value)}
-                                    className="w-10 text-center font-bold text-emerald-900 text-[8.5px] bg-emerald-50/60 border border-emerald-200 rounded px-0.5 outline-none"
+                                    className="w-10 text-center font-bold text-emerald-900 text-[8.5px] bg-emerald-50/60 border border-emerald-200 rounded px-0.5 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                                     title="T° Termocupla al salir del reposo"
                                   />
                                   <span className="text-[8px] font-bold text-emerald-950 ml-0.5">Láser:</span>
                                   <input
                                     type="number"
                                     step="0.1"
+                                    data-no-spin="true"
+                                    onWheel={handlePreventNumberSpinWheel}
+                                    onKeyDown={handlePreventNumberSpinKey}
                                     value={perfil.tempLaser !== undefined ? perfil.tempLaser : ""}
                                     placeholder="°C"
                                     onChange={(e) => handleReposoChange(idx, "tempLaser", e.target.value)}
-                                    className="w-10 text-center font-bold text-emerald-900 text-[8.5px] bg-emerald-50/60 border border-emerald-200 rounded px-0.5 outline-none"
+                                    className="w-10 text-center font-bold text-emerald-900 text-[8.5px] bg-emerald-50/60 border border-emerald-200 rounded px-0.5 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                                     title="T° Láser al salir del reposo"
                                   />
                                   <span className="text-[8px] font-bold text-amber-950 ml-0.5">H%:</span>
                                   <input
                                     type="number"
                                     step="0.1"
+                                    data-no-spin="true"
+                                    onWheel={handlePreventNumberSpinWheel}
+                                    onKeyDown={handlePreventNumberSpinKey}
                                     value={perfil.humedad !== undefined && perfil.humedad !== "" ? perfil.humedad : ""}
                                     placeholder="%"
                                     onChange={(e) => handleReposoChange(idx, "humedad", e.target.value === "" ? "" : parseFloat(e.target.value))}
-                                    className="w-10 text-center font-bold text-amber-950 text-[8.5px] bg-amber-50/60 border border-amber-200 rounded px-0.5 outline-none"
+                                    className="w-10 text-center font-bold text-amber-950 text-[8.5px] bg-amber-50/60 border border-amber-200 rounded px-0.5 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                                     title="Humedad al finalizar reposo"
                                   />
                                 </div>
@@ -6249,10 +6339,13 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                           <input
                             type="number"
                             step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
                             value={perfil.tempGrano !== undefined && perfil.tempGrano !== null ? perfil.tempGrano : ""}
                             placeholder="--"
                             onChange={(e) => handlePerfilSecadoChange(idx, "tempGrano", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                            className={`w-full text-center font-bold outline-none bg-transparent ${
+                            className={`w-full text-center font-bold outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin ${
                               perfil.tempGrano !== undefined && perfil.tempGrano >= 30.0 && perfil.tempGrano <= 32.0 
                                 ? "text-emerald-700 font-black" 
                                 : perfil.tempGrano !== undefined && perfil.tempGrano > 32.0 
@@ -6267,10 +6360,13 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                           <input
                             type="number"
                             step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
                             value={perfil.tempTermocupla !== undefined ? perfil.tempTermocupla : ""}
                             placeholder="--"
                             onChange={(e) => handleTempGranoRealChange(idx, "tempTermocupla", e.target.value)}
-                            className={`w-full text-center font-bold outline-none bg-transparent ${
+                            className={`w-full text-center font-bold outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin ${
                               isGrainTempOptima ? "text-emerald-700 font-black" : isGrainTempAlta ? "text-rose-700 font-black" : "text-emerald-950"
                             }`}
                             title={`T° Termocupla (${perfil.perfilIndex})`}
@@ -6281,10 +6377,13 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                           <input
                             type="number"
                             step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
                             value={perfil.tempLaser !== undefined ? perfil.tempLaser : ""}
                             placeholder="--"
                             onChange={(e) => handleTempGranoRealChange(idx, "tempLaser", e.target.value)}
-                            className={`w-full text-center font-bold outline-none bg-transparent ${
+                            className={`w-full text-center font-bold outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin ${
                               isGrainTempOptima ? "text-emerald-700 font-black" : isGrainTempAlta ? "text-rose-700 font-black" : "text-emerald-950"
                             }`}
                             title={`T° Láser (${perfil.perfilIndex})`}
@@ -6295,20 +6394,26 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                           <input
                             type="number"
                             step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
                             value={perfil.tempAmbiente !== undefined ? perfil.tempAmbiente : ""}
                             placeholder="--"
                             onChange={(e) => handlePerfilSecadoChange(idx, "tempAmbiente", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                            className="w-full text-center outline-none bg-transparent"
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                           />
                         </td>
                         {/* H.RELATIVA */}
                         <td className="border-r border-slate-300 py-0.5 px-0.5">
                           <input
                             type="number"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
                             value={perfil.humedadRelativa !== undefined ? perfil.humedadRelativa : ""}
                             placeholder="--"
                             onChange={(e) => handlePerfilSecadoChange(idx, "humedadRelativa", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                            className="w-full text-center outline-none bg-transparent"
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                           />
                         </td>
                         {/* H1 */}
@@ -6316,10 +6421,13 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                           <input
                             type="number"
                             step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
                             value={perfil.h1 !== undefined ? perfil.h1 : ""}
                             placeholder="-"
                             onChange={(e) => handleTomasHumChange(idx, "h1", e.target.value)}
-                            className="w-full text-center font-semibold text-slate-800 outline-none bg-transparent text-[9.5px]"
+                            className="w-full text-center font-semibold text-slate-800 outline-none bg-transparent text-[9.5px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                             title={`Toma H1 para ${perfil.perfilIndex}`}
                           />
                         </td>
@@ -6328,10 +6436,13 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                           <input
                             type="number"
                             step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
                             value={perfil.h2 !== undefined ? perfil.h2 : ""}
                             placeholder="-"
                             onChange={(e) => handleTomasHumChange(idx, "h2", e.target.value)}
-                            className="w-full text-center font-semibold text-slate-800 outline-none bg-transparent text-[9.5px]"
+                            className="w-full text-center font-semibold text-slate-800 outline-none bg-transparent text-[9.5px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                             title={`Toma H2 para ${perfil.perfilIndex}`}
                           />
                         </td>
@@ -6340,10 +6451,13 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                           <input
                             type="number"
                             step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
                             value={perfil.h3 !== undefined ? perfil.h3 : ""}
                             placeholder="-"
                             onChange={(e) => handleTomasHumChange(idx, "h3", e.target.value)}
-                            className="w-full text-center font-semibold text-slate-800 outline-none bg-transparent text-[9.5px]"
+                            className="w-full text-center font-semibold text-slate-800 outline-none bg-transparent text-[9.5px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                             title={`Toma H3 para ${perfil.perfilIndex}`}
                           />
                         </td>
@@ -6352,10 +6466,13 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                           <input
                             type="number"
                             step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
                             value={perfil.h4 !== undefined ? perfil.h4 : ""}
                             placeholder="-"
                             onChange={(e) => handleTomasHumChange(idx, "h4", e.target.value)}
-                            className="w-full text-center font-semibold text-slate-800 outline-none bg-transparent text-[9.5px]"
+                            className="w-full text-center font-semibold text-slate-800 outline-none bg-transparent text-[9.5px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                             title={`Toma H4 para ${perfil.perfilIndex}`}
                           />
                         </td>
@@ -6366,6 +6483,9 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                           <div className="flex items-center justify-center relative group">
                             <input
                               type="text"
+                              data-no-spin="true"
+                              onWheel={handlePreventNumberSpinWheel}
+                              onKeyDown={handlePreventNumberSpinKey}
                               value={displayHum}
                               placeholder="%"
                               readOnly={isAutoHum}
@@ -6410,40 +6530,52 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                         <td className="border-r border-slate-300 py-0.5 px-0.5">
                           <input
                             type="number"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
                             value={perfil.tiempoMin !== undefined ? perfil.tiempoMin : ""}
                             placeholder="--"
                             onChange={(e) => handlePerfilSecadoChange(idx, "tiempoMin", e.target.value === "" ? undefined : parseInt(e.target.value))}
-                            className="w-full text-center outline-none bg-transparent font-bold"
+                            className="w-full text-center outline-none bg-transparent font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                           />
                         </td>
                         {/* T° PROGRAMADA */}
                         <td className="border-r border-slate-300 py-0.5 px-0.5 font-bold text-rose-900 bg-rose-50/20">
                           <input
                             type="number"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
                             value={perfil.tempProgramada !== undefined ? perfil.tempProgramada : ""}
                             placeholder="--"
                             onChange={(e) => handlePerfilSecadoChange(idx, "tempProgramada", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                            className="w-full text-center font-bold text-rose-900 outline-none bg-transparent"
+                            className="w-full text-center font-bold text-rose-900 outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                           />
                         </td>
                         {/* A1 */}
                         <td className="border-r border-slate-300 py-0.5 px-0.5">
                           <input
                             type="number"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
                             value={perfil.a1 !== undefined ? perfil.a1 : ""}
                             placeholder="-"
                             onChange={(e) => handlePerfilSecadoChange(idx, "a1", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                            className="w-full text-center outline-none bg-transparent"
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                           />
                         </td>
                         {/* A2 */}
                         <td className="border-r border-slate-300 py-0.5 px-0.5">
                           <input
                             type="number"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
                             value={perfil.a2 !== undefined ? perfil.a2 : ""}
                             placeholder="-"
                             onChange={(e) => handlePerfilSecadoChange(idx, "a2", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                            className="w-full text-center outline-none bg-transparent"
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                           />
                         </td>
                         {/* Materia Prima */}
@@ -6855,34 +6987,46 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                       <td className="border-r border-teal-200 py-0.5 px-0.5">
                         <input
                           type="number"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.tempGrano !== undefined ? row.tempGrano : ""}
                           placeholder="--"
                           onChange={(e) => handleStageRowChange("etapaEnfriamientoFinal", idx, "tempGrano", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center font-semibold outline-none bg-transparent"
+                          className="w-full text-center font-semibold outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
                       <td className="border-r border-teal-200 py-0.5 px-0.5">
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.tempAmbiente !== undefined ? row.tempAmbiente : ""}
                           placeholder="--"
                           onChange={(e) => handleStageRowChange("etapaEnfriamientoFinal", idx, "tempAmbiente", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent"
+                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
                       <td className="border-r border-teal-200 py-0.5 px-0.5">
                         <input
                           type="number"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.humedadRelativa !== undefined ? row.humedadRelativa : ""}
                           placeholder="--"
                           onChange={(e) => handleStageRowChange("etapaEnfriamientoFinal", idx, "humedadRelativa", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent"
+                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
                       <td className="border-r border-teal-200 py-0.5 px-0.5 font-black text-teal-950 bg-teal-100">
                         <input
                           type="text"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.humedad ?? ""}
                           placeholder="%"
                           onChange={(e) => handleStageRowChange("etapaEnfriamientoFinal", idx, "humedad", e.target.value)}
@@ -6893,37 +7037,49 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.tempReal !== undefined ? row.tempReal : ""}
                           placeholder="--"
                           onChange={(e) => handleStageRowChange("etapaEnfriamientoFinal", idx, "tempReal", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent"
+                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
                       <td className="border-r border-teal-200 py-0.5 px-0.5">
                         <input
                           type="number"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.tempProgramada !== undefined ? row.tempProgramada : ""}
                           placeholder="--"
                           onChange={(e) => handleStageRowChange("etapaEnfriamientoFinal", idx, "tempProgramada", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent"
+                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
                       <td className="border-r border-teal-200 py-0.5 px-0.5">
                         <input
                           type="number"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.a1 !== undefined ? row.a1 : ""}
                           placeholder="-"
                           onChange={(e) => handleStageRowChange("etapaEnfriamientoFinal", idx, "a1", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent"
+                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
                       <td className="border-r border-teal-200 py-0.5 px-0.5">
                         <input
                           type="number"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.a2 !== undefined ? row.a2 : ""}
                           placeholder="-"
                           onChange={(e) => handleStageRowChange("etapaEnfriamientoFinal", idx, "a2", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent"
+                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
                       {/* Materia Prima */}
