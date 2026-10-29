@@ -385,8 +385,10 @@ export interface SiloControlPlant {
     blp?: number;
     rendimientoIntegral?: number; // RI: Rendimiento Integral (%)
     rendimientoBlanco?: number;   // RB: Rendimiento Blanco (%)
+    granoCocido?: number;         // GC: Grano Cocido (%)
     ri?: number;                  // Alias RI (%)
     rb?: number;                  // Alias RB (%)
+    gc?: number;                  // Alias GC (%)
     amarillo?: number;
     quebradoPct?: number;
     trizado?: number;

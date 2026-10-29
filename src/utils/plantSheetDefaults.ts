@@ -175,6 +175,8 @@ export function createEmptySilosPlant(): SiloControlPlant[] {
       blp: undefined as any,
       rendimientoIntegral: undefined as any,
       rendimientoBlanco: undefined as any,
+      granoCocido: undefined as any,
+      gc: undefined as any,
       amarillo: undefined as any,
       quebradoPct: undefined as any,
       trizado: undefined as any,

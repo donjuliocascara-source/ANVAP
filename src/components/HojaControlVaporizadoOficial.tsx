@@ -4114,6 +4114,27 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                       />
                     </div>
 
+                    {/* Grano Cocido (GC %) */}
+                    <div className="flex justify-between items-center bg-[#fdf2f8] px-1 py-0.5 rounded border border-pink-300" title="Grano Cocido (GC %)">
+                      <span className="font-bold text-pink-950 text-[8.5px]">GC %</span>
+                      <input
+                        type="number"
+                        step="0.1"
+                        data-no-spin="true"
+                        onWheel={handlePreventNumberSpinWheel}
+                        onKeyDown={handlePreventNumberSpinKey}
+                        value={silo.descarga?.granoCocido !== undefined ? silo.descarga.granoCocido : (silo.descarga?.gc !== undefined ? silo.descarga.gc : "")}
+                        placeholder="%"
+                        onChange={(e) => {
+                          const val = e.target.value === "" ? undefined : parseFloat(e.target.value);
+                          handleSiloDescargaChange(idx, "granoCocido", val);
+                          handleSiloDescargaChange(idx, "gc", val);
+                        }}
+                        className="w-11 text-right font-black text-pink-900 bg-white/90 border border-pink-300 rounded px-0.5 outline-none text-[8.5px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                        title="Grano Cocido del silo (%)"
+                      />
+                    </div>
+
                     {/* 11. HUMEDAD */}
                     <div className="flex justify-between items-center bg-[#ffe082] px-1 py-0.5 rounded border border-amber-400">
                       <span className="font-bold text-slate-800 text-[8.5px]">HUMEDAD</span>

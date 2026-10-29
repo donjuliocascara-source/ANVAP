@@ -1112,9 +1112,9 @@ export function generateHojaControlVaporizadoPDF(params: {
         }))
       ],
       [
-        { content: "Rendimientos (RI% / RB%)", styles: { fontStyle: "bold", fillColor: [236, 253, 245] } },
+        { content: "Rendimientos (RI / RB / GC)", styles: { fontStyle: "bold", fillColor: [236, 253, 245] } },
         ...silosList.map((s: any) => ({
-          content: `RI:${s.descarga?.rendimientoIntegral ?? s.descarga?.ri ?? "-"}% | RB:${s.descarga?.rendimientoBlanco ?? s.descarga?.rb ?? "-"}%`,
+          content: `RI:${s.descarga?.rendimientoIntegral ?? s.descarga?.ri ?? "-"}% | RB:${s.descarga?.rendimientoBlanco ?? s.descarga?.rb ?? "-"}% | GC:${s.descarga?.granoCocido ?? s.descarga?.gc ?? "-"}%`,
           styles: { halign: "center" as const, fontStyle: "bold" as const, textColor: [6, 95, 70] as [number, number, number] }
         }))
       ],
