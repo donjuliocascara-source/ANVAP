@@ -102,7 +102,14 @@ function calcDurationMinutes(inicio?: string, fin?: string): number {
   const e = parseMins(fin);
   if (s === null || e === null) return 0;
   let diff = e - s;
-  if (diff < 0) diff += 24 * 60;
+  if (diff < 0) {
+    const diff12h = (e + 720) - s;
+    if (diff12h >= 0 && diff12h <= 720 && s >= 360) {
+      diff = diff12h;
+    } else {
+      diff += 24 * 60;
+    }
+  }
   return Math.round(diff);
 }
 

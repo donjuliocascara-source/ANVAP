@@ -451,6 +451,16 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
     const parseMins = (t: string): number | null => {
       if (!t) return null;
       const clean = t.trim().toUpperCase();
+      if (
+        clean === "--:--" ||
+        clean === "-:--" ||
+        clean === "--" ||
+        clean === "-" ||
+        clean.includes("PEND") ||
+        clean.includes("SIN")
+      ) {
+        return null;
+      }
       const isPM = clean.includes("PM");
       const isAM = clean.includes("AM");
       const timeOnly = clean.replace(/[APM\s]/g, "");
@@ -470,10 +480,17 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
 
     let diff = end - start;
     if (diff < 0) {
-      diff += 24 * 60; // Cruce de medianoche
+      // Evaluamos si es formato 12 horas en la tarde ingresado sin PM (ej. inicio 11:30, fin 01:15 => 13:15, diff = 105 min)
+      const diff12h = (end + 720) - start;
+      if (diff12h >= 0 && diff12h <= 720 && start >= 360) {
+        diff = diff12h;
+      } else {
+        diff += 24 * 60; // Cruce de medianoche en turno nocturno
+      }
     }
     return `${Math.round(diff)} min`;
   };
+
 
   // Helper para obtener la hora actual en formato HH:MM
   const getHoraActual = (): string => {
@@ -616,9 +633,9 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
     : (formData.silos && formData.silos.length >= 5 ? formData.silos.slice(0, 5) : rawSilosPase1);
 
   const silosBateriaDetalle = silosActivosList.map((s, idx) => {
-    const tLlenadoMin = parseNumMins(calculateDuration(s.exclusa?.inicio, s.exclusa?.fin) || s.exclusa?.tiempoLlenado);
-    const tReposoMin = parseNumMins(calculateDuration(s.exclusa?.fin, s.descarga?.inicio) || s.descarga?.tiempoReposo || s.descarga?.reposo);
-    const tDescargaMin = parseNumMins(calculateDuration(s.descarga?.inicio, s.descarga?.fin) || s.descarga?.tiempoDescarga || s.descarga?.tiempo);
+    const tLlenadoMin = parseNumMins(s.exclusa?.tiempoLlenado || calculateDuration(s.exclusa?.inicio, s.exclusa?.fin));
+    const tReposoMin = parseNumMins(s.descarga?.tiempoReposo || s.descarga?.reposo || calculateDuration(s.exclusa?.fin, s.descarga?.inicio));
+    const tDescargaMin = parseNumMins(s.descarga?.tiempoDescarga || s.descarga?.tiempo || calculateDuration(s.descarga?.inicio, s.descarga?.fin));
     const totalSiloMin = tLlenadoMin + tReposoMin + tDescargaMin;
     const hasData = Boolean(s.exclusa?.inicio || s.exclusa?.fin || s.descarga?.inicio || s.descarga?.fin || totalSiloMin > 0);
     return {
@@ -1484,22 +1501,21 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
     const currentBase = (siloActivePase === 2 ? rawSilosPase2 : rawSilosPase1);
     const updated = currentBase.map((s, i) => i === siloIdx ? { ...s, exclusa: { ...s.exclusa }, descarga: { ...s.descarga } } : s);
     const prevExclusa = updated[siloIdx]?.exclusa || { inicio: "", fin: "" };
+    const prevDescarga = updated[siloIdx]?.descarga || { inicio: "", fin: "" };
     const newExclusa = {
       ...prevExclusa,
       [field]: val
     };
+    const newDescarga = { ...prevDescarga };
     if (field === "inicio" || field === "fin") {
       const calc = calculateDuration(newExclusa.inicio, newExclusa.fin);
-      if (calc) {
-        newExclusa.tiempoLlenado = calc;
-      }
-    }
-    const prevDescarga = updated[siloIdx]?.descarga || { inicio: "", fin: "" };
-    const newDescarga = { ...prevDescarga };
-    if (field === "fin" || field === "inicio") {
-      const reposoCalc = calculateDuration(newExclusa.fin, newDescarga.inicio);
-      if (reposoCalc) {
-        newDescarga.tiempoReposo = reposoCalc;
+      newExclusa.tiempoLlenado = calc || "";
+      if (newDescarga.inicio) {
+        const reposoCalc = calculateDuration(newExclusa.fin, newDescarga.inicio);
+        if (reposoCalc) {
+          newDescarga.tiempoReposo = reposoCalc;
+          newDescarga.reposo = reposoCalc;
+        }
       }
     }
     updated[siloIdx] = {
@@ -1526,23 +1542,27 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
     const currentBase = (siloActivePase === 2 ? rawSilosPase2 : rawSilosPase1);
     const updated = currentBase.map((s, i) => i === siloIdx ? { ...s, exclusa: { ...s.exclusa }, descarga: { ...s.descarga } } : s);
     const prevDescarga = updated[siloIdx]?.descarga || { inicio: "", fin: "" };
+    const currentExclusa = updated[siloIdx]?.exclusa || { inicio: "", fin: "" };
     const newDescarga = {
       ...prevDescarga,
       [field]: val
     };
+    if (field === "tiempoDescarga") {
+      newDescarga.tiempo = val;
+    }
+    if (field === "tiempoReposo") {
+      newDescarga.reposo = val;
+    }
     if (field === "inicio" || field === "fin") {
       const calc = calculateDuration(newDescarga.inicio, newDescarga.fin);
-      if (calc) {
-        newDescarga.tiempoDescarga = calc;
-        newDescarga.tiempo = calc;
-      }
-    }
-    // T. REPOSO = H.INICIO Descarga - H.FINAL Llenado de Silos
-    const currentExclusa = updated[siloIdx]?.exclusa || { inicio: "", fin: "" };
-    if (field === "inicio") {
-      const reposoCalc = calculateDuration(currentExclusa.fin, newDescarga.inicio);
-      if (reposoCalc) {
-        newDescarga.tiempoReposo = reposoCalc;
+      newDescarga.tiempoDescarga = calc || "";
+      newDescarga.tiempo = calc || "";
+      if (currentExclusa.fin) {
+        const reposoCalc = calculateDuration(currentExclusa.fin, newDescarga.inicio);
+        if (reposoCalc) {
+          newDescarga.tiempoReposo = reposoCalc;
+          newDescarga.reposo = reposoCalc;
+        }
       }
     }
     updated[siloIdx] = {
@@ -1558,22 +1578,21 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
       i === siloIdx ? { ...s, exclusa: { ...s.exclusa }, descarga: { ...s.descarga } } : s
     );
     const prevExclusa = targetSilos[siloIdx]?.exclusa || { inicio: "", fin: "" };
+    const prevDescarga = targetSilos[siloIdx]?.descarga || { inicio: "", fin: "" };
     const newExclusa = {
       ...prevExclusa,
       [field]: val
     };
+    const newDescarga = { ...prevDescarga };
     if (field === "inicio" || field === "fin") {
       const calc = calculateDuration(newExclusa.inicio, newExclusa.fin);
-      if (calc) {
-        newExclusa.tiempoLlenado = calc;
-      }
-    }
-    const prevDescarga = targetSilos[siloIdx]?.descarga || { inicio: "", fin: "" };
-    const newDescarga = { ...prevDescarga };
-    if (field === "fin" || field === "inicio") {
-      const reposoCalc = calculateDuration(newExclusa.fin, newDescarga.inicio);
-      if (reposoCalc) {
-        newDescarga.tiempoReposo = reposoCalc;
+      newExclusa.tiempoLlenado = calc || "";
+      if (newDescarga.inicio) {
+        const reposoCalc = calculateDuration(newExclusa.fin, newDescarga.inicio);
+        if (reposoCalc) {
+          newDescarga.tiempoReposo = reposoCalc;
+          newDescarga.reposo = reposoCalc;
+        }
       }
     }
     targetSilos[siloIdx] = {
@@ -1606,22 +1625,27 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
       i === siloIdx ? { ...s, exclusa: { ...s.exclusa }, descarga: { ...s.descarga } } : s
     );
     const prevDescarga = targetSilos[siloIdx]?.descarga || { inicio: "", fin: "" };
+    const currentExclusa = targetSilos[siloIdx]?.exclusa || { inicio: "", fin: "" };
     const newDescarga = {
       ...prevDescarga,
       [field]: val
     };
+    if (field === "tiempoDescarga") {
+      newDescarga.tiempo = val;
+    }
+    if (field === "tiempoReposo") {
+      newDescarga.reposo = val;
+    }
     if (field === "inicio" || field === "fin") {
       const calc = calculateDuration(newDescarga.inicio, newDescarga.fin);
-      if (calc) {
-        newDescarga.tiempoDescarga = calc;
-        newDescarga.tiempo = calc;
-      }
-    }
-    const currentExclusa = targetSilos[siloIdx]?.exclusa || { inicio: "", fin: "" };
-    if (field === "inicio") {
-      const reposoCalc = calculateDuration(currentExclusa.fin, newDescarga.inicio);
-      if (reposoCalc) {
-        newDescarga.tiempoReposo = reposoCalc;
+      newDescarga.tiempoDescarga = calc || "";
+      newDescarga.tiempo = calc || "";
+      if (currentExclusa.fin) {
+        const reposoCalc = calculateDuration(currentExclusa.fin, newDescarga.inicio);
+        if (reposoCalc) {
+          newDescarga.tiempoReposo = reposoCalc;
+          newDescarga.reposo = reposoCalc;
+        }
       }
     }
     targetSilos[siloIdx] = {
@@ -3741,9 +3765,21 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
 
               <div className="grid grid-cols-5 gap-2">
               {silos.map((silo, idx) => {
-                const autoTLlenado = calculateDuration(silo.exclusa?.inicio, silo.exclusa?.fin) || silo.exclusa?.tiempoLlenado || "";
-                const autoTDescarga = calculateDuration(silo.descarga?.inicio, silo.descarga?.fin) || silo.descarga?.tiempoDescarga || silo.descarga?.tiempo || "";
-                const autoTReposo = calculateDuration(silo.exclusa?.fin, silo.descarga?.inicio) || silo.descarga?.tiempoReposo || silo.descarga?.reposo || "";
+                const valTLlenado = (silo.exclusa?.tiempoLlenado !== undefined && silo.exclusa?.tiempoLlenado !== "")
+                  ? String(silo.exclusa.tiempoLlenado)
+                  : (calculateDuration(silo.exclusa?.inicio, silo.exclusa?.fin) || "");
+
+                const valTDescarga = (silo.descarga?.tiempoDescarga !== undefined && silo.descarga?.tiempoDescarga !== "")
+                  ? String(silo.descarga.tiempoDescarga)
+                  : (silo.descarga?.tiempo !== undefined && silo.descarga?.tiempo !== ""
+                    ? String(silo.descarga.tiempo)
+                    : (calculateDuration(silo.descarga?.inicio, silo.descarga?.fin) || ""));
+
+                const valTReposo = (silo.descarga?.tiempoReposo !== undefined && silo.descarga?.tiempoReposo !== "")
+                  ? String(silo.descarga.tiempoReposo)
+                  : (silo.descarga?.reposo !== undefined && silo.descarga?.reposo !== ""
+                    ? String(silo.descarga.reposo)
+                    : (calculateDuration(silo.exclusa?.fin, silo.descarga?.inicio) || ""));
 
                 return (
                 <div key={`${silo.siloNumber}-${datosVaporizado.modalidadPases === "2_PASES" ? siloActivePase : 1}`} className="border border-slate-400 rounded-lg overflow-hidden flex flex-col bg-white shadow-xs">
@@ -3813,11 +3849,11 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                       <span className="text-amber-950 font-bold text-[8.5px]">T. LLENADO</span>
                       <input
                         type="text"
-                        value={autoTLlenado}
+                        value={valTLlenado}
                         placeholder="Auto"
                         onChange={(e) => handleSiloExclusaChange(idx, "tiempoLlenado", e.target.value)}
                         className="w-14 text-right font-black text-amber-900 bg-white/90 border border-amber-300 rounded px-0.5 outline-none text-[8.5px]"
-                        title="Tiempo calculado automáticamente entre H.INICIO y H.FINAL"
+                        title="Tiempo calculado automáticamente entre H.INICIO y H.FINAL (editable)"
                       />
                     </div>
                     <div className="flex justify-between items-center">
@@ -3900,12 +3936,12 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                     </div>
 
                     {/* Center Reposo Badge in Graphic */}
-                    {autoTReposo && (
+                    {valTReposo && (
                       <div 
                         className="absolute z-10 bg-amber-500 text-white font-mono font-black text-[9px] px-1.5 py-0.5 rounded shadow-sm border border-amber-600 flex items-center gap-0.5"
                         title={`T. REPOSO = ${silo.descarga?.inicio || '--:--'} (H.Inicio Descarga) - ${silo.exclusa?.fin || '--:--'} (H.Final Llenado)`}
                       >
-                        <span>⏱️ {autoTReposo}</span>
+                        <span>⏱️ {valTReposo}</span>
                       </div>
                     )}
 
@@ -3979,11 +4015,11 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                       <span className="text-blue-950 font-bold text-[8.5px]">T. DESCARGA</span>
                       <input
                         type="text"
-                        value={autoTDescarga}
+                        value={valTDescarga}
                         placeholder="Auto"
                         onChange={(e) => handleSiloDescargaChange(idx, "tiempoDescarga", e.target.value)}
                         className="w-14 text-right font-black text-blue-900 bg-white/90 border border-blue-200 rounded px-0.5 outline-none text-[8.5px]"
-                        title="Tiempo de descarga calculado automáticamente entre H.INICIO y H.FINAL"
+                        title="Tiempo de descarga calculado automáticamente entre H.INICIO y H.FINAL (editable)"
                       />
                     </div>
 
@@ -3992,11 +4028,11 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                       <span className="text-amber-950 font-bold text-[8.5px]">T. REPOSO</span>
                       <input
                         type="text"
-                        value={autoTReposo}
+                        value={valTReposo}
                         placeholder="Auto"
                         onChange={(e) => handleSiloDescargaChange(idx, "tiempoReposo", e.target.value)}
                         className="w-14 text-right font-black text-amber-900 bg-white/90 border border-amber-300 rounded px-0.5 outline-none text-[8.5px]"
-                        title={`T. REPOSO = H.INICIO Descarga (${silo.descarga?.inicio || '--:--'}) menos H.FINAL Llenado (${silo.exclusa?.fin || '--:--'})`}
+                        title={`T. REPOSO = H.INICIO Descarga (${silo.descarga?.inicio || '--:--'}) menos H.FINAL Llenado (${silo.exclusa?.fin || '--:--'}) (editable)`}
                       />
                     </div>
 
