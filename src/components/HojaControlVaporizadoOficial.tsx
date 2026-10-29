@@ -1165,6 +1165,17 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
     }));
   };
 
+  // Prevenir que las celdas numéricas incrementen/decrementen valor por scroll o teclas arriba/abajo
+  const handlePreventNumberSpinWheel = (e: React.WheelEvent<HTMLInputElement>) => {
+    e.currentTarget.blur();
+  };
+
+  const handlePreventNumberSpinKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+      e.preventDefault();
+    }
+  };
+
   const handleStageMateriaPrimaChange = (
     stageKey: "etapaReposo1" | "etapaEnfriamiento" | "etapaReposo2" | "etapaEnfriamientoFinal",
     rowIdx: number,
@@ -4643,74 +4654,95 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                         />
                       </td>
                       {/* Materia Prima */}
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40">
+                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.materiaPrima?.ri !== undefined ? row.materiaPrima.ri : ""}
                           placeholder=""
                           onChange={(e) => handleStageMateriaPrimaChange("etapaReposo1", idx, "ri", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40">
+                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.materiaPrima?.rb !== undefined ? row.materiaPrima.rb : ""}
                           placeholder=""
                           onChange={(e) => handleStageMateriaPrimaChange("etapaReposo1", idx, "rb", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40">
+                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.materiaPrima?.bli !== undefined ? row.materiaPrima.bli : ""}
                           placeholder=""
                           onChange={(e) => handleStageMateriaPrimaChange("etapaReposo1", idx, "bli", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40">
+                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.materiaPrima?.blp !== undefined ? row.materiaPrima.blp : (row.materiaPrima?.blGrad !== undefined ? row.materiaPrima.blGrad : "")}
                           placeholder=""
                           onChange={(e) => handleStageMateriaPrimaChange("etapaReposo1", idx, "blp", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40">
+                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.materiaPrima?.qiPct !== undefined ? row.materiaPrima.qiPct : ""}
                           placeholder=""
                           onChange={(e) => handleStageMateriaPrimaChange("etapaReposo1", idx, "qiPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40">
+                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.materiaPrima?.qbPct !== undefined ? row.materiaPrima.qbPct : (row.materiaPrima?.qPct !== undefined ? row.materiaPrima.qPct : "")}
                           placeholder=""
                           onChange={(e) => handleStageMateriaPrimaChange("etapaReposo1", idx, "qbPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40">
+                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.materiaPrima?.trizPct !== undefined ? row.materiaPrima.trizPct : ""}
                           placeholder=""
                           onChange={(e) => handleStageMateriaPrimaChange("etapaReposo1", idx, "trizPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
                       <td className="py-0.5 px-0.5 text-center print:hidden">
@@ -4950,74 +4982,95 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                         />
                       </td>
                       {/* Materia Prima */}
-                      <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40">
+                      <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40" data-materia-prima="true">
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.materiaPrima?.ri !== undefined ? row.materiaPrima.ri : ""}
                           placeholder=""
                           onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamiento", idx, "ri", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
-                      <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40">
+                      <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40" data-materia-prima="true">
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.materiaPrima?.rb !== undefined ? row.materiaPrima.rb : ""}
                           placeholder=""
                           onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamiento", idx, "rb", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
-                      <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40">
+                      <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40" data-materia-prima="true">
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.materiaPrima?.bli !== undefined ? row.materiaPrima.bli : ""}
                           placeholder=""
                           onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamiento", idx, "bli", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
-                      <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40">
+                      <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40" data-materia-prima="true">
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.materiaPrima?.blp !== undefined ? row.materiaPrima.blp : (row.materiaPrima?.blGrad !== undefined ? row.materiaPrima.blGrad : "")}
                           placeholder=""
                           onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamiento", idx, "blp", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
-                      <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40">
+                      <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40" data-materia-prima="true">
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.materiaPrima?.qiPct !== undefined ? row.materiaPrima.qiPct : ""}
                           placeholder=""
                           onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamiento", idx, "qiPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
-                      <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40">
+                      <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40" data-materia-prima="true">
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.materiaPrima?.qbPct !== undefined ? row.materiaPrima.qbPct : (row.materiaPrima?.qPct !== undefined ? row.materiaPrima.qPct : "")}
                           placeholder=""
                           onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamiento", idx, "qbPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
-                      <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40">
+                      <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40" data-materia-prima="true">
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.materiaPrima?.trizPct !== undefined ? row.materiaPrima.trizPct : ""}
                           placeholder=""
                           onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamiento", idx, "trizPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
                       <td className="py-0.5 px-0.5 text-center print:hidden">
@@ -5332,74 +5385,95 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                         />
                       </td>
                       {/* Materia Prima */}
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40">
+                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.materiaPrima?.ri !== undefined ? row.materiaPrima.ri : ""}
                           placeholder=""
                           onChange={(e) => handleStageMateriaPrimaChange("etapaReposo2", idx, "ri", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40">
+                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.materiaPrima?.rb !== undefined ? row.materiaPrima.rb : ""}
                           placeholder=""
                           onChange={(e) => handleStageMateriaPrimaChange("etapaReposo2", idx, "rb", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40">
+                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.materiaPrima?.bli !== undefined ? row.materiaPrima.bli : ""}
                           placeholder=""
                           onChange={(e) => handleStageMateriaPrimaChange("etapaReposo2", idx, "bli", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40">
+                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.materiaPrima?.blp !== undefined ? row.materiaPrima.blp : (row.materiaPrima?.blGrad !== undefined ? row.materiaPrima.blGrad : "")}
                           placeholder=""
                           onChange={(e) => handleStageMateriaPrimaChange("etapaReposo2", idx, "blp", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40">
+                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.materiaPrima?.qiPct !== undefined ? row.materiaPrima.qiPct : ""}
                           placeholder=""
                           onChange={(e) => handleStageMateriaPrimaChange("etapaReposo2", idx, "qiPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40">
+                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.materiaPrima?.qbPct !== undefined ? row.materiaPrima.qbPct : (row.materiaPrima?.qPct !== undefined ? row.materiaPrima.qPct : "")}
                           placeholder=""
                           onChange={(e) => handleStageMateriaPrimaChange("etapaReposo2", idx, "qbPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40">
+                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.materiaPrima?.trizPct !== undefined ? row.materiaPrima.trizPct : ""}
                           placeholder=""
                           onChange={(e) => handleStageMateriaPrimaChange("etapaReposo2", idx, "trizPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
                       <td className="py-0.5 px-0.5 text-center print:hidden">
@@ -6352,95 +6426,116 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                           />
                         </td>
                         {/* Materia Prima */}
-                        <td className="border-r border-slate-300 py-0.5 px-0.5 bg-slate-50">
+                        <td className="border-r border-slate-300 py-0.5 px-0.5 bg-slate-50" data-materia-prima="true">
                           <input
                             type="number"
                             step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
                             value={perfil.materiaPrima?.ri !== undefined ? perfil.materiaPrima.ri : ""}
                             placeholder=""
                             onChange={(e) => {
                               const cur = perfil.materiaPrima || {};
                               handlePerfilSecadoChange(idx, "materiaPrima", { ...cur, ri: e.target.value === "" ? undefined : parseFloat(e.target.value) });
                             }}
-                            className="w-full text-center outline-none bg-transparent text-[9px]"
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                           />
                         </td>
-                        <td className="border-r border-slate-300 py-0.5 px-0.5 bg-slate-50">
+                        <td className="border-r border-slate-300 py-0.5 px-0.5 bg-slate-50" data-materia-prima="true">
                           <input
                             type="number"
                             step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
                             value={perfil.materiaPrima?.rb !== undefined ? perfil.materiaPrima.rb : ""}
                             placeholder=""
                             onChange={(e) => {
                               const cur = perfil.materiaPrima || {};
                               handlePerfilSecadoChange(idx, "materiaPrima", { ...cur, rb: e.target.value === "" ? undefined : parseFloat(e.target.value) });
                             }}
-                            className="w-full text-center outline-none bg-transparent text-[9px]"
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                           />
                         </td>
-                        <td className="border-r border-slate-300 py-0.5 px-0.5 bg-slate-50">
+                        <td className="border-r border-slate-300 py-0.5 px-0.5 bg-slate-50" data-materia-prima="true">
                           <input
                             type="number"
                             step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
                             value={perfil.materiaPrima?.bli !== undefined ? perfil.materiaPrima.bli : ""}
                             placeholder=""
                             onChange={(e) => {
                               const cur = perfil.materiaPrima || {};
                               handlePerfilSecadoChange(idx, "materiaPrima", { ...cur, bli: e.target.value === "" ? undefined : parseFloat(e.target.value) });
                             }}
-                            className="w-full text-center outline-none bg-transparent text-[9px]"
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                           />
                         </td>
-                        <td className="border-r border-slate-300 py-0.5 px-0.5 bg-slate-50">
+                        <td className="border-r border-slate-300 py-0.5 px-0.5 bg-slate-50" data-materia-prima="true">
                           <input
                             type="number"
                             step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
                             value={perfil.materiaPrima?.blp !== undefined ? perfil.materiaPrima.blp : (perfil.materiaPrima?.blGrad !== undefined ? perfil.materiaPrima.blGrad : "")}
                             placeholder=""
                             onChange={(e) => {
                               const cur = perfil.materiaPrima || {};
                               handlePerfilSecadoChange(idx, "materiaPrima", { ...cur, blp: e.target.value === "" ? undefined : parseFloat(e.target.value) });
                             }}
-                            className="w-full text-center outline-none bg-transparent text-[9px]"
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                           />
                         </td>
-                        <td className="border-r border-slate-300 py-0.5 px-0.5 bg-slate-50">
+                        <td className="border-r border-slate-300 py-0.5 px-0.5 bg-slate-50" data-materia-prima="true">
                           <input
                             type="number"
                             step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
                             value={perfil.materiaPrima?.qiPct !== undefined ? perfil.materiaPrima.qiPct : ""}
                             placeholder=""
                             onChange={(e) => {
                               const cur = perfil.materiaPrima || {};
                               handlePerfilSecadoChange(idx, "materiaPrima", { ...cur, qiPct: e.target.value === "" ? undefined : parseFloat(e.target.value) });
                             }}
-                            className="w-full text-center outline-none bg-transparent text-[9px]"
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                           />
                         </td>
-                        <td className="border-r border-slate-300 py-0.5 px-0.5 bg-slate-50">
+                        <td className="border-r border-slate-300 py-0.5 px-0.5 bg-slate-50" data-materia-prima="true">
                           <input
                             type="number"
                             step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
                             value={perfil.materiaPrima?.qbPct !== undefined ? perfil.materiaPrima.qbPct : (perfil.materiaPrima?.qPct !== undefined ? perfil.materiaPrima.qPct : "")}
                             placeholder=""
                             onChange={(e) => {
                               const cur = perfil.materiaPrima || {};
                               handlePerfilSecadoChange(idx, "materiaPrima", { ...cur, qbPct: e.target.value === "" ? undefined : parseFloat(e.target.value) });
                             }}
-                            className="w-full text-center outline-none bg-transparent text-[9px]"
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                           />
                         </td>
-                        <td className={`${recetaLayoutMode === "lateral_derecha" ? "border-r border-slate-300" : ""} py-0.5 px-0.5 bg-slate-50`}>
+                        <td className={`${recetaLayoutMode === "lateral_derecha" ? "border-r border-slate-300" : ""} py-0.5 px-0.5 bg-slate-50`} data-materia-prima="true">
                           <input
                             type="number"
                             step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
                             value={perfil.materiaPrima?.trizPct !== undefined ? perfil.materiaPrima.trizPct : ""}
                             placeholder=""
                             onChange={(e) => {
                               const cur = perfil.materiaPrima || {};
                               handlePerfilSecadoChange(idx, "materiaPrima", { ...cur, trizPct: e.target.value === "" ? undefined : parseFloat(e.target.value) });
                             }}
-                            className="w-full text-center outline-none bg-transparent text-[9px]"
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                           />
                         </td>
                         {recetaLayoutMode === "lateral_derecha" && (
@@ -6811,74 +6906,95 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                         />
                       </td>
                       {/* Materia Prima */}
-                      <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40">
+                      <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40" data-materia-prima="true">
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.materiaPrima?.ri !== undefined ? row.materiaPrima.ri : ""}
                           placeholder=""
                           onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamientoFinal", idx, "ri", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
-                      <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40">
+                      <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40" data-materia-prima="true">
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.materiaPrima?.rb !== undefined ? row.materiaPrima.rb : ""}
                           placeholder=""
                           onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamientoFinal", idx, "rb", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
-                      <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40">
+                      <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40" data-materia-prima="true">
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.materiaPrima?.bli !== undefined ? row.materiaPrima.bli : ""}
                           placeholder=""
                           onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamientoFinal", idx, "bli", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
-                      <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40">
+                      <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40" data-materia-prima="true">
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.materiaPrima?.blp !== undefined ? row.materiaPrima.blp : (row.materiaPrima?.blGrad !== undefined ? row.materiaPrima.blGrad : "")}
                           placeholder=""
                           onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamientoFinal", idx, "blp", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
-                      <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40">
+                      <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40" data-materia-prima="true">
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.materiaPrima?.qiPct !== undefined ? row.materiaPrima.qiPct : ""}
                           placeholder=""
                           onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamientoFinal", idx, "qiPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
-                      <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40">
+                      <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40" data-materia-prima="true">
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.materiaPrima?.qbPct !== undefined ? row.materiaPrima.qbPct : (row.materiaPrima?.qPct !== undefined ? row.materiaPrima.qPct : "")}
                           placeholder=""
                           onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamientoFinal", idx, "qbPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
-                      <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40">
+                      <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40" data-materia-prima="true">
                         <input
                           type="number"
                           step="0.1"
+                          data-no-spin="true"
+                          onWheel={handlePreventNumberSpinWheel}
+                          onKeyDown={handlePreventNumberSpinKey}
                           value={row.materiaPrima?.trizPct !== undefined ? row.materiaPrima.trizPct : ""}
                           placeholder=""
                           onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamientoFinal", idx, "trizPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px]"
+                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
                         />
                       </td>
                       <td className="py-0.5 px-0.5 text-center print:hidden">
