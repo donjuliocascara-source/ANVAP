@@ -892,18 +892,66 @@ export function cargarProgramacionesOficiales(): ProgramacionBatchOficial[] {
       return false;
     };
 
-    // Mantener siempre todas las programaciones y lotes subidos
+    // Mantener siempre todas las programaciones y lotes programados sin recortar filas
     const filtradas = Array.from(pMap.values())
-      .filter(p => !isClosedBatchProg(p) && !isV200BatchReference(p?.batch) && !isV200BatchReference(p?.id))
-      .map(p => {
-        if (Array.isArray(p.filasLote)) {
-          p.filasLote = p.filasLote.filter((f: any) => !isExcludedLote(f?.loteId || f?.LOTE_ID));
+      .filter(p => !isClosedBatchProg(p) && !isV200BatchReference(p?.batch) && !isV200BatchReference(p?.id));
+
+    // Auto-curación de V374 en caso de carga: unión de saldo 8477 (145 sacos) con 8481 (170 sacos) = 315 sacos
+    filtradas.forEach(p => {
+      const bCode = (p.batch || p.id || "").toString().trim().toUpperCase();
+      if (bCode.includes("374")) {
+        if (!Array.isArray(p.filasLote)) p.filasLote = [];
+        const cli = p.clientePrincipal || "MOLINO DON JULIO S.A.C.";
+        const varP = p.variedadPrincipal || "TINAJONES";
+        const has77 = p.filasLote.some((f: any) => formatLoteCode(f?.loteId || f?.LOTE_ID) === "C08477");
+        const has81 = p.filasLote.some((f: any) => formatLoteCode(f?.loteId || f?.LOTE_ID) === "C08481");
+
+        const row8477 = {
+          loteId: "C08477",
+          cliente: cli,
+          variedad: varP,
+          sacos: 145,
+          sacProg: 145,
+          peso: 7250,
+          pesoProg: 7250,
+          tipoServicio: p.tipoServicio || "VAPORIZADO Y SECADO EN APIT",
+          condicion: "APTO" as const
+        };
+        const row8481 = {
+          loteId: "C08481",
+          cliente: cli,
+          variedad: varP,
+          sacos: 170,
+          sacProg: 170,
+          peso: 8500,
+          pesoProg: 8500,
+          tipoServicio: p.tipoServicio || "VAPORIZADO Y SECADO EN APIT",
+          condicion: "APTO" as const
+        };
+
+        const newFilas = [];
+        if (has77) {
+          const f77 = p.filasLote.find((f: any) => formatLoteCode(f?.loteId || f?.LOTE_ID) === "C08477");
+          newFilas.push({ ...row8477, ...f77, sacProg: 145, sacos: 145, pesoProg: 7250, peso: 7250 });
+        } else {
+          newFilas.push(row8477);
         }
-        if (Array.isArray((p as any).lotes)) {
-          (p as any).lotes = (p as any).lotes.filter((l: any) => !isExcludedLote(typeof l === "string" ? l : (l?.LOTE_ID || l?.loteId)));
+
+        if (has81) {
+          const f81 = p.filasLote.find((f: any) => formatLoteCode(f?.loteId || f?.LOTE_ID) === "C08481");
+          newFilas.push({ ...row8481, ...f81, sacProg: 170, sacos: 170, pesoProg: 8500, peso: 8500 });
+        } else {
+          newFilas.push(row8481);
         }
-        return p;
-      });
+
+        p.filasLote = newFilas;
+        p.totalSacosProg = 315;
+        p.pesoTotalKg = 15750;
+        p.clientePrincipal = cli;
+        p.variedadPrincipal = varP;
+        (p as any).lotes = newFilas.map(f => f.loteId);
+      }
+    });
 
     return ordenarProgramacionesDeArribaHaciaAbajo(filtradas);
   } catch (e) {

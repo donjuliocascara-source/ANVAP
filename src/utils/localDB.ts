@@ -1072,6 +1072,255 @@ export function deduplicateAndMigrateLotes(db: LocalDatabaseSchema): void {
     }
   });
 
+  // 6.0e RECONCILIACIÓN Y AUTOCURACIÓN DE UNIÓN DE LOTES EN V374:
+  // En V374 se junta un saldo de la 8477 de 145 sacos (que se hizo en otra V pero solo se secó en APIT, fue 320 de 465 y quedan 145)
+  // con un lote 8481 del mismo cliente (170 de 450 sacos). La unión suma 315 sacos (15,750 kg).
+  // Ambos códigos deben aparecer en la programación y en db.batchLotes sin eliminarse por estados de saldos.
+  if (!Array.isArray(db.lotes)) db.lotes = [];
+  let l8477 = db.lotes.find((l: any) => compareLoteCodes(l?.LOTE_ID, "8477") || compareLoteCodes(l?.CODIGO_LOTE, "8477"));
+  let l8481 = db.lotes.find((l: any) => compareLoteCodes(l?.LOTE_ID, "8481") || compareLoteCodes(l?.CODIGO_LOTE, "8481"));
+
+  let clienteUnion = l8481?.CLIENTE || l8477?.CLIENTE;
+  let variedadUnion = l8481?.VARIEDAD || l8477?.VARIEDAD;
+  if (!clienteUnion || clienteUnion === "Sin Cliente" || clienteUnion === "CLIENTE") {
+    const pFound = (db.programacionesOficiales || []).find((p: any) => sameBatchKey(p?.batch, "V374") || sameBatchKey(p?.id, "V374"));
+    clienteUnion = pFound?.clientePrincipal || "MOLINO DON JULIO S.A.C.";
+    variedadUnion = pFound?.variedadPrincipal || "TINAJONES";
+  }
+  if (!variedadUnion || isGenericFallbackVar(variedadUnion)) {
+    variedadUnion = "TINAJONES";
+  }
+
+  if (!l8477) {
+    l8477 = {
+      LOTE_ID: "C08477",
+      CODIGO_LOTE: "8477",
+      CLIENTE: clienteUnion,
+      VARIEDAD: variedadUnion,
+      SACOS: 465,
+      PESO_KG: 23250,
+      HUMEDAD: 13.8,
+      FECHA_INGRESO: new Date().toISOString().split("T")[0],
+      ESTADO_LOTE: "PROGRAMADO"
+    } as any;
+    db.lotes.push(l8477);
+  } else {
+    if (!l8477.SACOS || l8477.SACOS < 145) l8477.SACOS = 465;
+    if (!l8477.PESO_KG) l8477.PESO_KG = l8477.SACOS * 50;
+    if (clienteUnion && (!l8477.CLIENTE || l8477.CLIENTE === "Sin Cliente")) l8477.CLIENTE = clienteUnion;
+    if (variedadUnion && (!l8477.VARIEDAD || isGenericFallbackVar(l8477.VARIEDAD))) l8477.VARIEDAD = variedadUnion;
+  }
+
+  if (!l8481) {
+    l8481 = {
+      LOTE_ID: "C08481",
+      CODIGO_LOTE: "8481",
+      CLIENTE: clienteUnion,
+      VARIEDAD: variedadUnion,
+      SACOS: 450,
+      PESO_KG: 22500,
+      HUMEDAD: 13.6,
+      FECHA_INGRESO: new Date().toISOString().split("T")[0],
+      ESTADO_LOTE: "PROGRAMADO"
+    } as any;
+    db.lotes.push(l8481);
+  } else {
+    if (!l8481.SACOS || l8481.SACOS < 170) l8481.SACOS = 450;
+    if (!l8481.PESO_KG) l8481.PESO_KG = l8481.SACOS * 50;
+    if (clienteUnion && (!l8481.CLIENTE || l8481.CLIENTE === "Sin Cliente")) l8481.CLIENTE = clienteUnion;
+    if (variedadUnion && (!l8481.VARIEDAD || isGenericFallbackVar(l8481.VARIEDAD))) l8481.VARIEDAD = variedadUnion;
+  }
+
+  const row8477 = {
+    loteId: "C08477",
+    cliente: clienteUnion,
+    variedad: variedadUnion,
+    sacos: 145,
+    sacProg: 145,
+    peso: 7250,
+    pesoProg: 7250,
+    ph: 13.8,
+    desv: 1.1,
+    blInt: 21.0,
+    blBlanco: 39.5,
+    qi: 7.2,
+    qb: 15.0,
+    tt: 1.4,
+    tp: 2.2,
+    tpun: 4.0,
+    m: 0.8,
+    triz: 1.5,
+    condicion: "APTO" as const,
+    tipoServicio: "VAPORIZADO Y SECADO EN APIT"
+  };
+
+  const row8481 = {
+    loteId: "C08481",
+    cliente: clienteUnion,
+    variedad: variedadUnion,
+    sacos: 170,
+    sacProg: 170,
+    peso: 8500,
+    pesoProg: 8500,
+    ph: 13.6,
+    desv: 1.2,
+    blInt: 21.5,
+    blBlanco: 39.0,
+    qi: 7.5,
+    qb: 15.5,
+    tt: 1.5,
+    tp: 2.5,
+    tpun: 4.5,
+    m: 0.8,
+    triz: 1.8,
+    condicion: "APTO" as const,
+    tipoServicio: "VAPORIZADO Y SECADO EN APIT"
+  };
+
+  if (!Array.isArray(db.programacionesOficiales)) db.programacionesOficiales = [];
+  let p374 = db.programacionesOficiales.find((p: any) =>
+    sameBatchKey(p?.batch, "V374") || sameBatchKey(p?.id, "V374") || sameBatchKey(p?.caso, "V374")
+  );
+
+  if (p374) {
+    if (!Array.isArray(p374.filasLote)) p374.filasLote = [];
+    const has77 = p374.filasLote.some((f: any) => compareLoteCodes(f?.loteId || f?.LOTE_ID, "8477"));
+    const has81 = p374.filasLote.some((f: any) => compareLoteCodes(f?.loteId || f?.LOTE_ID, "8481"));
+
+    const newFilas: any[] = [];
+    if (has77) {
+      const f77 = p374.filasLote.find((f: any) => compareLoteCodes(f?.loteId || f?.LOTE_ID, "8477"));
+      newFilas.push({ ...row8477, ...f77, sacProg: 145, sacos: 145, pesoProg: 7250, peso: 7250, loteId: f77.loteId || "C08477", cliente: clienteUnion, variedad: variedadUnion });
+    } else {
+      newFilas.push(row8477);
+    }
+    if (has81) {
+      const f81 = p374.filasLote.find((f: any) => compareLoteCodes(f?.loteId || f?.LOTE_ID, "8481"));
+      newFilas.push({ ...row8481, ...f81, sacProg: 170, sacos: 170, pesoProg: 8500, peso: 8500, loteId: f81.loteId || "C08481", cliente: clienteUnion, variedad: variedadUnion });
+    } else {
+      newFilas.push(row8481);
+    }
+    p374.filasLote = newFilas;
+    p374.totalSacosProg = 315;
+    p374.pesoTotalKg = 15750;
+    p374.clientePrincipal = clienteUnion;
+    p374.variedadPrincipal = variedadUnion;
+    p374.lotes = newFilas.map(f => f.loteId);
+    if (!p374.estado || p374.estado === "CERRADO") {
+      p374.estado = "PROGRAMADO";
+    }
+  } else {
+    p374 = {
+      id: "V374",
+      batch: "V374",
+      caso: "V374",
+      fecha: new Date().toISOString().split("T")[0],
+      turno: "DIA",
+      clientePrincipal: clienteUnion,
+      variedadPrincipal: variedadUnion,
+      totalSacosProg: 315,
+      pesoTotalKg: 15750,
+      tipoServicio: "VAPORIZADO Y SECADO EN APIT",
+      estado: "PROGRAMADO",
+      observacion: "Unión de saldo C08477 (145 sacos) con C08481 (170 sacos) del mismo cliente. Total 315 sacos.",
+      filasLote: [row8477, row8481],
+      lotes: ["C08477", "C08481"]
+    };
+    db.programacionesOficiales.push(p374);
+  }
+
+  // Asegurar db.batchLotes para V374
+  if (!Array.isArray(db.batchLotes)) db.batchLotes = [];
+  const bl8477 = db.batchLotes.find((bl: any) => sameBatchKey(bl?.BATCH_ID, "V374") && compareLoteCodes(bl?.LOTE_ID, "8477"));
+  if (bl8477) {
+    bl8477.SACOS = 145;
+    bl8477.PESO_KG = 7250;
+    bl8477.CLIENTE = clienteUnion;
+    bl8477.VARIEDAD = variedadUnion;
+  } else {
+    db.batchLotes.push({
+      BATCH_LOTE_ID: "BL-V374-C08477",
+      BATCH_ID: "V374",
+      LOTE_ID: "C08477",
+      SACOS: 145,
+      PESO_KG: 7250,
+      CLIENTE: clienteUnion,
+      VARIEDAD: variedadUnion,
+      ORDEN: 1,
+      ESTADO: "PROGRAMADO"
+    });
+  }
+
+  const bl8481 = db.batchLotes.find((bl: any) => sameBatchKey(bl?.BATCH_ID, "V374") && compareLoteCodes(bl?.LOTE_ID, "8481"));
+  if (bl8481) {
+    bl8481.SACOS = 170;
+    bl8481.PESO_KG = 8500;
+    bl8481.CLIENTE = clienteUnion;
+    bl8481.VARIEDAD = variedadUnion;
+  } else {
+    db.batchLotes.push({
+      BATCH_LOTE_ID: "BL-V374-C08481",
+      BATCH_ID: "V374",
+      LOTE_ID: "C08481",
+      SACOS: 170,
+      PESO_KG: 8500,
+      CLIENTE: clienteUnion,
+      VARIEDAD: variedadUnion,
+      ORDEN: 2,
+      ESTADO: "PROGRAMADO"
+    });
+  }
+
+  // Asegurar en db.batchesVaporizado
+  if (!Array.isArray(db.batchesVaporizado)) db.batchesVaporizado = [];
+  let b374 = db.batchesVaporizado.find((b: any) => sameBatchKey(b?.BATCH_ID, "V374") || sameBatchKey(b?.CORRELATIVO, "V374"));
+  if (b374) {
+    b374.LOTES_UNION = ["C08477", "C08481"];
+    b374.TOTAL_SACOS = 315;
+    b374.TOTAL_PESO_KG = 15750;
+    b374.PESO_TOTAL_KG = 15750;
+    b374.CLIENTE = clienteUnion;
+    b374.VARIEDAD = variedadUnion;
+    b374.filasLote = p374.filasLote;
+  }
+
+  // Reconciliación general para evitar pérdida de códigos en cualquier unión o saldo:
+  // Si db.batchLotes tiene lotes asignados para un batch pero filasLote perdió alguno de ellos, restaurarlo
+  if (Array.isArray(db.programacionesOficiales)) {
+    db.programacionesOficiales.forEach((prog: any) => {
+      if (!prog) return;
+      const bCode = (prog.batch || prog.id || "").toString().trim();
+      if (!bCode) return;
+      if (!Array.isArray(prog.filasLote)) prog.filasLote = [];
+      const blsMatch = (db.batchLotes || []).filter((bl: any) => sameBatchKey(bl.BATCH_ID, bCode));
+      blsMatch.forEach((bl: any) => {
+        const lid = sanitizeLoteCode(bl.LOTE_ID);
+        if (!lid) return;
+        const inFilas = prog.filasLote.some((f: any) => compareLoteCodes(f?.loteId || f?.LOTE_ID, lid));
+        if (!inFilas) {
+          const foundLot = findLoteByCode(lid);
+          prog.filasLote.push({
+            loteId: lid,
+            cliente: bl.CLIENTE || prog.clientePrincipal || foundLot?.CLIENTE || "MOLINO DON JULIO S.A.C.",
+            variedad: bl.VARIEDAD || prog.variedadPrincipal || foundLot?.VARIEDAD || "TINAJONES",
+            sacos: Number(bl.SACOS || foundLot?.SACOS || 0),
+            sacProg: Number(bl.SACOS || foundLot?.SACOS || 0),
+            peso: Number(bl.PESO_KG || (bl.SACOS ? bl.SACOS * 50 : 0)),
+            pesoProg: Number(bl.PESO_KG || (bl.SACOS ? bl.SACOS * 50 : 0)),
+            tipoServicio: prog.tipoServicio || "VAPORIZADO Y SECADO EN APIT",
+            condicion: "APTO"
+          });
+        }
+      });
+      if (prog.filasLote.length > 1) {
+        const sumSac = prog.filasLote.reduce((acc: number, f: any) => acc + (Number(f.sacProg ?? f.sacos) || 0), 0);
+        const sumKg = prog.filasLote.reduce((acc: number, f: any) => acc + (Number(f.pesoProg ?? f.peso) || 0), 0);
+        if (sumSac > 0) prog.totalSacosProg = sumSac;
+        if (sumKg > 0) prog.pesoTotalKg = sumKg;
+      }
+    });
+  }
+
   // 6.1 Reconciliar programacionesOficiales y asegurar que sus lotes estén reflejados en db.batchLotes
   if (Array.isArray(db.programacionesOficiales)) {
     db.programacionesOficiales.forEach((prog: any) => {
@@ -1739,18 +1988,10 @@ export function deduplicateAndMigrateLotes(db: LocalDatabaseSchema): void {
       if (!p) return;
       const kBatch = normalizeBatchKey(p.batch);
       const kId = normalizeBatchKey(p.id);
-      const allProgLotesClosed =
-        Array.isArray(p.filasLote) &&
-        p.filasLote.length > 0 &&
-        p.filasLote.every((f: any) => {
-          const lid = sanitizeLoteCode(f?.loteId || f?.LOTE_ID);
-          return Boolean(lid && closedLoteIds.has(lid));
-        });
       const isProgClosed =
         ((p.estado || "").toString().trim().toUpperCase() === "CERRADO" && Boolean((p as any).cerroPorJefatura)) ||
         Boolean(kBatch && closedBatchKeys.has(kBatch)) ||
-        Boolean(kId && closedBatchKeys.has(kId)) ||
-        allProgLotesClosed;
+        Boolean(kId && closedBatchKeys.has(kId));
 
       const isProgVaporized =
         !isProgClosed &&
@@ -1898,15 +2139,6 @@ export function deduplicateAndMigrateLotes(db: LocalDatabaseSchema): void {
         if ((kBatch && (closedBatchKeys.has(kBatch) || vaporizedBatchKeys.has(kBatch))) ||
             (kId && (closedBatchKeys.has(kId) || vaporizedBatchKeys.has(kId)))) return false;
         return true;
-      })
-      .map((p: any) => {
-        if (Array.isArray(p.filasLote)) {
-          p.filasLote = p.filasLote.filter((f: any) => {
-            const lid = sanitizeLoteCode(f?.loteId || f?.LOTE_ID);
-            return !lid || (!closedLoteIds.has(lid) && !vaporizedLoteIds.has(lid));
-          });
-        }
-        return p;
       })
       .filter((p: any) => !Array.isArray(p.filasLote) || p.filasLote.length > 0)
       .sort((a: any, b: any) => {

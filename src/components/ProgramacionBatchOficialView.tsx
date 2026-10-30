@@ -2569,24 +2569,7 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
         const idKey = (p.id || "").trim().toUpperCase();
         if ((bKey && closedBatchSet.has(bKey)) || (idKey && closedBatchSet.has(idKey))) return false;
         return true;
-      })
-      .map(p => {
-        if (Array.isArray(p.filasLote)) {
-          const filasActivas = p.filasLote.filter(f => {
-            const lid = (f?.loteId || "").trim().toUpperCase();
-            if (!lid) return true;
-            if (closedLoteSet.has(lid)) return false;
-            const matchedLote = (lotes || []).find(l => compareLoteCodes(l.LOTE_ID, lid));
-            if (matchedLote && ((matchedLote.ESTADO_LOTE || "").trim().toUpperCase() === "CERRADO" || Boolean((matchedLote as any).cerroCompletamente))) {
-              return false;
-            }
-            return true;
-          });
-          return { ...p, filasLote: filasActivas };
-        }
-        return p;
-      })
-      .filter(p => !Array.isArray(p.filasLote) || p.filasLote.length > 0);
+      });
 
     const filtradas = activas.filter(p => {
       if (filtroTurno !== "TODOS" && p.turno !== filtroTurno) return false;
