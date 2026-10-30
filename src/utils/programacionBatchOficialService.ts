@@ -1057,9 +1057,47 @@ export function parseBatchSequenceKey(batchStr?: string, casoStr?: string): { ma
 }
 
 /**
+ * Convierte cualquier formato de fecha (YYYY-MM-DD, DD/MM/YYYY, etc.) a timestamp numérico
+ * para ordenamiento cronológico preciso.
+ */
+export function normalizarFechaParaOrden(fechaStr?: string): number {
+  if (!fechaStr) return 0;
+  const s = fechaStr.toString().trim();
+  const dmy = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (dmy) {
+    const d = parseInt(dmy[1], 10);
+    const m = parseInt(dmy[2], 10);
+    const y = parseInt(dmy[3], 10);
+    return new Date(y, m - 1, d).getTime();
+  }
+  const ymd = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  if (ymd) {
+    const y = parseInt(ymd[1], 10);
+    const m = parseInt(ymd[2], 10);
+    const d = parseInt(ymd[3], 10);
+    return new Date(y, m - 1, d).getTime();
+  }
+  const parsed = Date.parse(s);
+  return isNaN(parsed) ? 0 : parsed;
+}
+
+/**
+ * Normaliza el turno para ordenamiento:
+ * Turno DÍA va primero (0), Turno NOCHE va segundo (1).
+ */
+export function normalizarTurnoParaOrden(turnoStr?: string): number {
+  if (!turnoStr) return 0;
+  const t = turnoStr.toString().trim().toUpperCase();
+  if (t.includes("DIA") || t.includes("DÍA") || t === "D") return 0;
+  if (t.includes("NOCHE") || t === "N") return 1;
+  return 2;
+}
+
+/**
  * Ordena las programaciones de arriba hacia abajo:
- * El primer batch/lote a procesar va arriba (menor correlativo / fecha más temprana / Turno Día antes de Noche)
- * y va bajando progresivamente.
+ * 1° Criterio: FECHA (cronológico ascendente, ej. 28/10/2026 antes que 29/10/2026)
+ * 2° Criterio: TURNO (DÍA va primero, NOCHE va segundo)
+ * 3° Criterio: Correlativo de Batch / Caso
  */
 export function ordenarProgramacionesDeArribaHaciaAbajo(
   progs: ProgramacionBatchOficial[],
@@ -1079,6 +1117,23 @@ export function ordenarProgramacionesDeArribaHaciaAbajo(
       return p;
     })
     .sort((a, b) => {
+      // 1. Fecha: cronológico ascendente (más temprano va arriba)
+      const timeA = normalizarFechaParaOrden(a.fecha);
+      const timeB = normalizarFechaParaOrden(b.fecha);
+      if (timeA !== timeB) {
+        if (timeA === 0) return 1;
+        if (timeB === 0) return -1;
+        return timeA - timeB;
+      }
+
+      // 2. Turno: DÍA (0) va primero, NOCHE (1) va segundo
+      const turnoA = normalizarTurnoParaOrden(a.turno);
+      const turnoB = normalizarTurnoParaOrden(b.turno);
+      if (turnoA !== turnoB) {
+        return turnoA - turnoB;
+      }
+
+      // 3. Desempate: Número de Batch correlativo
       const keyA = parseBatchSequenceKey(a.batch || a.id, a.caso);
       const keyB = parseBatchSequenceKey(b.batch || b.id, b.caso);
       if (keyA.mainNum !== keyB.mainNum) {
@@ -1087,12 +1142,11 @@ export function ordenarProgramacionesDeArribaHaciaAbajo(
       if (keyA.subNum !== keyB.subNum) {
         return keyA.subNum - keyB.subNum;
       }
-      const fechaCmp = (a.fecha || "").localeCompare(b.fecha || "");
-      if (fechaCmp !== 0) return fechaCmp;
-      const turnoA = a.turno === "DIA" ? 0 : 1;
-      const turnoB = b.turno === "DIA" ? 0 : 1;
-      if (turnoA !== turnoB) return turnoA - turnoB;
-      return (a.caso || "").localeCompare(b.caso || "", undefined, { numeric: true });
+      return (a.caso || a.batch || a.id || "").toString().localeCompare(
+        (b.caso || b.batch || b.id || "").toString(),
+        undefined,
+        { numeric: true }
+      );
     });
 }
 

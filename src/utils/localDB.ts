@@ -2087,6 +2087,29 @@ export function deduplicateAndMigrateLotes(db: LocalDatabaseSchema): void {
       return { mainNum: casoMatch ? parseInt(casoMatch[1], 10) : 999999, subNum: 0 };
     };
 
+    const parseFechaTs = (fechaStr?: string): number => {
+      if (!fechaStr) return 0;
+      const s = fechaStr.toString().trim();
+      const dmy = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+      if (dmy) {
+        return new Date(parseInt(dmy[3], 10), parseInt(dmy[2], 10) - 1, parseInt(dmy[1], 10)).getTime();
+      }
+      const ymd = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+      if (ymd) {
+        return new Date(parseInt(ymd[1], 10), parseInt(ymd[2], 10) - 1, parseInt(ymd[3], 10)).getTime();
+      }
+      const p = Date.parse(s);
+      return isNaN(p) ? 0 : p;
+    };
+
+    const parseTurnoRank = (tStr?: string): number => {
+      if (!tStr) return 0;
+      const t = tStr.toString().trim().toUpperCase();
+      if (t.includes("DIA") || t.includes("DÍA") || t === "D") return 0;
+      if (t.includes("NOCHE") || t === "N") return 1;
+      return 2;
+    };
+
     const beforeLen = JSON.stringify(db.programacionesOficiales);
 
     // Antes de retirar de programación los batches cerrados o vaporizados, asegurar que queden registrados en db.batchesVaporizado
@@ -2248,16 +2271,30 @@ export function deduplicateAndMigrateLotes(db: LocalDatabaseSchema): void {
       })
       .filter((p: any) => !Array.isArray(p.filasLote) || p.filasLote.length > 0)
       .sort((a: any, b: any) => {
+        // 1. Criterio Principal: FECHA (cronológico ascendente)
+        const timeA = parseFechaTs(a.fecha);
+        const timeB = parseFechaTs(b.fecha);
+        if (timeA !== timeB) {
+          if (timeA === 0) return 1;
+          if (timeB === 0) return -1;
+          return timeA - timeB;
+        }
+
+        // 2. Criterio Secundario: TURNO (DÍA primero, NOCHE segundo)
+        const turnoA = parseTurnoRank(a.turno);
+        const turnoB = parseTurnoRank(b.turno);
+        if (turnoA !== turnoB) return turnoA - turnoB;
+
+        // 3. Desempate: Secuencia numérica de Batch / Caso
         const keyA = parseSeqKey(a.batch || a.id, a.caso);
         const keyB = parseSeqKey(b.batch || b.id, b.caso);
         if (keyA.mainNum !== keyB.mainNum) return keyA.mainNum - keyB.mainNum;
         if (keyA.subNum !== keyB.subNum) return keyA.subNum - keyB.subNum;
-        const fechaCmp = (a.fecha || "").toString().localeCompare((b.fecha || "").toString());
-        if (fechaCmp !== 0) return fechaCmp;
-        const turnoA = a.turno === "DIA" ? 0 : 1;
-        const turnoB = b.turno === "DIA" ? 0 : 1;
-        if (turnoA !== turnoB) return turnoA - turnoB;
-        return (a.caso || "").toString().localeCompare((b.caso || "").toString(), undefined, { numeric: true });
+        return (a.caso || a.batch || a.id || "").toString().localeCompare(
+          (b.caso || b.batch || b.id || "").toString(),
+          undefined,
+          { numeric: true }
+        );
       });
 
     db.programacionApit = db.programacionesOficiales;
