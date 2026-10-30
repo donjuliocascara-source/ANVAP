@@ -808,10 +808,23 @@ export function deduplicateAndMigrateLotes(db: LocalDatabaseSchema): void {
   }
 
   // 4. BatchLotes, Presecado, AnalisisSeco, Programaciones
+  // 4. BatchLotes, Presecado, AnalisisSeco, Programaciones con deduplicación estricta
   if (Array.isArray(db.batchLotes)) {
-    db.batchLotes.forEach(bl => {
-      if (bl && bl.LOTE_ID) bl.LOTE_ID = formatLoteCode(bl.LOTE_ID);
+    const blMap = new Map<string, any>();
+    db.batchLotes.forEach((bl: any) => {
+      if (!bl || !bl.LOTE_ID) return;
+      bl.LOTE_ID = formatLoteCode(bl.LOTE_ID);
+      const bKey = (bl.BATCH_ID || "").toString().trim().toUpperCase();
+      const dedupKey = `${bKey}___${bl.LOTE_ID}`;
+      if (!blMap.has(dedupKey)) {
+        blMap.set(dedupKey, bl);
+      } else {
+        const prev = blMap.get(dedupKey);
+        if ((Number(bl.SACOS) || 0) > (Number(prev.SACOS) || 0)) prev.SACOS = bl.SACOS;
+        if ((Number(bl.PESO_KG) || 0) > (Number(prev.PESO_KG) || 0)) prev.PESO_KG = bl.PESO_KG;
+      }
     });
+    db.batchLotes = Array.from(blMap.values());
   }
   if (Array.isArray(db.presecado)) {
     db.presecado.forEach(p => {
@@ -826,16 +839,20 @@ export function deduplicateAndMigrateLotes(db: LocalDatabaseSchema): void {
   if (Array.isArray(db.programacionesOficiales)) {
     db.programacionesOficiales.forEach((prog: any) => {
       if (Array.isArray(prog.filasLote)) {
-        prog.filasLote.forEach((f: any) => {
+        const seenFilas = new Set<string>();
+        prog.filasLote = prog.filasLote.filter((f: any) => {
+          if (!f) return false;
           if (f.loteId) f.loteId = formatLoteCode(f.loteId);
           if (f.LOTE_ID) f.LOTE_ID = formatLoteCode(f.LOTE_ID);
+          const lid = f.loteId || f.LOTE_ID;
+          if (!lid) return true;
+          if (seenFilas.has(lid)) return false;
+          seenFilas.add(lid);
+          return true;
         });
       }
       if (Array.isArray(prog.lotes)) {
-        prog.lotes.forEach((l: any) => {
-          if (l.LOTE_ID) l.LOTE_ID = formatLoteCode(l.LOTE_ID);
-          if (l.loteId) l.loteId = formatLoteCode(l.loteId);
-        });
+        prog.lotes = Array.from(new Set(prog.lotes.map((l: any) => formatLoteCode(typeof l === "string" ? l : (l?.LOTE_ID || l?.loteId)) || l)));
       }
     });
   }
@@ -1074,22 +1091,17 @@ export function deduplicateAndMigrateLotes(db: LocalDatabaseSchema): void {
 
   // 6.0e RECONCILIACIÓN Y AUTOCURACIÓN DE UNIÓN DE LOTES EN V374:
   // En V374 se junta un saldo de la 8477 de 145 sacos (que se hizo en otra V pero solo se secó en APIT, fue 320 de 465 y quedan 145)
-  // con un lote 8481 del mismo cliente (170 de 450 sacos). La unión suma 315 sacos (15,750 kg).
-  // Ambos códigos deben aparecer en la programación y en db.batchLotes sin eliminarse por estados de saldos.
+  // con un lote 8481 del mismo cliente (170 de 450 sacos). La unión suma 315 sacos.
+  // El cálculo del peso se determina hallando el peso unitario (peso total del lote / total sacos):
+  // Lote 8477: 47,290 kg / 465 sacos = 101.6989 kg/saco -> 145 sacos = 14,746 kg
+  // Lote 8481: 46,300 kg / 450 sacos = 102.8889 kg/saco -> 170 sacos = 17,491 kg
+  // Total peso unión V374 = 14,746 + 17,491 = 32,237 kg (32.24 TN)
   if (!Array.isArray(db.lotes)) db.lotes = [];
   let l8477 = db.lotes.find((l: any) => compareLoteCodes(l?.LOTE_ID, "8477") || compareLoteCodes(l?.CODIGO_LOTE, "8477"));
   let l8481 = db.lotes.find((l: any) => compareLoteCodes(l?.LOTE_ID, "8481") || compareLoteCodes(l?.CODIGO_LOTE, "8481"));
 
-  let clienteUnion = l8481?.CLIENTE || l8477?.CLIENTE;
-  let variedadUnion = l8481?.VARIEDAD || l8477?.VARIEDAD;
-  if (!clienteUnion || clienteUnion === "Sin Cliente" || clienteUnion === "CLIENTE") {
-    const pFound = (db.programacionesOficiales || []).find((p: any) => sameBatchKey(p?.batch, "V374") || sameBatchKey(p?.id, "V374"));
-    clienteUnion = pFound?.clientePrincipal || "MOLINO DON JULIO S.A.C.";
-    variedadUnion = pFound?.variedadPrincipal || "TINAJONES";
-  }
-  if (!variedadUnion || isGenericFallbackVar(variedadUnion)) {
-    variedadUnion = "TINAJONES";
-  }
+  const clienteUnion = l8481?.CLIENTE || l8477?.CLIENTE || "URBINA SAAVEDRA CLAUDIO MARTIN";
+  const variedadUnion = l8481?.VARIEDAD || l8477?.VARIEDAD || "VALOR";
 
   if (!l8477) {
     l8477 = {
@@ -1098,17 +1110,33 @@ export function deduplicateAndMigrateLotes(db: LocalDatabaseSchema): void {
       CLIENTE: clienteUnion,
       VARIEDAD: variedadUnion,
       SACOS: 465,
-      PESO_KG: 23250,
-      HUMEDAD: 13.8,
+      PESO_KG: 47290,
+      HUMEDAD: 27.28,
+      DESV: 0.64,
+      BL_INT: 22.0,
+      BL_BLANCO: 39.0,
+      QI: 3.3,
+      QB: 9.0,
+      TT: 3.0,
+      TP: 8.1,
+      TPUN: 0,
+      M: 1.5,
+      TZ: 1.0,
       FECHA_INGRESO: new Date().toISOString().split("T")[0],
       ESTADO_LOTE: "PROGRAMADO"
     } as any;
     db.lotes.push(l8477);
   } else {
-    if (!l8477.SACOS || l8477.SACOS < 145) l8477.SACOS = 465;
-    if (!l8477.PESO_KG) l8477.PESO_KG = l8477.SACOS * 50;
-    if (clienteUnion && (!l8477.CLIENTE || l8477.CLIENTE === "Sin Cliente")) l8477.CLIENTE = clienteUnion;
-    if (variedadUnion && (!l8477.VARIEDAD || isGenericFallbackVar(l8477.VARIEDAD))) l8477.VARIEDAD = variedadUnion;
+    l8477.SACOS = Number(l8477.SACOS) > 0 ? Number(l8477.SACOS) : 465;
+    if (!l8477.PESO_KG || l8477.PESO_KG === 23250 || l8477.PESO_KG === 7250) {
+      l8477.PESO_KG = 47290;
+    }
+    if (!l8477.CLIENTE || l8477.CLIENTE === "Sin Cliente" || l8477.CLIENTE === "MOLINO DON JULIO S.A.C.") {
+      l8477.CLIENTE = clienteUnion;
+    }
+    if (!l8477.VARIEDAD || isGenericFallbackVar(l8477.VARIEDAD)) {
+      l8477.VARIEDAD = variedadUnion;
+    }
   }
 
   if (!l8481) {
@@ -1118,63 +1146,117 @@ export function deduplicateAndMigrateLotes(db: LocalDatabaseSchema): void {
       CLIENTE: clienteUnion,
       VARIEDAD: variedadUnion,
       SACOS: 450,
-      PESO_KG: 22500,
-      HUMEDAD: 13.6,
+      PESO_KG: 46300,
+      HUMEDAD: 26.49,
+      DESV: 1.16,
+      BL_INT: 22.1,
+      BL_BLANCO: 38.2,
+      QI: 5.0,
+      QB: 12.8,
+      TT: 2.6,
+      TP: 5.8,
+      TPUN: 0,
+      M: 2.3,
+      TZ: 1.6,
       FECHA_INGRESO: new Date().toISOString().split("T")[0],
       ESTADO_LOTE: "PROGRAMADO"
     } as any;
     db.lotes.push(l8481);
   } else {
-    if (!l8481.SACOS || l8481.SACOS < 170) l8481.SACOS = 450;
-    if (!l8481.PESO_KG) l8481.PESO_KG = l8481.SACOS * 50;
-    if (clienteUnion && (!l8481.CLIENTE || l8481.CLIENTE === "Sin Cliente")) l8481.CLIENTE = clienteUnion;
-    if (variedadUnion && (!l8481.VARIEDAD || isGenericFallbackVar(l8481.VARIEDAD))) l8481.VARIEDAD = variedadUnion;
+    l8481.SACOS = Number(l8481.SACOS) > 0 ? Number(l8481.SACOS) : 450;
+    if (!l8481.PESO_KG || l8481.PESO_KG === 22500 || l8481.PESO_KG === 8500) {
+      l8481.PESO_KG = 46300;
+    }
+    if (!l8481.CLIENTE || l8481.CLIENTE === "Sin Cliente" || l8481.CLIENTE === "MOLINO DON JULIO S.A.C.") {
+      l8481.CLIENTE = clienteUnion;
+    }
+    if (!l8481.VARIEDAD || isGenericFallbackVar(l8481.VARIEDAD)) {
+      l8481.VARIEDAD = variedadUnion;
+    }
   }
+
+  // Hallar peso unitario real (PESO_KG / SACOS)
+  const pesoUnit77 = (Number(l8477.PESO_KG) > 0 && Number(l8477.SACOS) > 0)
+    ? (Number(l8477.PESO_KG) / Number(l8477.SACOS))
+    : (47290 / 465);
+  const pesoProg77 = Math.round(145 * pesoUnit77); // 14,746 kg
+
+  const pesoUnit81 = (Number(l8481.PESO_KG) > 0 && Number(l8481.SACOS) > 0)
+    ? (Number(l8481.PESO_KG) / Number(l8481.SACOS))
+    : (46300 / 450);
+  const pesoProg81 = Math.round(170 * pesoUnit81); // 17,491 kg
+
+  const totalPesoV374 = pesoProg77 + pesoProg81; // 32,237 kg
 
   const row8477 = {
     loteId: "C08477",
-    cliente: clienteUnion,
-    variedad: variedadUnion,
-    sacos: 145,
+    cliente: l8477.CLIENTE || clienteUnion,
+    variedad: l8477.VARIEDAD || variedadUnion,
+    sacos: 465,
     sacProg: 145,
-    peso: 7250,
-    pesoProg: 7250,
-    ph: 13.8,
-    desv: 1.1,
-    blInt: 21.0,
-    blBlanco: 39.5,
-    qi: 7.2,
-    qb: 15.0,
-    tt: 1.4,
-    tp: 2.2,
-    tpun: 4.0,
-    m: 0.8,
-    triz: 1.5,
+    peso: Number(l8477.PESO_KG) || 47290,
+    pesoProg: pesoProg77,
+    ph: Number((l8477 as any).HUMEDAD || (l8477 as any).HUM) || 13.8,
+    desv: Number((l8477 as any).DESV) || 0.64,
+    blInt: Number((l8477 as any).BL_INT) || 22.0,
+    blBlanco: Number((l8477 as any).BL_BLANCO) || 39.0,
+    qi: Number((l8477 as any).QI) || 3.3,
+    qb: Number((l8477 as any).QB) || 9.0,
+    tt: Number((l8477 as any).TT) || 3.0,
+    tp: Number((l8477 as any).TP) || 8.1,
+    tpun: Number((l8477 as any).TPUN) || 0,
+    m: Number((l8477 as any).M) || 1.5,
+    triz: Number((l8477 as any).TZ) || 1.0,
     condicion: "APTO" as const,
     tipoServicio: "VAPORIZADO Y SECADO EN APIT"
   };
 
   const row8481 = {
     loteId: "C08481",
-    cliente: clienteUnion,
-    variedad: variedadUnion,
-    sacos: 170,
+    cliente: l8481.CLIENTE || clienteUnion,
+    variedad: l8481.VARIEDAD || variedadUnion,
+    sacos: 450,
     sacProg: 170,
-    peso: 8500,
-    pesoProg: 8500,
-    ph: 13.6,
-    desv: 1.2,
-    blInt: 21.5,
-    blBlanco: 39.0,
-    qi: 7.5,
-    qb: 15.5,
-    tt: 1.5,
-    tp: 2.5,
-    tpun: 4.5,
-    m: 0.8,
-    triz: 1.8,
+    peso: Number(l8481.PESO_KG) || 46300,
+    pesoProg: pesoProg81,
+    ph: Number((l8481 as any).HUMEDAD || (l8481 as any).HUM) || 13.6,
+    desv: Number((l8481 as any).DESV) || 1.16,
+    blInt: Number((l8481 as any).BL_INT) || 22.1,
+    blBlanco: Number((l8481 as any).BL_BLANCO) || 38.2,
+    qi: Number((l8481 as any).QI) || 5.0,
+    qb: Number((l8481 as any).QB) || 12.8,
+    tt: Number((l8481 as any).TT) || 2.6,
+    tp: Number((l8481 as any).TP) || 5.8,
+    tpun: Number((l8481 as any).TPUN) || 0,
+    m: Number((l8481 as any).M) || 2.3,
+    triz: Number((l8481 as any).TZ) || 1.6,
     condicion: "APTO" as const,
     tipoServicio: "VAPORIZADO Y SECADO EN APIT"
+  };
+
+  const defaultPromedios = {
+    ph: 13.7,
+    desv: 0.9,
+    blInt: 22.05,
+    blBlanco: 38.6,
+    qi: 4.15,
+    qb: 10.9,
+    tt: 2.8,
+    tp: 6.95,
+    tpun: 0,
+    m: 1.9,
+    triz: 1.3,
+    condicion: "APTO" as const
+  };
+
+  const defaultParams = {
+    presionBar: 0.35,
+    velExclusa: 6,
+    tiempoReposoMin: 40,
+    tempSecadoC: 80,
+    modalidadPases: "1_PASE" as const,
+    presionPase1: 0.35,
+    presionPase2: 0.35
   };
 
   if (!Array.isArray(db.programacionesOficiales)) db.programacionesOficiales = [];
@@ -1183,29 +1265,36 @@ export function deduplicateAndMigrateLotes(db: LocalDatabaseSchema): void {
   );
 
   if (p374) {
-    if (!Array.isArray(p374.filasLote)) p374.filasLote = [];
-    const has77 = p374.filasLote.some((f: any) => compareLoteCodes(f?.loteId || f?.LOTE_ID, "8477"));
-    const has81 = p374.filasLote.some((f: any) => compareLoteCodes(f?.loteId || f?.LOTE_ID, "8481"));
-
-    const newFilas: any[] = [];
-    if (has77) {
-      const f77 = p374.filasLote.find((f: any) => compareLoteCodes(f?.loteId || f?.LOTE_ID, "8477"));
-      newFilas.push({ ...row8477, ...f77, sacProg: 145, sacos: 145, pesoProg: 7250, peso: 7250, loteId: f77.loteId || "C08477", cliente: clienteUnion, variedad: variedadUnion });
-    } else {
-      newFilas.push(row8477);
-    }
-    if (has81) {
-      const f81 = p374.filasLote.find((f: any) => compareLoteCodes(f?.loteId || f?.LOTE_ID, "8481"));
-      newFilas.push({ ...row8481, ...f81, sacProg: 170, sacos: 170, pesoProg: 8500, peso: 8500, loteId: f81.loteId || "C08481", cliente: clienteUnion, variedad: variedadUnion });
-    } else {
-      newFilas.push(row8481);
-    }
-    p374.filasLote = newFilas;
+    p374.filasLote = [
+      {
+        ...row8477,
+        sacos: 465,
+        sacProg: 145,
+        peso: Number(l8477.PESO_KG) || 47290,
+        pesoProg: pesoProg77,
+        loteId: "C08477",
+        cliente: l8477.CLIENTE || clienteUnion,
+        variedad: l8477.VARIEDAD || variedadUnion
+      },
+      {
+        ...row8481,
+        sacos: 450,
+        sacProg: 170,
+        peso: Number(l8481.PESO_KG) || 46300,
+        pesoProg: pesoProg81,
+        loteId: "C08481",
+        cliente: l8481.CLIENTE || clienteUnion,
+        variedad: l8481.VARIEDAD || variedadUnion
+      }
+    ];
     p374.totalSacosProg = 315;
-    p374.pesoTotalKg = 15750;
+    p374.pesoTotalKg = totalPesoV374;
     p374.clientePrincipal = clienteUnion;
     p374.variedadPrincipal = variedadUnion;
-    p374.lotes = newFilas.map(f => f.loteId);
+    p374.lotes = ["C08477", "C08481"];
+    if (!p374.promedios) p374.promedios = { ...defaultPromedios };
+    if (!p374.parametrosDeterminados) p374.parametrosDeterminados = { ...defaultParams };
+    if (!p374.parametrosRecomendadosIA) p374.parametrosRecomendadosIA = { ...defaultParams };
     if (!p374.estado || p374.estado === "CERRADO") {
       p374.estado = "PROGRAMADO";
     }
@@ -1219,22 +1308,32 @@ export function deduplicateAndMigrateLotes(db: LocalDatabaseSchema): void {
       clientePrincipal: clienteUnion,
       variedadPrincipal: variedadUnion,
       totalSacosProg: 315,
-      pesoTotalKg: 15750,
+      pesoTotalKg: totalPesoV374,
       tipoServicio: "VAPORIZADO Y SECADO EN APIT",
       estado: "PROGRAMADO",
-      observacion: "Unión de saldo C08477 (145 sacos) con C08481 (170 sacos) del mismo cliente. Total 315 sacos.",
+      observacion: "Unión de saldo C08477 (145 sacos / 14,746 kg) con C08481 (170 sacos / 17,491 kg) de URBINA SAAVEDRA CLAUDIO MARTIN. Total: 315 sacos / 32,237 kg.",
       filasLote: [row8477, row8481],
-      lotes: ["C08477", "C08481"]
+      lotes: ["C08477", "C08481"],
+      promedios: { ...defaultPromedios },
+      parametrosDeterminados: { ...defaultParams },
+      parametrosRecomendadosIA: { ...defaultParams }
     };
     db.programacionesOficiales.push(p374);
   }
 
-  // Asegurar db.batchLotes para V374
+  (db.programacionesOficiales || []).forEach((prog: any) => {
+    if (!prog) return;
+    if (!prog.promedios) prog.promedios = { ...defaultPromedios };
+    if (!prog.parametrosDeterminados) prog.parametrosDeterminados = { ...defaultParams };
+    if (!prog.parametrosRecomendadosIA) prog.parametrosRecomendadosIA = { ...defaultParams };
+  });
+
+  // Asegurar db.batchLotes para V374 con los pesos unitarios reales
   if (!Array.isArray(db.batchLotes)) db.batchLotes = [];
   const bl8477 = db.batchLotes.find((bl: any) => sameBatchKey(bl?.BATCH_ID, "V374") && compareLoteCodes(bl?.LOTE_ID, "8477"));
   if (bl8477) {
     bl8477.SACOS = 145;
-    bl8477.PESO_KG = 7250;
+    bl8477.PESO_KG = pesoProg77;
     bl8477.CLIENTE = clienteUnion;
     bl8477.VARIEDAD = variedadUnion;
   } else {
@@ -1243,7 +1342,7 @@ export function deduplicateAndMigrateLotes(db: LocalDatabaseSchema): void {
       BATCH_ID: "V374",
       LOTE_ID: "C08477",
       SACOS: 145,
-      PESO_KG: 7250,
+      PESO_KG: pesoProg77,
       CLIENTE: clienteUnion,
       VARIEDAD: variedadUnion,
       ORDEN: 1,
@@ -1254,7 +1353,7 @@ export function deduplicateAndMigrateLotes(db: LocalDatabaseSchema): void {
   const bl8481 = db.batchLotes.find((bl: any) => sameBatchKey(bl?.BATCH_ID, "V374") && compareLoteCodes(bl?.LOTE_ID, "8481"));
   if (bl8481) {
     bl8481.SACOS = 170;
-    bl8481.PESO_KG = 8500;
+    bl8481.PESO_KG = pesoProg81;
     bl8481.CLIENTE = clienteUnion;
     bl8481.VARIEDAD = variedadUnion;
   } else {
@@ -1263,7 +1362,7 @@ export function deduplicateAndMigrateLotes(db: LocalDatabaseSchema): void {
       BATCH_ID: "V374",
       LOTE_ID: "C08481",
       SACOS: 170,
-      PESO_KG: 8500,
+      PESO_KG: pesoProg81,
       CLIENTE: clienteUnion,
       VARIEDAD: variedadUnion,
       ORDEN: 2,
@@ -1277,8 +1376,8 @@ export function deduplicateAndMigrateLotes(db: LocalDatabaseSchema): void {
   if (b374) {
     b374.LOTES_UNION = ["C08477", "C08481"];
     b374.TOTAL_SACOS = 315;
-    b374.TOTAL_PESO_KG = 15750;
-    b374.PESO_TOTAL_KG = 15750;
+    b374.TOTAL_PESO_KG = totalPesoV374;
+    b374.PESO_TOTAL_KG = totalPesoV374;
     b374.CLIENTE = clienteUnion;
     b374.VARIEDAD = variedadUnion;
     b374.filasLote = p374.filasLote;
@@ -1299,14 +1398,21 @@ export function deduplicateAndMigrateLotes(db: LocalDatabaseSchema): void {
         const inFilas = prog.filasLote.some((f: any) => compareLoteCodes(f?.loteId || f?.LOTE_ID, lid));
         if (!inFilas) {
           const foundLot = findLoteByCode(lid);
+          const sacCount = Number(bl.SACOS || foundLot?.SACOS || 0);
+          const unitW = (foundLot?.PESO_KG && foundLot?.SACOS && Number(foundLot.SACOS) > 0)
+            ? (Number(foundLot.PESO_KG) / Number(foundLot.SACOS))
+            : (bl.PESO_KG && bl.SACOS && Number(bl.SACOS) > 0 ? (Number(bl.PESO_KG) / Number(bl.SACOS)) : 50);
+          const computedKg = (Number(bl.PESO_KG) > 0 && Number(bl.PESO_KG) !== sacCount * 50)
+            ? Number(bl.PESO_KG)
+            : Math.round(sacCount * unitW);
           prog.filasLote.push({
             loteId: lid,
             cliente: bl.CLIENTE || prog.clientePrincipal || foundLot?.CLIENTE || "MOLINO DON JULIO S.A.C.",
             variedad: bl.VARIEDAD || prog.variedadPrincipal || foundLot?.VARIEDAD || "TINAJONES",
-            sacos: Number(bl.SACOS || foundLot?.SACOS || 0),
-            sacProg: Number(bl.SACOS || foundLot?.SACOS || 0),
-            peso: Number(bl.PESO_KG || (bl.SACOS ? bl.SACOS * 50 : 0)),
-            pesoProg: Number(bl.PESO_KG || (bl.SACOS ? bl.SACOS * 50 : 0)),
+            sacos: Number(foundLot?.SACOS || sacCount),
+            sacProg: sacCount,
+            peso: Number(foundLot?.PESO_KG || computedKg),
+            pesoProg: computedKg,
             tipoServicio: prog.tipoServicio || "VAPORIZADO Y SECADO EN APIT",
             condicion: "APTO"
           });

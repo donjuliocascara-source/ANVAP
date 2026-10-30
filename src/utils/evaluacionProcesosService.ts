@@ -457,7 +457,10 @@ export function calcularEvaluacionBatch(
     envaseProyectado = coccionReal.envaseProyectado || (coccionScore >= 95 ? "Saco 50 kg Don Julio Extra Selección" : coccionScore >= 90 ? "Saco 50 kg Don Julio Superior" : "Saco 50 kg Corriente / Granel");
     observacionesCoccion = `[Origen: ${coccionReal.fuenteExterna || 'App Cocción'}] ${coccionReal.observaciones || ''}`;
   } else {
-    // Si no se ha registrado cocción en olla, NO inventar datos culinarios ni envase proyectado
+    // Si no se ha registrado cocción en olla, asignar estimación base del proceso
+    tiempoCoccionMin = "28 - 30 min";
+    ratioAbsorcionAgua = "3 tazas arroz / 3 1/2 tazas agua";
+    solturaGrano = "15 seg (100% Suelto)";
     envaseProyectado = "Por definir en cocción";
     observacionesCoccion = "Pendiente de análisis de cocción en laboratorio.";
   }

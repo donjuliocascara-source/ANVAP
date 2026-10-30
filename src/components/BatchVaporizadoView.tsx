@@ -390,7 +390,10 @@ export const BatchVaporizadoView: React.FC<BatchVaporizadoViewProps> = ({
       const loteObj = lotes.find((l) => l.LOTE_ID === bl.LOTE_ID || compareLoteCodes(l.LOTE_ID, bl.LOTE_ID));
       const ahObj = analisisHumedos.find((a) => a.LOTE_ID === bl.LOTE_ID || compareLoteCodes(a.LOTE_ID, bl.LOTE_ID));
       const sacosIngresados = (bl.SACOS && bl.SACOS > 0) ? bl.SACOS : (loteObj?.SACOS || (bl.PESO_KG ? Math.round(bl.PESO_KG / 50) : 0));
-      const pesoIngresado = (bl.PESO_KG && bl.PESO_KG > 0) ? bl.PESO_KG : (loteObj?.PESO_KG || (sacosIngresados * 50));
+      const unitWeight = (loteObj?.PESO_KG && loteObj?.SACOS && Number(loteObj.SACOS) > 0)
+        ? (Number(loteObj.PESO_KG) / Number(loteObj.SACOS))
+        : 50;
+      const pesoIngresado = (bl.PESO_KG && bl.PESO_KG > 0) ? bl.PESO_KG : (sacosIngresados > 0 ? Math.round(sacosIngresados * unitWeight) : (loteObj?.PESO_KG || 0));
       const humVal = loteObj?.HUM ?? loteObj?.HUMEDAD ?? (ahObj?.HUMEDADES !== undefined ? Number(ahObj.HUMEDADES) : undefined);
 
       return {

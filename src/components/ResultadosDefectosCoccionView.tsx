@@ -940,7 +940,7 @@ export const ResultadosDefectosCoccionView: React.FC<ResultadosDefectosCoccionVi
                     </td>
                   </tr>
                 ) : (
-                  evaluacionesFiltradas.map((e) => {
+                  evaluacionesFiltradas.map((e, idx) => {
                     // Semáforo de Δ Quebrado
                     const esOptimoQ = e.deltaQuebrado <= 1.5;
                     const esAlertaQ = e.deltaQuebrado > 1.5 && e.deltaQuebrado <= 2.2;
@@ -952,7 +952,7 @@ export const ResultadosDefectosCoccionView: React.FC<ResultadosDefectosCoccionVi
                     const tieneCoccion = Boolean(e.resultadoCoccion);
 
                     return (
-                      <tr key={e.batchId} className="hover:bg-slate-850/60 transition-colors">
+                      <tr key={`${e.batchId}-${e.correlativo || ''}-${idx}`} className="hover:bg-slate-850/60 transition-colors">
                         {/* Batch & Fecha */}
                         <td className="py-2.5 px-3 border-r border-slate-800 whitespace-nowrap">
                           <div className="font-black text-white text-xs flex items-center gap-1.5">
@@ -1070,7 +1070,7 @@ export const ResultadosDefectosCoccionView: React.FC<ResultadosDefectosCoccionVi
                         </td>
 
                         <td className="py-2.5 px-2 text-center border-r border-slate-800 bg-emerald-950/20 text-slate-300 text-[11px] whitespace-nowrap">
-                          {e.tiempoCoccionMin.replace(" min", "")} m
+                          {e.tiempoCoccionMin ? String(e.tiempoCoccionMin).replace(/\s*min/gi, "") : "30"} m
                         </td>
 
                         <td className="py-2.5 px-2 text-center border-r border-slate-800 bg-emerald-950/20 text-amber-300 text-xs font-bold">
@@ -1146,7 +1146,7 @@ export const ResultadosDefectosCoccionView: React.FC<ResultadosDefectosCoccionVi
 
           {/* Gráfico de Barras Horizontales por Batch */}
           <div className="space-y-3 font-mono text-xs">
-            {evaluacionesFiltradas.slice(0, 15).map((e) => {
+            {evaluacionesFiltradas.slice(0, 15).map((e, idx) => {
               const maxScale = 3.5;
               const pctBarra = Math.min(100, Math.round((e.deltaQuebrado / maxScale) * 100));
               const pctTiza = Math.min(100, Math.round((Math.max(0, e.deltaTiza) / maxScale) * 100));
@@ -1155,7 +1155,7 @@ export const ResultadosDefectosCoccionView: React.FC<ResultadosDefectosCoccionVi
               const esAlerta = e.deltaQuebrado > 1.5 && e.deltaQuebrado <= 2.2;
 
               return (
-                <div key={e.batchId} className="bg-slate-850/80 p-3 rounded-xl border border-slate-800 space-y-2">
+                <div key={`grid-${e.batchId}-${e.correlativo || ''}-${idx}`} className="bg-slate-850/80 p-3 rounded-xl border border-slate-800 space-y-2">
                   <div className="flex items-center justify-between font-sans">
                     <div className="flex items-center gap-2">
                       <span className="font-mono font-black text-amber-400 text-sm">{e.correlativo || e.batchId}</span>

@@ -332,11 +332,25 @@ export function obtenerValoresIngresoBatchDesdeLotes(params: {
     // Variedad del lote
     const variedadLote = (loteObj?.VARIEDAD || blMatch?.VARIEDAD || filaProgMatch?.variedad || "").trim();
 
-    // Sacos del lote
-    const sacosLote = Number(loteObj?.SACOS) || Number(blMatch?.SACOS) || Number(filaProgMatch?.sacProg) || Number(filaProgMatch?.sacos) || 0;
+    // Sacos del lote asignados a este batch (prioridad: fila de programación o batchLotes, luego lote maestro)
+    const progSacos = Number(filaProgMatch?.sacProg) || Number(filaProgMatch?.sacos) || 0;
+    const blSacos = Number(blMatch?.SACOS) || 0;
+    const sacosLote = progSacos > 0 ? progSacos : (blSacos > 0 ? blSacos : (Number(loteObj?.SACOS) || 0));
 
-    // Peso en Kg del lote
-    const pesoKgLote = Number(loteObj?.PESO_KG) || Number(blMatch?.PESO_KG) || Number(filaProgMatch?.pesoProg) || Number(filaProgMatch?.peso) || (sacosLote > 0 ? sacosLote * 50 : 0);
+    // Peso en Kg del lote para este batch (calculado en base al peso unitario real del lote = PESO_KG / SACOS)
+    const unitWeight = (loteObj?.PESO_KG && loteObj?.SACOS && Number(loteObj.SACOS) > 0)
+      ? (Number(loteObj.PESO_KG) / Number(loteObj.SACOS))
+      : 50;
+    const progPeso = Number(filaProgMatch?.pesoProg) || Number(filaProgMatch?.peso) || 0;
+    const blPeso = Number(blMatch?.PESO_KG) || 0;
+    const isErroneous50FallbackProg = progPeso > 0 && progSacos > 0 && Math.abs(progPeso - progSacos * 50) <= 2 && unitWeight > 60;
+    const isErroneous50FallbackBL = blPeso > 0 && blSacos > 0 && Math.abs(blPeso - blSacos * 50) <= 2 && unitWeight > 60;
+
+    const pesoKgLote = (progPeso > 0 && !isErroneous50FallbackProg)
+      ? progPeso
+      : (blPeso > 0 && !isErroneous50FallbackBL
+        ? blPeso
+        : (sacosLote > 0 ? Math.round(sacosLote * unitWeight) : (Number(loteObj?.PESO_KG) || 0)));
 
     // Humedad del lote (de Lote MP, registro de caladas o análisis húmedo)
     const humRaw = loteObj?.HUM ?? loteObj?.HUMEDAD ?? humReg?.["H. PROMEDIO"] ?? ahReg?.HUMEDADES ?? filaProgMatch?.ph;
@@ -384,24 +398,29 @@ export function obtenerValoresIngresoBatchDesdeLotes(params: {
 
   // 6. Calcular PESO TOTAL y PESO (KG)
   const pesoSumLotes = lotesCalculados.reduce((sum, l) => sum + (l.pesoKg || 0), 0);
-  let pesoTotalKgFinal = (targetBatch?.PESO_TOTAL_KG && targetBatch.PESO_TOTAL_KG > 0)
-    ? targetBatch.PESO_TOTAL_KG
-    : (pesoSumLotes > 0
-      ? pesoSumLotes
-      : ((targetBatch as any)?.TOTAL_PESO_KG 
-        || (targetBatch?.TON_PROCESADAS ? targetBatch.TON_PROCESADAS * 1000 : 0) 
-        || (targetBatch?.TON_PROGRAMADAS ? targetBatch.TON_PROGRAMADAS * 1000 : 0) 
-        || (targetBatch?.CAPACIDAD_PROGRAMADA_TN ? targetBatch.CAPACIDAD_PROGRAMADA_TN * 1000 : 0)
-        || (progMatch?.pesoTotalKg || 0)));
+  const progPesoKg = Number(progMatch?.pesoTotalKg || 0);
+  let pesoTotalKgFinal = pesoSumLotes > 0
+    ? pesoSumLotes
+    : (progPesoKg > 0
+      ? progPesoKg
+      : ((targetBatch?.PESO_TOTAL_KG && targetBatch.PESO_TOTAL_KG > 0 && targetBatch.PESO_TOTAL_KG !== 18000)
+        ? targetBatch.PESO_TOTAL_KG
+        : ((targetBatch as any)?.TOTAL_PESO_KG 
+          || (targetBatch?.TON_PROCESADAS ? targetBatch.TON_PROCESADAS * 1000 : 0) 
+          || (targetBatch?.TON_PROGRAMADAS ? targetBatch.TON_PROGRAMADAS * 1000 : 0) 
+          || (targetBatch?.CAPACIDAD_PROGRAMADA_TN ? targetBatch.CAPACIDAD_PROGRAMADA_TN * 1000 : 0)
+          || (targetBatch?.PESO_TOTAL_KG || 0))));
 
   // 7. Calcular N° SACOS
   const sacosSumLotes = lotesCalculados.reduce((sum, l) => sum + (l.sacos || 0), 0);
-  let sacosNumeroFinal = (targetBatch?.TOTAL_SACOS && targetBatch.TOTAL_SACOS > 0)
-    ? targetBatch.TOTAL_SACOS
-    : (sacosSumLotes > 0
-      ? sacosSumLotes
-      : ((targetBatch as any)?.SACOS 
-        || (progMatch?.totalSacosProg || 0)));
+  const progSacosNum = Number(progMatch?.totalSacosProg || 0);
+  let sacosNumeroFinal = sacosSumLotes > 0
+    ? sacosSumLotes
+    : (progSacosNum > 0
+      ? progSacosNum
+      : ((targetBatch?.TOTAL_SACOS && targetBatch.TOTAL_SACOS > 0 && targetBatch.TOTAL_SACOS !== 360)
+        ? targetBatch.TOTAL_SACOS
+        : ((targetBatch as any)?.SACOS || 0)));
 
   if (sacosNumeroFinal <= 0 && pesoTotalKgFinal > 0) {
     sacosNumeroFinal = Math.round(pesoTotalKgFinal / 50);

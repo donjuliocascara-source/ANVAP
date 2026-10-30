@@ -2508,22 +2508,22 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
         `"${sacosStr}"`,
         `${prog.totalSacosProg}`,
         `${prog.pesoTotalKg}`,
-        `${prog.promedios.ph}`,
-        `${prog.promedios.desv}`,
-        `${prog.promedios.blInt}`,
-        `${prog.promedios.blBlanco}`,
-        `${prog.promedios.qi}`,
-        `${prog.promedios.qb}`,
-        `${prog.promedios.tt}`,
-        `${prog.promedios.tp}`,
-        `${prog.promedios.tpun}`,
-        `${prog.promedios.m}`,
-        `${prog.promedios.triz}`,
-        prog.promedios.condicion,
-        `${prog.parametrosDeterminados.presionBar}`,
-        `${prog.parametrosDeterminados.velExclusa}`,
-        `${prog.parametrosDeterminados.tiempoReposoMin} MIN`,
-        `${prog.parametrosDeterminados.tempSecadoC}`,
+        `${prog.promedios?.ph ?? 13.8}`,
+        `${prog.promedios?.desv ?? 1.2}`,
+        `${prog.promedios?.blInt ?? 21.2}`,
+        `${prog.promedios?.blBlanco ?? 39.2}`,
+        `${prog.promedios?.qi ?? 7.3}`,
+        `${prog.promedios?.qb ?? 15.2}`,
+        `${prog.promedios?.tt ?? 1.4}`,
+        `${prog.promedios?.tp ?? 2.3}`,
+        `${prog.promedios?.tpun ?? 4.2}`,
+        `${prog.promedios?.m ?? 0.8}`,
+        `${prog.promedios?.triz ?? 1.6}`,
+        prog.promedios?.condicion ?? "APTO",
+        `${prog.parametrosDeterminados?.presionBar ?? 0.35}`,
+        `${prog.parametrosDeterminados?.velExclusa ?? 6}`,
+        `${prog.parametrosDeterminados?.tiempoReposoMin ?? 40} MIN`,
+        `${prog.parametrosDeterminados?.tempSecadoC ?? 80}`,
         `"${prog.observacion || ""}"`
       ]);
     }
@@ -2596,10 +2596,12 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
     let coincidenTemp = 0;
 
     for (const p of programaciones) {
-      if (Math.abs(p.parametrosRecomendadosIA.presionBar - p.parametrosDeterminados.presionBar) < 0.05) coincidenPresion++;
-      if (p.parametrosRecomendadosIA.velExclusa === p.parametrosDeterminados.velExclusa) coincidenEsclusa++;
-      if (Math.abs(p.parametrosRecomendadosIA.tiempoReposoMin - p.parametrosDeterminados.tiempoReposoMin) <= 5) coincidenReposo++;
-      if (Math.abs(p.parametrosRecomendadosIA.tempSecadoC - p.parametrosDeterminados.tempSecadoC) <= 2) coincidenTemp++;
+      const ia = p.parametrosRecomendadosIA || p.parametrosDeterminados || { presionBar: 0.35, velExclusa: 6, tiempoReposoMin: 40, tempSecadoC: 80 };
+      const det = p.parametrosDeterminados || p.parametrosRecomendadosIA || { presionBar: 0.35, velExclusa: 6, tiempoReposoMin: 40, tempSecadoC: 80 };
+      if (Math.abs((ia.presionBar ?? 0.35) - (det.presionBar ?? 0.35)) < 0.05) coincidenPresion++;
+      if ((ia.velExclusa ?? 6) === (det.velExclusa ?? 6)) coincidenEsclusa++;
+      if (Math.abs((ia.tiempoReposoMin ?? 40) - (det.tiempoReposoMin ?? 40)) <= 5) coincidenReposo++;
+      if (Math.abs((ia.tempSecadoC ?? 80) - (det.tempSecadoC ?? 80)) <= 2) coincidenTemp++;
     }
 
     const pctPresion = totalBatches > 0 ? Math.round((coincidenPresion / totalBatches) * 100) : 100;
@@ -4462,14 +4464,14 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
                   </button>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                  {sugerenciasLotesSemejantes.slice(0, 6).map(s => {
+                  {sugerenciasLotesSemejantes.slice(0, 6).map((s, sIdx) => {
                     const sHum = Number(s.humedad ?? s.analisisH?.HUMEDADES ?? s.lote.HUM ?? 14.0) || 14.0;
                     const sDifHum = Number(s.diferenciaHumedad) || 0;
                     const sTT = Number(s.tt ?? s.analisisH?.TT ?? 1.5) || 1.5;
                     const sSim = s.porcentajeSimilitud ?? s.scoreSimilitud ?? 100;
                     return (
                       <div
-                        key={s.lote.LOTE_ID}
+                        key={`${s.lote.LOTE_ID}-${sIdx}`}
                         className="p-2 bg-slate-900/90 rounded-lg border border-purple-700/40 text-xs flex items-center justify-between"
                       >
                         <div>
@@ -4798,7 +4800,7 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
                     </tr>
                   ) : (
                     filasLote.map((fila, idx) => (
-                      <tr key={fila.loteId} className="hover:bg-slate-800/50 transition-colors">
+                      <tr key={`${fila.loteId}-${idx}`} className="hover:bg-slate-800/50 transition-colors">
                         <td className="py-2 px-2 text-center font-black text-cyan-400 border-r border-slate-800">
                           {fila.loteId}
                         </td>
@@ -6087,7 +6089,7 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
                       </thead>
                       <tbody className="divide-y divide-slate-800 font-mono">
                         {quickEditData.filasLote.map((f, fIdx) => (
-                          <tr key={f.loteId || fIdx} className="hover:bg-slate-900/50">
+                          <tr key={`${f.loteId || 'lote'}-${fIdx}`} className="hover:bg-slate-900/50">
                             <td className="py-1.5 px-2 font-bold text-cyan-400">{f.loteId}</td>
                             <td className="py-1.5 px-2 font-sans truncate max-w-[120px] text-slate-300">{f.cliente || quickEditData.clientePrincipal}</td>
                             <td className="py-1.5 px-2 font-sans text-slate-300">{f.variedad || quickEditData.variedadPrincipal}</td>

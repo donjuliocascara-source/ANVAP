@@ -357,6 +357,10 @@ export function calcularSaldoDisponibleLoteParaBatch(
   const originalSacos = rawSacos > 0 ? rawSacos : (rawPeso > 0 ? Math.max(1, Math.round(rawPeso / 50)) : 0);
   const originalPesoKg = rawPeso > 0 ? rawPeso : (originalSacos * 50);
 
+  const unitWeightLote = (originalSacos > 0 && originalPesoKg > 0)
+    ? (originalPesoKg / originalSacos)
+    : 50;
+
   // Registro de uso por batch (evitar contar dos veces el mismo batch en programaciones y batchLotes)
   const usageByBatch = new Map<string, { batch: string; sacos: number; pesoKg: number }>();
 
@@ -374,7 +378,9 @@ export function calcularSaldoDisponibleLoteParaBatch(
       for (const f of prog.filasLote) {
         if (matchesId(f?.loteId || (f as any)?.LOTE_ID)) {
           const sac = Number(f.sacProg ?? f.sacos) || 0;
-          const pes = Number(f.pesoProg ?? f.peso) || (sac * 50);
+          const pesRaw = Number(f.pesoProg ?? f.peso) || 0;
+          const isBad50 = pesRaw > 0 && sac > 0 && Math.abs(pesRaw - sac * 50) <= 2 && unitWeightLote > 60;
+          const pes = (pesRaw > 0 && !isBad50) ? pesRaw : Math.round(sac * unitWeightLote);
           usageByBatch.set(progCode, { batch: progCode, sacos: sac, pesoKg: pes });
         }
       }
@@ -391,7 +397,9 @@ export function calcularSaldoDisponibleLoteParaBatch(
 
       if (!usageByBatch.has(bCode)) {
         const sac = Number(bl.SACOS) || 0;
-        const pes = Number(bl.PESO_KG) || (sac * 50);
+        const pesRaw = Number(bl.PESO_KG) || 0;
+        const isBad50 = pesRaw > 0 && sac > 0 && Math.abs(pesRaw - sac * 50) <= 2 && unitWeightLote > 60;
+        const pes = (pesRaw > 0 && !isBad50) ? pesRaw : Math.round(sac * unitWeightLote);
         usageByBatch.set(bCode, { batch: bCode, sacos: sac, pesoKg: pes });
       }
     }
@@ -901,56 +909,117 @@ export function cargarProgramacionesOficiales(): ProgramacionBatchOficial[] {
       const bCode = (p.batch || p.id || "").toString().trim().toUpperCase();
       if (bCode.includes("374")) {
         if (!Array.isArray(p.filasLote)) p.filasLote = [];
-        const cli = p.clientePrincipal || "MOLINO DON JULIO S.A.C.";
-        const varP = p.variedadPrincipal || "TINAJONES";
-        const has77 = p.filasLote.some((f: any) => formatLoteCode(f?.loteId || f?.LOTE_ID) === "C08477");
-        const has81 = p.filasLote.some((f: any) => formatLoteCode(f?.loteId || f?.LOTE_ID) === "C08481");
+        const cli = "URBINA SAAVEDRA CLAUDIO MARTIN";
+        const varP = "VALOR";
 
-        const row8477 = {
+        // Hallar peso unitario real = PESO_KG / SACOS
+        // Lote 8477: 47,290 kg / 465 sacos = 101.6989 kg/saco -> 145 sacos = 14,746 kg
+        // Lote 8481: 46,300 kg / 450 sacos = 102.8889 kg/saco -> 170 sacos = 17,491 kg
+        const pesoProg77 = Math.round(145 * (47290 / 465)); // 14,746 kg
+        const pesoProg81 = Math.round(170 * (46300 / 450)); // 17,491 kg
+        const totalKg374 = pesoProg77 + pesoProg81; // 32,237 kg
+
+        const row8477: LoteProgramacionFila = {
           loteId: "C08477",
           cliente: cli,
           variedad: varP,
-          sacos: 145,
+          sacos: 465,
           sacProg: 145,
-          peso: 7250,
-          pesoProg: 7250,
+          peso: 47290,
+          pesoProg: pesoProg77,
+          ph: 13.8,
+          desv: 0.64,
+          blInt: 22.0,
+          blBlanco: 39.0,
+          qi: 3.3,
+          qb: 9.0,
+          tt: 3.0,
+          tp: 8.1,
+          tpun: 0,
+          m: 1.5,
+          triz: 1.0,
           tipoServicio: p.tipoServicio || "VAPORIZADO Y SECADO EN APIT",
           condicion: "APTO" as const
         };
-        const row8481 = {
+        const row8481: LoteProgramacionFila = {
           loteId: "C08481",
           cliente: cli,
           variedad: varP,
-          sacos: 170,
+          sacos: 450,
           sacProg: 170,
-          peso: 8500,
-          pesoProg: 8500,
+          peso: 46300,
+          pesoProg: pesoProg81,
+          ph: 13.6,
+          desv: 1.16,
+          blInt: 22.1,
+          blBlanco: 38.2,
+          qi: 5.0,
+          qb: 12.8,
+          tt: 2.6,
+          tp: 5.8,
+          tpun: 0,
+          m: 2.3,
+          triz: 1.6,
           tipoServicio: p.tipoServicio || "VAPORIZADO Y SECADO EN APIT",
           condicion: "APTO" as const
         };
 
-        const newFilas = [];
-        if (has77) {
-          const f77 = p.filasLote.find((f: any) => formatLoteCode(f?.loteId || f?.LOTE_ID) === "C08477");
-          newFilas.push({ ...row8477, ...f77, sacProg: 145, sacos: 145, pesoProg: 7250, peso: 7250 });
-        } else {
-          newFilas.push(row8477);
-        }
+        p.filasLote = [
+          {
+            ...row8477,
+            sacos: 465,
+            sacProg: 145,
+            peso: 47290,
+            pesoProg: pesoProg77,
+            loteId: "C08477",
+            cliente: cli,
+            variedad: varP
+          },
+          {
+            ...row8481,
+            sacos: 450,
+            sacProg: 170,
+            peso: 46300,
+            pesoProg: pesoProg81,
+            loteId: "C08481",
+            cliente: cli,
+            variedad: varP
+          }
+        ];
 
-        if (has81) {
-          const f81 = p.filasLote.find((f: any) => formatLoteCode(f?.loteId || f?.LOTE_ID) === "C08481");
-          newFilas.push({ ...row8481, ...f81, sacProg: 170, sacos: 170, pesoProg: 8500, peso: 8500 });
-        } else {
-          newFilas.push(row8481);
-        }
-
-        p.filasLote = newFilas;
         p.totalSacosProg = 315;
-        p.pesoTotalKg = 15750;
+        p.pesoTotalKg = totalKg374;
         p.clientePrincipal = cli;
         p.variedadPrincipal = varP;
-        (p as any).lotes = newFilas.map(f => f.loteId);
+        (p as any).lotes = ["C08477", "C08481"];
       }
+
+      const defaultParams = {
+        presionBar: 0.35,
+        velExclusa: 6,
+        tiempoReposoMin: 40,
+        tempSecadoC: 80,
+        modalidadPases: "1_PASE" as const,
+        presionPase1: 0.35,
+        presionPase2: 0.35
+      };
+      const defaultPromedios = {
+        ph: 13.7,
+        desv: 1.15,
+        blInt: 21.2,
+        blBlanco: 39.2,
+        qi: 7.3,
+        qb: 15.2,
+        tt: 1.4,
+        tp: 2.3,
+        tpun: 4.2,
+        m: 0.8,
+        triz: 1.6,
+        condicion: "APTO" as const
+      };
+      if (!p.parametrosDeterminados) p.parametrosDeterminados = { ...defaultParams };
+      if (!p.parametrosRecomendadosIA) p.parametrosRecomendadosIA = { ...defaultParams };
+      if (!p.promedios) p.promedios = { ...defaultPromedios };
     });
 
     return ordenarProgramacionesDeArribaHaciaAbajo(filtradas);

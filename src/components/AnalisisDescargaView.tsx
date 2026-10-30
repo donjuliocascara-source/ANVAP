@@ -596,9 +596,9 @@ export const AnalisisDescargaView: React.FC<AnalisisDescargaViewProps> = ({
                     </span>
                     <div className="flex flex-wrap gap-1">
                       {item.lotesDetalle.length > 0 ? (
-                        item.lotesDetalle.map(l => (
+                        item.lotesDetalle.map((l, lIdx) => (
                           <span
-                            key={l.loteId}
+                            key={`${l.loteId}-${lIdx}`}
                             className="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-300 border border-slate-700"
                             title={`${l.cliente} - ${l.variedad} (${l.sacos} sacos)`}
                           >

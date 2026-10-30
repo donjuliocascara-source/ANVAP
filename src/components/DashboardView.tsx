@@ -611,12 +611,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               {/* Alert Cards Container */}
               {!isAlertasPanelCollapsed && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pt-3">
-                  {alertasPorLote.map((item) => {
+                  {alertasPorLote.map((item, idx) => {
                     const hasCritical = item.alertas.some((a) => a.severidad === "CRITICO");
 
                     return (
                       <div
-                        key={item.loteId}
+                        key={`${item.loteId}-${idx}`}
                         className={`rounded-xl p-3.5 border transition-all flex flex-col justify-between ${
                           hasCritical
                             ? "bg-slate-900/90 border-rose-600/50 hover:border-rose-500 shadow-md shadow-rose-950/20"
