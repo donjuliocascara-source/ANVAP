@@ -2807,7 +2807,7 @@ export const RecepcionLotesView: React.FC<RecepcionLotesViewProps> = ({
           {/* Master Cards Grid / Table View */}
           {viewMode === "tarjetas" ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {paginatedLotes.map(({ lote, humRec, anRec, avgHum, cardDesv, hasCaladas, cardCaladas, cardCaladasCount, cardMenores17, cardPctMenores17, cardMenores10, cardPctMenores10, cardVetoHum10, evalResult, estadoNormalizado, hasAnalisisData, hasAutorizacionExp, isRech, resistenciaInfo }) => {
+            {paginatedLotes.map(({ lote, humRec, anRec, avgHum, cardDesv, hasCaladas, cardCaladas, cardCaladasCount, cardMenores17, cardPctMenores17, cardMenores10, cardPctMenores10, cardVetoHum10, evalResult, estadoNormalizado, hasAnalisisData, hasAutorizacionExp, isRech, resistenciaInfo }, idx) => {
               // Category info
               const cat = obtenerCategoriaLote(lote.ESTADO_LOTE);
               const metaCat = obtenerMetaCategoria(cat);
@@ -2815,7 +2815,7 @@ export const RecepcionLotesView: React.FC<RecepcionLotesViewProps> = ({
 
               return (
                 <div
-                  key={lote.LOTE_ID}
+                  key={`${lote.LOTE_ID}-${idx}`}
                   className="bg-slate-800 hover:bg-slate-750 transition-all rounded-xl border border-slate-700/80 p-4 shadow-sm flex flex-col justify-between"
                 >
                   <div>
@@ -3195,7 +3195,7 @@ export const RecepcionLotesView: React.FC<RecepcionLotesViewProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800 text-slate-200">
-                  {paginatedLotes.map(({ lote, humRec, anRec, avgHum, cardDesv, evalResult, estadoNormalizado, hasAnalisisData, hasAutorizacionExp, isRech, resistenciaInfo }) => {
+                  {paginatedLotes.map(({ lote, humRec, anRec, avgHum, cardDesv, evalResult, estadoNormalizado, hasAnalisisData, hasAutorizacionExp, isRech, resistenciaInfo }, idx) => {
                     const cat = obtenerCategoriaLote(lote.ESTADO_LOTE);
                     const metaCat = obtenerMetaCategoria(cat);
                     const codigoBadgeProps = getDictamenBadgeProps(estadoNormalizado, evalResult, hasAnalisisData);
@@ -3203,7 +3203,7 @@ export const RecepcionLotesView: React.FC<RecepcionLotesViewProps> = ({
 
                     return (
                       <tr 
-                        key={lote.LOTE_ID}
+                        key={`${lote.LOTE_ID}-${idx}`}
                         className={`hover:bg-slate-800/80 transition-colors ${
                           esPendiente && resistenciaInfo.esCritico && resistenciaInfo.tieneHumedadRegistrada
                             ? "bg-rose-950/15"

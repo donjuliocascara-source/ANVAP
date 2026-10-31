@@ -291,24 +291,9 @@ export function useAutoSaveControlVaporizado(
       return;
     }
 
-    // Immediately persist draft to localStorage & localDB so switching tabs even 1ms later never loses data
+    // Immediately persist draft to localStorage so switching tabs even 1ms later never loses data
     hasPendingChangesRef.current = true;
     saveLocalDraftSync(formData, batchId);
-    try {
-      const targetId = (formData.BATCH_ID || batchId || "").trim();
-      if (targetId) {
-        localDB.saveControlVaporizado(
-          {
-            ...formData,
-            BATCH_ID: targetId,
-            OPERADOR: formData.OPERADOR || currentUserRef.current?.nombre || "Operador de Planta"
-          },
-          currentUserRef.current?.nombre || "Operador"
-        );
-      }
-    } catch (e) {
-      console.warn("[AutoSave] Error guardando instantáneamente en localDB:", e);
-    }
 
     // Set status to pending/saving indicator
     setAutoSaveStatus("saving");

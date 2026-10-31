@@ -482,10 +482,17 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
   // Sincronización garantizada en tiempo real con localDB para que todo lote subido aparezca de inmediato
   const [dbSyncTick, setDbSyncTick] = useState(0);
   useEffect(() => {
-    const onDbUpdate = () => setDbSyncTick(t => t + 1);
+    let tickTimer: ReturnType<typeof setTimeout> | null = null;
+    const onDbUpdate = () => {
+      if (tickTimer) clearTimeout(tickTimer);
+      tickTimer = setTimeout(() => {
+        setDbSyncTick(t => t + 1);
+      }, 100);
+    };
     window.addEventListener("localdb_change", onDbUpdate);
     window.addEventListener("cloud_data_updated", onDbUpdate);
     return () => {
+      if (tickTimer) clearTimeout(tickTimer);
       window.removeEventListener("localdb_change", onDbUpdate);
       window.removeEventListener("cloud_data_updated", onDbUpdate);
     };
@@ -555,18 +562,23 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
 
   useEffect(() => {
     recargarProgramaciones();
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     const handleRemoteProgUpdate = () => {
-      recargarProgramaciones();
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        recargarProgramaciones();
+      }, 100);
     };
     window.addEventListener("programaciones-oficiales-updated", handleRemoteProgUpdate);
     window.addEventListener("cloud_data_updated", handleRemoteProgUpdate);
     window.addEventListener("localdb_change", handleRemoteProgUpdate);
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       window.removeEventListener("programaciones-oficiales-updated", handleRemoteProgUpdate);
       window.removeEventListener("cloud_data_updated", handleRemoteProgUpdate);
       window.removeEventListener("localdb_change", handleRemoteProgUpdate);
     };
-  }, [recargarProgramaciones, batches, lotesSincronizados]);
+  }, [recargarProgramaciones]);
 
   // Asegurar que al entrar a modo armador el campo BATCH siga correlativamente del anterior y no registre como 1
   useEffect(() => {

@@ -1083,72 +1083,8 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
         }
       }
 
-      // Si es el mismo batch activo, preservamos íntegramente todo lo que el usuario está llenando en prev
-      const currentParamRows = (prev.parametrosPaddy && prev.parametrosPaddy.length > 0) ? prev.parametrosPaddy : emptyPaddy;
-      const updatedPaddy = emptyPaddy.map((emptyRow) => {
-        const found = currentParamRows.find((p) => p.parametro === emptyRow.parametro);
-        if (found) {
-          const newIngreso = found.ingresoVaporizado !== undefined ? found.ingresoVaporizado : emptyRow.ingresoVaporizado;
-          const sal = found.salidaSecadora;
-          const newVar = (sal !== undefined && newIngreso !== undefined && !isNaN(sal) && !isNaN(newIngreso))
-            ? Number((sal - newIngreso).toFixed(1))
-            : found.variacion;
-          return {
-            ...found,
-            ingresoVaporizado: newIngreso,
-            variacion: newVar
-          };
-        }
-        return emptyRow;
-      });
-
-      const finalCliente = (prev.CLIENTE && !["CLIENTE GENERAL", "MOLINO SAN PEDRO S.A.C.", "Cliente de Producción", "Sin cliente"].includes(prev.CLIENTE.trim()))
-        ? prev.CLIENTE
-        : (valoresBatchCalculados.cliente || batchClientName || "CLIENTE GENERAL");
-
-      const finalVariedad = (prev.VARIEDAD && prev.VARIEDAD !== "IR-43 MEJORADO" && prev.VARIEDAD.trim() !== "")
-        ? prev.VARIEDAD
-        : (valoresBatchCalculados.variedad || batchVariedad || "TINAJONES");
-
-      const finalPesoKg = (prev.datosIngreso?.pesoKg && prev.datosIngreso.pesoKg > 0 && prev.datosIngreso.pesoKg !== 18000)
-        ? prev.datosIngreso.pesoKg
-        : (valoresBatchCalculados.pesoKg || batchPaddyReceptionData.totalWeight || 0);
-
-      const finalSacos = (prev.datosIngreso?.numSacos && !["360 SACOS", "300 SACOS", "0 SACOS", ""].includes(prev.datosIngreso.numSacos.trim()))
-        ? prev.datosIngreso.numSacos
-        : (valoresBatchCalculados.numSacos || batchPaddyReceptionData.sumSacos || "");
-
-      const finalProcedencia = (prev.datosIngreso?.procedencia && !["Tolva de Alimentación", "Tolvas de Recepción", "Silo B-01, Silo B-03", ""].includes(prev.datosIngreso.procedencia.trim()))
-        ? prev.datosIngreso.procedencia
-        : (valoresBatchCalculados.procedencia || batchPaddyReceptionData.procedencia || "Tolva de Alimentación");
-
-      const finalHumedad = prev.datosIngreso?.humedadPct 
-        ?? valoresBatchCalculados.humedadPct
-        ?? batchPaddyReceptionData.initialPaddy.humedad 
-        ?? prev.HUMEDAD_INGRESO 
-        ?? selectedBatch?.HUMEDAD_PROMEDIO;
-
-      return {
-        ...prev,
-        BATCH_ID: currentTargetBatchId,
-        CORRELATIVO: currentCorrelativo,
-        CLIENTE: finalCliente,
-        VARIEDAD: finalVariedad,
-        TON_PROCESADAS: finalPesoKg ? Number((finalPesoKg / 1000).toFixed(1)) : (prev.TON_PROCESADAS || 0),
-        HUMEDAD_INGRESO: finalHumedad,
-        datosIngreso: {
-          ...prev.datosIngreso,
-          procedencia: finalProcedencia,
-          codigo: prev.datosIngreso?.codigo || currentCorrelativo,
-          numSacos: finalSacos,
-          pesoKg: finalPesoKg,
-          pesoTotalKg: finalPesoKg,
-          variedad: finalVariedad,
-          humedadPct: finalHumedad,
-          tiempoReposo: prev.datosIngreso?.tiempoReposo ?? ""
-        },
-        parametrosPaddy: updatedPaddy
-      };
+      // Si es el mismo batch activo, preservamos íntegramente todo lo que el usuario está llenando en prev sin recrear el objeto
+      return prev;
     });
   }, [
     selectedBatchId,
@@ -1193,7 +1129,7 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
         const mergedPerfilesSecado = updated.perfilesSecado && updated.perfilesSecado.length > 0 ? updated.perfilesSecado : prev.perfilesSecado;
         const mergedSacas = updated.sacasDescarga && updated.sacasDescarga.length > 0 ? updated.sacasDescarga : prev.sacasDescarga;
 
-        return {
+        const nextState = {
           ...updated,
           ...prev,
           datosVaporizado: mergedDatosVaporizado,
@@ -1205,6 +1141,11 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
           ESTADO_PROCESO: updated.ESTADO_PROCESO || prev.ESTADO_PROCESO,
           liquidado: updated.liquidado ?? prev.liquidado
         } as Partial<ControlVaporizado>;
+
+        if (JSON.stringify(nextState) === JSON.stringify(prev)) {
+          return prev;
+        }
+        return nextState;
       });
     };
 
