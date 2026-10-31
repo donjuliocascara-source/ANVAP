@@ -1163,6 +1163,59 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
     progsOficialesList
   ]);
 
+  // Sincronización en tiempo real bidireccional entre usuarios para Control de Vaporizado
+  useEffect(() => {
+    const handleRemoteControlUpdate = () => {
+      const currentTargetBatchId = (selectedBatch?.BATCH_ID || selectedBatchId || "").trim();
+      const currentCorrelativo = (selectedBatch?.CORRELATIVO || currentTargetBatchId).trim();
+      if (!currentTargetBatchId) return;
+
+      const updated = resolveSavedControl(currentTargetBatchId, currentCorrelativo);
+      if (!updated) return;
+
+      setFormData((prev) => {
+        const prevId = (prev.BATCH_ID || "").trim().toUpperCase();
+        const prevCorr = (prev.CORRELATIVO || "").trim().toUpperCase();
+        const targetU = currentTargetBatchId.toUpperCase();
+        const corrU = currentCorrelativo.toUpperCase();
+        if (prevId && prevId !== targetU && prevId !== corrU && prevCorr !== targetU && prevCorr !== corrU) {
+          return prev;
+        }
+
+        const mergedDatosVaporizado = {
+          ...(prev.datosVaporizado || {}),
+          ...(updated.datosVaporizado || {})
+        } as any;
+
+        const mergedSilos = updated.silos && updated.silos.length > 0 ? updated.silos : prev.silos;
+        const mergedSilosPase1 = updated.silosPase1 && updated.silosPase1.length > 0 ? updated.silosPase1 : prev.silosPase1;
+        const mergedSilosPase2 = updated.silosPase2 && updated.silosPase2.length > 0 ? updated.silosPase2 : prev.silosPase2;
+        const mergedPerfilesSecado = updated.perfilesSecado && updated.perfilesSecado.length > 0 ? updated.perfilesSecado : prev.perfilesSecado;
+        const mergedSacas = updated.sacasDescarga && updated.sacasDescarga.length > 0 ? updated.sacasDescarga : prev.sacasDescarga;
+
+        return {
+          ...updated,
+          ...prev,
+          datosVaporizado: mergedDatosVaporizado,
+          silos: mergedSilos,
+          silosPase1: mergedSilosPase1,
+          silosPase2: mergedSilosPase2,
+          perfilesSecado: mergedPerfilesSecado,
+          sacasDescarga: mergedSacas,
+          ESTADO_PROCESO: updated.ESTADO_PROCESO || prev.ESTADO_PROCESO,
+          liquidado: updated.liquidado ?? prev.liquidado
+        } as Partial<ControlVaporizado>;
+      });
+    };
+
+    window.addEventListener("control_vaporizado_updated", handleRemoteControlUpdate);
+    window.addEventListener("cloud_data_updated", handleRemoteControlUpdate);
+    return () => {
+      window.removeEventListener("control_vaporizado_updated", handleRemoteControlUpdate);
+      window.removeEventListener("cloud_data_updated", handleRemoteControlUpdate);
+    };
+  }, [selectedBatch, selectedBatchId, resolveSavedControl]);
+
   // Handler: Re-sync / Auto-fill batch averages from assigned lotes
   const handleReaplicarPromediosBatch = useCallback(() => {
     setFormData((prev) => {

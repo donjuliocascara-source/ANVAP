@@ -170,20 +170,27 @@ class CloudSyncService {
     data: any,
     options: { merge?: boolean; debounceMs?: number } = {}
   ): Promise<void> {
-    const { merge = true, debounceMs = 280 } = options;
+    const { merge = true, debounceMs = 0 } = options;
     const cleanId = docId.toString().trim().replace(/[\/\s]/g, "_");
     const key = `${col}/${cleanId}`;
 
     return new Promise<void>((resolve, reject) => {
       const existing = this.pendingDocWrites.get(key);
       if (existing) {
-        clearTimeout(existing.timer);
+        if (existing.timer) {
+          clearTimeout(existing.timer);
+          existing.timer = null;
+        }
         existing.data = merge ? { ...existing.data, ...data } : data;
         existing.resolvers.push(resolve);
         existing.rejecters.push(reject);
-        existing.timer = setTimeout(() => {
+        if (debounceMs <= 0) {
           this.flushDocWrite(key);
-        }, debounceMs);
+        } else {
+          existing.timer = setTimeout(() => {
+            this.flushDocWrite(key);
+          }, debounceMs);
+        }
       } else {
         const item = {
           col,
@@ -192,11 +199,16 @@ class CloudSyncService {
           merge,
           resolvers: [resolve],
           rejecters: [reject],
-          timer: setTimeout(() => {
-            this.flushDocWrite(key);
-          }, debounceMs)
+          timer: null as any
         };
         this.pendingDocWrites.set(key, item);
+        if (debounceMs <= 0) {
+          this.flushDocWrite(key);
+        } else {
+          item.timer = setTimeout(() => {
+            this.flushDocWrite(key);
+          }, debounceMs);
+        }
       }
     });
   }
@@ -347,7 +359,7 @@ class CloudSyncService {
    * Configura listeners en tiempo real para reflejar cambios y eliminaciones de todas las colecciones al instante
    */
   private setupRealtimeListeners() {
-    // Definición de las 10 colecciones operacionales que deben reflejarse en tiempo real
+    // Definición de las 11 colecciones operacionales que deben reflejarse en tiempo real
     const collectionsToListen = [
       { name: "lotes", type: "lotes" },
       { name: "humedades", type: "humedades" },
@@ -358,7 +370,8 @@ class CloudSyncService {
       { name: "batchLotes", type: "batchLotes" },
       { name: "controlesVaporizado", type: "controlesVaporizado" },
       { name: "analisisVaporizados", type: "analisisVaporizados" },
-      { name: "programaciones", type: "programaciones" }
+      { name: "programaciones", type: "programaciones" },
+      { name: "cocciones", type: "cocciones" }
     ];
 
     collectionsToListen.forEach(({ name, type }) => {
@@ -450,6 +463,7 @@ class CloudSyncService {
         ctrlSnap,
         avSnap,
         progSnap,
+        coccSnap,
         sysCfgSnap
       ] = await Promise.all([
         fetchColSafe("lotes"),
@@ -462,6 +476,7 @@ class CloudSyncService {
         fetchColSafe("controlesVaporizado"),
         fetchColSafe("analisisVaporizados"),
         fetchColSafe("programaciones"),
+        fetchColSafe("cocciones"),
         fetchColSafe("systemConfig")
       ]);
 
@@ -497,6 +512,9 @@ class CloudSyncService {
       }
       if (progSnap) {
         cloudData.programacionesOficiales = progSnap.docs.map((d) => d.data() as any);
+      }
+      if (coccSnap) {
+        cloudData.resultadosCoccionExternos = coccSnap.docs.map((d) => d.data() as any);
       }
 
       if (sysCfgSnap && !sysCfgSnap.empty) {
@@ -832,7 +850,8 @@ class CloudSyncService {
           "batchLotes",
           "controlesVaporizado",
           "analisisVaporizados",
-          "programaciones"
+          "programaciones",
+          "cocciones"
         ];
 
         for (const colName of collectionsToClear) {
@@ -878,7 +897,7 @@ class CloudSyncService {
     if (!lote || !lote.LOTE_ID) return;
     const cleanId = lote.LOTE_ID.toString().trim().replace(/[\/\s]/g, "_");
     // merge: false para asegurar que no persistan campos residuales no deseados
-    return this.queueDocWrite("lotes", cleanId, lote, { merge: false, debounceMs: 250 });
+    return this.queueDocWrite("lotes", cleanId, lote, { merge: false, debounceMs: 0 });
   }
 
   /**
@@ -1030,7 +1049,7 @@ class CloudSyncService {
   }
 
   /**
-   * Guarda un registro de humedad en Firestore con coalescencia y debounce
+   * Guarda un registro de humedad en Firestore con coalescencia y sincronización inmediata
    */
   public async syncHumedad(humedad: RegistroHumedad): Promise<void> {
     if (!humedad || !humedad.LOTE_ID) return;
@@ -1039,11 +1058,11 @@ class CloudSyncService {
     return this.queueDocWrite("humedades", docId, {
       ...humedad,
       "ID ANALISIS": docId
-    }, { merge: true, debounceMs: 250 });
+    }, { merge: true, debounceMs: 0 });
   }
 
   /**
-   * Guarda un análisis húmedo en Firestore con coalescencia y debounce
+   * Guarda un análisis húmedo en Firestore con coalescencia y sincronización inmediata
    */
   public async syncAnalisisHumedo(ah: AnalisisHumedo): Promise<void> {
     if (!ah || (!ah.ANALISIS_HUMEDO_ID && !ah.LOTE_ID)) return;
@@ -1052,16 +1071,16 @@ class CloudSyncService {
     return this.queueDocWrite("analisisHumedo", docId, {
       ...ah,
       ANALISIS_HUMEDO_ID: docId
-    }, { merge: true, debounceMs: 250 });
+    }, { merge: true, debounceMs: 0 });
   }
 
   /**
-   * Guarda un batch de vaporizado en Firestore con coalescencia y debounce
+   * Guarda un batch de vaporizado en Firestore con coalescencia y sincronización inmediata
    */
   public async syncBatch(batch: BatchVaporizado): Promise<void> {
     if (!batch || !batch.BATCH_ID) return;
     const cleanId = batch.BATCH_ID.toString().trim().replace(/[\/\s]/g, "_");
-    return this.queueDocWrite("batchesVaporizado", cleanId, batch, { merge: true, debounceMs: 250 });
+    return this.queueDocWrite("batchesVaporizado", cleanId, batch, { merge: true, debounceMs: 0 });
   }
 
   /**
@@ -1135,40 +1154,40 @@ class CloudSyncService {
   }
 
   /**
-   * Guarda un análisis seco en Firestore con coalescencia y debounce
+   * Guarda un análisis seco en Firestore con coalescencia y sincronización inmediata
    */
   public async syncAnalisisSeco(asData: AnalisisSeco): Promise<void> {
     if (!asData || (!asData.ANALISIS_SECO_ID && !asData.LOTE_ID)) return;
     const cleanId = (asData.ANALISIS_SECO_ID || asData.LOTE_ID).toString().trim().replace(/[\/\s]/g, "_");
-    return this.queueDocWrite("analisisSeco", cleanId, asData, { merge: true, debounceMs: 250 });
+    return this.queueDocWrite("analisisSeco", cleanId, asData, { merge: true, debounceMs: 0 });
   }
 
   /**
-   * Guarda un control de presecado en Firestore con coalescencia y debounce
+   * Guarda un control de presecado en Firestore con coalescencia y sincronización inmediata
    */
   public async syncPresecado(preData: Presecado): Promise<void> {
     if (!preData || (!preData.PRESECADO_ID && !preData.LOTE_ID)) return;
     const cleanId = (preData.PRESECADO_ID || preData.LOTE_ID).toString().trim().replace(/[\/\s]/g, "_");
-    return this.queueDocWrite("presecados", cleanId, preData, { merge: true, debounceMs: 250 });
+    return this.queueDocWrite("presecados", cleanId, preData, { merge: true, debounceMs: 0 });
   }
 
   /**
-   * Guarda un control de vaporizado en Firestore con coalescencia y debounce (320ms)
-   * Ideal para optimizar las continuas ediciones de perfiles, temperaturas y silos sin saturar la red.
+   * Guarda un control de vaporizado en Firestore con coalescencia y sincronización inmediata (0ms)
+   * Las ediciones de perfiles, temperaturas y silos se propagan al instante a todas las máquinas.
    */
   public async syncControl(control: ControlVaporizado): Promise<void> {
     if (!control || (!control.CONTROL_VAPORIZADO_ID && !control.BATCH_ID)) return;
     const cleanId = (control.CONTROL_VAPORIZADO_ID || control.BATCH_ID).toString().trim().replace(/[\/\s]/g, "_");
-    return this.queueDocWrite("controlesVaporizado", cleanId, control, { merge: true, debounceMs: 320 });
+    return this.queueDocWrite("controlesVaporizado", cleanId, control, { merge: true, debounceMs: 0 });
   }
 
   /**
-   * Guarda un análisis de vaporizado en Firestore con coalescencia y debounce
+   * Guarda un análisis de vaporizado en Firestore con coalescencia y sincronización inmediata
    */
   public async syncAnalisisVaporizado(av: AnalisisVaporizado): Promise<void> {
     if (!av || !av.ANALISIS_VAPORIZADO_ID) return;
     const cleanId = av.ANALISIS_VAPORIZADO_ID.toString().trim().replace(/[\/\s]/g, "_");
-    return this.queueDocWrite("analisisVaporizados", cleanId, av, { merge: true, debounceMs: 250 });
+    return this.queueDocWrite("analisisVaporizados", cleanId, av, { merge: true, debounceMs: 0 });
   }
 
   /**
@@ -1190,7 +1209,7 @@ class CloudSyncService {
   }
 
   /**
-   * Guarda una programación oficial en Firestore con coalescencia y debounce
+   * Guarda una programación oficial en Firestore con coalescencia y sincronización inmediata
    */
   public async syncProgramacion(prog: ProgramacionApit | any): Promise<void> {
     const rawId = prog?.PROGRAMACION_ID || prog?.id || prog?.batch;
@@ -1199,7 +1218,60 @@ class CloudSyncService {
     return this.queueDocWrite("programaciones", cleanId, {
       ...prog,
       PROGRAMACION_ID: prog.PROGRAMACION_ID || cleanId
-    }, { merge: true, debounceMs: 250 });
+    }, { merge: true, debounceMs: 0 });
+  }
+
+  /**
+   * Elimina una programación oficial de Firestore
+   */
+  public async deleteProgramacionFromCloud(progId: string): Promise<void> {
+    if (!progId) return;
+    return this.enqueueWrite(async () => {
+      try {
+        const cleanId = progId.toString().trim().replace(/[\/\s]/g, "_");
+        const deleteOps = [
+          deleteDoc(doc(db, "programaciones", cleanId)),
+          deleteDoc(doc(db, "programaciones", `PROG-${cleanId}`))
+        ];
+        await Promise.allSettled(deleteOps);
+        this.status.lastSyncTime = new Date();
+        this.notifyStatus();
+      } catch (err: any) {
+        if (isFirestoreQuotaOrResourceError(err)) return;
+        console.warn(`[CloudSync] Aviso eliminando programacion ${progId}:`, err?.message || err);
+      }
+    });
+  }
+
+  /**
+   * Guarda un resultado de cocción externo en Firestore en tiempo real (0ms)
+   */
+  public async syncCoccion(record: any): Promise<void> {
+    const rawId = record?.id || record?.batchId || record?.correlativo;
+    if (!record || !rawId) return;
+    const cleanId = rawId.toString().trim().replace(/[\/\s]/g, "_");
+    return this.queueDocWrite("cocciones", cleanId, {
+      ...record,
+      id: record.id || cleanId
+    }, { merge: true, debounceMs: 0 });
+  }
+
+  /**
+   * Elimina un registro de cocción de Firestore
+   */
+  public async deleteCoccionFromCloud(id: string): Promise<void> {
+    if (!id) return;
+    return this.enqueueWrite(async () => {
+      try {
+        const cleanId = id.toString().trim().replace(/[\/\s]/g, "_");
+        await deleteDoc(doc(db, "cocciones", cleanId));
+        this.status.lastSyncTime = new Date();
+        this.notifyStatus();
+      } catch (err: any) {
+        if (isFirestoreQuotaOrResourceError(err)) return;
+        console.warn(`[CloudSync] Aviso eliminando coccion ${id}:`, err?.message || err);
+      }
+    });
   }
 
   /**
@@ -1249,7 +1321,8 @@ class CloudSyncService {
         "controlesVaporizado",
         "analisisVaporizados",
         "presecados",
-        "programaciones"
+        "programaciones",
+        "cocciones"
       ];
 
       try {
@@ -1302,3 +1375,24 @@ class CloudSyncService {
 }
 
 export const cloudSyncService = new CloudSyncService();
+
+// Enlazar el puente de sincronización en la nube con LocalDB para que cada guardado local se replique en Firestore en tiempo real
+if (typeof localDB !== "undefined" && typeof (localDB as any).setCloudSyncBridge === "function") {
+  (localDB as any).setCloudSyncBridge({
+    syncLote: (lote: Lote) => cloudSyncService.syncLote(lote),
+    deleteLoteFromCloud: (loteId: string) => cloudSyncService.deleteLoteFromCloud(loteId),
+    syncHumedad: (hum: RegistroHumedad) => cloudSyncService.syncHumedad(hum),
+    syncAnalisisHumedo: (ah: AnalisisHumedo) => cloudSyncService.syncAnalisisHumedo(ah),
+    syncPresecado: (pre: Presecado) => cloudSyncService.syncPresecado(pre),
+    syncAnalisisSeco: (asData: AnalisisSeco) => cloudSyncService.syncAnalisisSeco(asData),
+    syncBatch: (batch: BatchVaporizado) => cloudSyncService.syncBatch(batch),
+    deleteBatchFromCloud: (batchId: string) => cloudSyncService.deleteBatchFromCloud(batchId),
+    syncControl: (control: ControlVaporizado) => cloudSyncService.syncControl(control),
+    syncAnalisisVaporizado: (av: AnalisisVaporizado) => cloudSyncService.syncAnalisisVaporizado(av),
+    deleteAnalisisVaporizadoFromCloud: (id: string) => cloudSyncService.deleteAnalisisVaporizadoFromCloud(id),
+    syncProgramacion: (prog: any) => cloudSyncService.syncProgramacion(prog),
+    deleteProgramacionFromCloud: (id: string) => cloudSyncService.deleteProgramacionFromCloud(id),
+    syncCoccion: (record: any) => cloudSyncService.syncCoccion(record),
+    deleteCoccionFromCloud: (id: string) => cloudSyncService.deleteCoccionFromCloud(id)
+  });
+}

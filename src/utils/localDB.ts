@@ -2511,10 +2511,33 @@ export function evaluateControlSheetStages(ctrl: any): {
   };
 }
 
+export interface CloudSyncBridge {
+  syncLote(lote: Lote): Promise<void>;
+  deleteLoteFromCloud(loteId: string): Promise<void>;
+  syncHumedad(hum: RegistroHumedad): Promise<void>;
+  syncAnalisisHumedo(ah: AnalisisHumedo): Promise<void>;
+  syncPresecado(pre: Presecado): Promise<void>;
+  syncAnalisisSeco(asData: AnalisisSeco): Promise<void>;
+  syncBatch(batch: BatchVaporizado): Promise<void>;
+  deleteBatchFromCloud(batchId: string): Promise<void>;
+  syncControl(control: ControlVaporizado): Promise<void>;
+  syncAnalisisVaporizado(av: AnalisisVaporizado): Promise<void>;
+  deleteAnalisisVaporizadoFromCloud(id: string): Promise<void>;
+  syncProgramacion(prog: any): Promise<void>;
+  deleteProgramacionFromCloud(id: string): Promise<void>;
+  syncCoccion(record: any): Promise<void>;
+  deleteCoccionFromCloud(id: string): Promise<void>;
+}
+
 class LocalDBService {
   private cache: LocalDatabaseSchema | null = null;
   private isIndexedDBHydrated: boolean = false;
   private persistDebounceTimer: any = null;
+  private cloudBridge: CloudSyncBridge | null = null;
+
+  public setCloudSyncBridge(bridge: CloudSyncBridge) {
+    this.cloudBridge = bridge;
+  }
 
   constructor() {
     if (typeof window !== "undefined") {
@@ -3247,6 +3270,7 @@ class LocalDBService {
 
     deduplicateAndMigrateLotes(db);
     this.persist();
+    this.cloudBridge?.syncLote(savedLote).catch(() => {});
     return savedLote;
   }
 
@@ -3350,6 +3374,7 @@ class LocalDBService {
 
     this.addAuditLog(`Eliminación del lote ${rawId}`, user);
     this.persist();
+    this.cloudBridge?.deleteLoteFromCloud(normalized || rawId).catch(() => {});
     return true;
   }
 
@@ -3617,6 +3642,7 @@ class LocalDBService {
     deduplicateAndMigrateLotes(db);
     this.addAuditLog(`Registro de humedad ${idAnalisis} para lote ${normalizedLoteId}`, user);
     this.persist();
+    this.cloudBridge?.syncHumedad(newRecord).catch(() => {});
     return newRecord;
   }
 
@@ -3721,6 +3747,7 @@ class LocalDBService {
     deduplicateAndMigrateLotes(db);
     this.addAuditLog(`Registro de análisis húmedo ${idAnalisis} para lote ${normalizedLoteId}`, user);
     this.persist();
+    this.cloudBridge?.syncAnalisisHumedo(newRecord).catch(() => {});
     return newRecord;
   }
 
@@ -3751,6 +3778,7 @@ class LocalDBService {
       db.presecado.unshift(record);
     }
     this.persist();
+    this.cloudBridge?.syncPresecado(record).catch(() => {});
     return record;
   }
 
@@ -3779,6 +3807,7 @@ class LocalDBService {
       db.analisisSeco.unshift(record);
     }
     this.persist();
+    this.cloudBridge?.syncAnalisisSeco(record).catch(() => {});
     return record;
   }
 
@@ -3964,6 +3993,7 @@ class LocalDBService {
 
     this.addAuditLog(`Guardado de Batch ${rawBatchId} (${savedBatch.ESTADO_BATCH})`, user);
     this.persist();
+    this.cloudBridge?.syncBatch(savedBatch).catch(() => {});
     return savedBatch;
   }
 
@@ -4005,6 +4035,9 @@ class LocalDBService {
 
     this.addAuditLog(`Actualización de Batch ${batchId}`, user);
     this.persist();
+    if (idx !== -1) {
+      this.cloudBridge?.syncBatch(db.batchesVaporizado[idx]).catch(() => {});
+    }
     return idx !== -1 ? db.batchesVaporizado[idx] : null;
   }
 
@@ -4131,6 +4164,7 @@ class LocalDBService {
 
     this.addAuditLog(`Eliminación del Batch ${rawId}`, user);
     this.persist();
+    this.cloudBridge?.deleteBatchFromCloud(rawId).catch(() => {});
     return true;
   }
 
@@ -4644,6 +4678,7 @@ class LocalDBService {
 
     deduplicateAndMigrateLotes(db);
     this.persist();
+    this.cloudBridge?.syncControl(mergedRecord).catch(() => {});
     return { control: mergedRecord, batch };
   }
 
@@ -4761,6 +4796,7 @@ class LocalDBService {
     this.addAuditLog(`Registro de análisis de descarga ${id} para Batch ${batchId} (Estado: ${nextState})`, user);
     deduplicateAndMigrateLotes(db);
     this.persist();
+    this.cloudBridge?.syncAnalisisVaporizado(record).catch(() => {});
     return record;
   }
 
@@ -4809,6 +4845,7 @@ class LocalDBService {
       this.addAuditLog(`Eliminación de muestra de análisis de vaporizado ${id}`, user);
       deduplicateAndMigrateLotes(db);
       this.persist();
+      this.cloudBridge?.deleteAnalisisVaporizadoFromCloud(id).catch(() => {});
       return true;
     }
     return false;
@@ -4859,6 +4896,7 @@ class LocalDBService {
     this.addAuditLog(`Registro de resultados de calidad (incremento de defectos y cocción en olla) para Batch ${batchId} (Estado: EVALUADO)`, user);
     deduplicateAndMigrateLotes(db);
     this.persist();
+    this.cloudBridge?.syncCoccion(record).catch(() => {});
     return record;
   }
 
@@ -5179,11 +5217,14 @@ class LocalDBService {
 
     deduplicateAndMigrateLotes(db);
     this.persist();
+    this.cloudBridge?.syncProgramacion(progObj).catch(() => {});
     return progObj;
   }
 
   public deleteProgramacionOficial(id: string, user: string = "Operador"): boolean {
-    return this.deleteBatch(id, user);
+    const res = this.deleteBatch(id, user);
+    this.cloudBridge?.deleteProgramacionFromCloud(id).catch(() => {});
+    return res;
   }
 
   // --- COCCION EXTERNA ---
@@ -5960,10 +6001,50 @@ class LocalDBService {
       case "controlesVaporizado": {
         db.controlVaporizado = items || [];
         deduplicateAndMigrateLotes(db);
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("control_vaporizado_updated", { detail: items }));
+        }
         break;
       }
       case "analisisVaporizados": {
         db.analisisVaporizado = items || [];
+        break;
+      }
+      case "cocciones": {
+        const cloudCocciones = items || [];
+        const coccMap = new Map<string, any>();
+        (db.resultadosCoccionExternos || []).forEach((c: any) => {
+          const k = (c?.id || c?.batchId || c?.correlativo || "").toString().trim().toUpperCase();
+          if (k) coccMap.set(k, c);
+        });
+        cloudCocciones.forEach((cc: any) => {
+          const k = (cc?.id || cc?.batchId || cc?.correlativo || "").toString().trim().toUpperCase();
+          if (!k) return;
+          const localItem = coccMap.get(k);
+          if (!localItem) {
+            coccMap.set(k, cc);
+          } else {
+            const localTime = localItem.updatedAt ? new Date(localItem.updatedAt).getTime() : 0;
+            const cloudTime = cc.updatedAt ? new Date(cc.updatedAt).getTime() : 0;
+            if (localTime > cloudTime) {
+              coccMap.set(k, { ...cc, ...localItem });
+            } else {
+              coccMap.set(k, { ...localItem, ...cc });
+            }
+          }
+        });
+        const mergedCocciones = Array.from(coccMap.values());
+        db.resultadosCoccionExternos = mergedCocciones;
+        if (typeof window !== "undefined" && window.localStorage) {
+          try {
+            const serialized = JSON.stringify(mergedCocciones);
+            window.localStorage.setItem("resultados_coccion_externos_v1", serialized);
+            window.localStorage.setItem("resultados_coccion_integrados_v2", serialized);
+            window.dispatchEvent(new CustomEvent("coccion-resultados-updated", { detail: mergedCocciones }));
+          } catch {
+            // ignore
+          }
+        }
         break;
       }
       case "programaciones": {
@@ -6234,6 +6315,32 @@ class LocalDBService {
       if (typeof window !== "undefined" && window.localStorage) {
         try {
           window.localStorage.setItem("anvap_users_v1", JSON.stringify(db.users));
+        } catch {
+          // ignore
+        }
+      }
+    }
+
+    if (Array.isArray(cloudData.resultadosCoccionExternos) && cloudData.resultadosCoccionExternos.length > 0) {
+      const coccMap = new Map<string, any>();
+      (db.resultadosCoccionExternos || []).forEach((c: any) => {
+        const k = (c?.id || c?.batchId || c?.correlativo || "").toString().trim().toUpperCase();
+        if (k) coccMap.set(k, c);
+      });
+      cloudData.resultadosCoccionExternos.forEach((cc: any) => {
+        const k = (cc?.id || cc?.batchId || cc?.correlativo || "").toString().trim().toUpperCase();
+        if (k) {
+          coccMap.set(k, { ...coccMap.get(k), ...cc });
+          changed = true;
+        }
+      });
+      db.resultadosCoccionExternos = Array.from(coccMap.values());
+      if (typeof window !== "undefined" && window.localStorage) {
+        try {
+          const serialized = JSON.stringify(db.resultadosCoccionExternos);
+          window.localStorage.setItem("resultados_coccion_externos_v1", serialized);
+          window.localStorage.setItem("resultados_coccion_integrados_v2", serialized);
+          window.dispatchEvent(new CustomEvent("coccion-resultados-updated", { detail: db.resultadosCoccionExternos }));
         } catch {
           // ignore
         }

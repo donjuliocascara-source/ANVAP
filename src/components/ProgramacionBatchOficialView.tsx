@@ -547,7 +547,6 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
         });
         const ordenadas = ordenarProgramacionesDeArribaHaciaAbajo(sinMock);
         setProgramaciones(ordenadas);
-        guardarProgramacionesOficiales(ordenadas);
       }
     } catch (err) {
       console.warn("Error cargando programaciones oficiales:", err);
@@ -556,6 +555,17 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
 
   useEffect(() => {
     recargarProgramaciones();
+    const handleRemoteProgUpdate = () => {
+      recargarProgramaciones();
+    };
+    window.addEventListener("programaciones-oficiales-updated", handleRemoteProgUpdate);
+    window.addEventListener("cloud_data_updated", handleRemoteProgUpdate);
+    window.addEventListener("localdb_change", handleRemoteProgUpdate);
+    return () => {
+      window.removeEventListener("programaciones-oficiales-updated", handleRemoteProgUpdate);
+      window.removeEventListener("cloud_data_updated", handleRemoteProgUpdate);
+      window.removeEventListener("localdb_change", handleRemoteProgUpdate);
+    };
   }, [recargarProgramaciones, batches, lotesSincronizados]);
 
   // Asegurar que al entrar a modo armador el campo BATCH siga correlativamente del anterior y no registre como 1
@@ -2458,6 +2468,11 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
         guardarProgramacionesOficiales(next);
         return next;
       });
+
+      cloudSyncService.deleteProgramacionFromCloud(batchCode).catch(() => {});
+      if (id && id !== batchCode) {
+        cloudSyncService.deleteProgramacionFromCloud(id).catch(() => {});
+      }
 
       if (lotesInBatch.length > 0) {
         localDB.bulkUpdateLotesStatus(lotesInBatch, "ANALIZADO");

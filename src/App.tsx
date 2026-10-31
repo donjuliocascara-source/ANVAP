@@ -299,7 +299,7 @@ export default function App() {
 
     // Sincronización en tiempo real desde Firestore (cambios de otras máquinas)
     const handleCloudUpdated = () => {
-      scheduleDataReload();
+      fetchAllData();
     };
     window.addEventListener("cloud_data_updated", handleCloudUpdated);
 

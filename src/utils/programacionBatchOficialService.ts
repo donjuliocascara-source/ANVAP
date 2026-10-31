@@ -1,6 +1,7 @@
 import { AnalisisHumedo, Lote, Presecado } from "../types";
 import { formatLoteCode } from "./formatLoteCode";
 import { getDeletedLotesTombstones, isV200BatchReference } from "./localDB";
+import { cloudSyncService } from "../services/cloudSyncService";
 
 export interface LoteProgramacionFila {
   loteId: string;
@@ -1161,6 +1162,10 @@ export function guardarProgramacionesOficiales(progs: ProgramacionBatchOficial[]
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("programaciones-oficiales-updated", { detail: ordenadas }));
     }
+    // Sincronizar en tiempo real cada programación oficial en Firestore
+    ordenadas.forEach(p => {
+      cloudSyncService.syncProgramacion(p).catch(() => {});
+    });
   } catch (e) {
     console.error("Error guardando programaciones oficiales", e);
   }

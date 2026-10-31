@@ -1,5 +1,6 @@
 import { ResultadoCoccionExterno, ConfigConexionCoccion } from "../types";
 import { localDB } from "./localDB";
+import { cloudSyncService } from "../services/cloudSyncService";
 
 const COCCION_STORAGE_KEY = "resultados_coccion_externos_v1";
 const COCCION_CONFIG_KEY = "config_conexion_coccion_v1";
@@ -417,6 +418,9 @@ export function guardarResultadosCoccionLocales(nuevosResultados: ResultadoCocci
     const serialized = JSON.stringify(combinados);
     localStorage.setItem(COCCION_STORAGE_KEY, serialized);
     localStorage.setItem("resultados_coccion_integrados_v2", serialized);
+    nuevosResultados.forEach(item => {
+      cloudSyncService.syncCoccion(item).catch(() => {});
+    });
   } catch (e) {
     console.error("Error al guardar resultados de cocción en localStorage:", e);
   }
@@ -504,6 +508,7 @@ export async function guardarCoccionParaBatch(
     if (typeof localDB !== "undefined") {
       localDB.saveCoccionParaBatch(record, "Laboratorio Cocción");
     }
+    cloudSyncService.syncCoccion(record).catch(() => {});
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("cloud_data_updated", { detail: { type: "coccion", batchId: targetBatchId } }));
     }

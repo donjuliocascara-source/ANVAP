@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { ControlVaporizado } from "../types";
 import { localDB } from "../utils/localDB";
+import { cloudSyncService } from "../services/cloudSyncService";
 
 export type AutoSaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -119,7 +120,10 @@ export function useAutoSaveControlVaporizado(
         // 2. Always persist in localDB immediately so switching tabs has the latest state synchronously
         localDB.saveControlVaporizado(payload, currentUserRef.current?.nombre || "Operador");
 
-        // 3. Parent / Cloud Synchronization
+        // 3. Parent / Cloud Synchronization en tiempo real sin retardo
+        cloudSyncService.syncControl(payload as ControlVaporizado).catch((e) => {
+          console.warn("[AutoSave] Aviso sincronizando con Firestore:", e);
+        });
         if (onSaveRef.current) {
           await onSaveRef.current(payload);
         }
