@@ -126,22 +126,6 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
       });
     } catch {}
 
-    if (typeof window !== "undefined" && window.localStorage) {
-      for (const lsKey of ["molino_programaciones_batch_oficiales_v4", "molino_programaciones_batch_oficiales_v3", "programaciones_batch_oficial_v1"]) {
-        try {
-          const raw = window.localStorage.getItem(lsKey);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) {
-              parsed.forEach((p: any) => {
-                const k = (p.batch || p.id || "").trim().toUpperCase();
-                if (k && !progsMap.has(k)) progsMap.set(k, p);
-              });
-            }
-          }
-        } catch {}
-      }
-    }
     const allProgs = Array.from(progsMap.values());
 
     // 2. Batches en memoria y en base de datos local
@@ -165,13 +149,13 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
           FECHA_PROGRAMADA: rawB.FECHA_PROGRAMADA || new Date().toISOString().split("T")[0],
           EQUIPO: rawB.EQUIPO || "APIT",
           ESTADO_BATCH: (rawB.ESTADO_BATCH as any) || defaultState,
-          TON_PROGRAMADAS: rawB.TON_PROGRAMADAS || 18,
-          TON_PROCESADAS: rawB.TON_PROCESADAS || 18,
-          PESO_TOTAL_KG: rawB.PESO_TOTAL_KG || 18000,
-          CLIENTE: rawB.CLIENTE || "MOLINO SAN PEDRO S.A.C.",
-          VARIEDAD: rawB.VARIEDAD || "TINAJONES",
+          TON_PROGRAMADAS: rawB.TON_PROGRAMADAS || 0,
+          TON_PROCESADAS: rawB.TON_PROCESADAS || 0,
+          PESO_TOTAL_KG: rawB.PESO_TOTAL_KG || 0,
+          CLIENTE: rawB.CLIENTE || "",
+          VARIEDAD: rawB.VARIEDAD || "",
           TURNO: rawB.TURNO || "Turno Día",
-          OPERADOR: rawB.OPERADOR || "Pedro Huamán",
+          OPERADOR: rawB.OPERADOR || "",
           OBSERVACIONES: rawB.OBSERVACIONES || "",
           ...rawB
         } as BatchVaporizado);
@@ -180,7 +164,7 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
 
     dbBatches.forEach((b) => addBatchIfMissing(b));
 
-    // Agregar batches que ya tienen ficha guardada o liquidada en dbControles (ej: V366, V368)
+    // Agregar batches que ya tienen ficha guardada o liquidada en dbControles
     dbControles.forEach((c) => {
       const bCode = (c.BATCH_ID || c.CORRELATIVO || "").trim();
       if (bCode) {
@@ -188,12 +172,12 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
         addBatchIfMissing({
           BATCH_ID: bCode,
           CORRELATIVO: c.CORRELATIVO || bCode,
-          CLIENTE: c.CLIENTE || (c.datosIngreso as any)?.cliente,
-          VARIEDAD: c.VARIEDAD || c.datosIngreso?.variedad,
+          CLIENTE: c.CLIENTE || (c.datosIngreso as any)?.cliente || "",
+          VARIEDAD: c.VARIEDAD || c.datosIngreso?.variedad || "",
           ESTADO_BATCH: isLiq ? "VAPORIZADO" : ((c.ESTADO_PROCESO as any) || "CERRADO"),
           cerroCompletamente: Boolean((c as any).cerroCompletamente || isLiq),
           liquidado: Boolean(isLiq),
-          PESO_TOTAL_KG: c.datosIngreso?.pesoKg || (c.TON_PROCESADAS ? c.TON_PROCESADAS * 1000 : 18000)
+          PESO_TOTAL_KG: c.datosIngreso?.pesoKg || (c.TON_PROCESADAS ? c.TON_PROCESADAS * 1000 : 0)
         } as any, "VAPORIZADO");
       }
     });
@@ -206,43 +190,15 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
           addBatchIfMissing({
             BATCH_ID: bCode,
             CORRELATIVO: c.CORRELATIVO || bCode,
-            CLIENTE: c.CLIENTE || (c.datosIngreso as any)?.cliente,
-            VARIEDAD: c.VARIEDAD || c.datosIngreso?.variedad,
+            CLIENTE: c.CLIENTE || (c.datosIngreso as any)?.cliente || "",
+            VARIEDAD: c.VARIEDAD || c.datosIngreso?.variedad || "",
             ESTADO_BATCH: isLiq ? "VAPORIZADO" : ((c.ESTADO_PROCESO as any) || "CERRADO"),
             cerroCompletamente: Boolean((c as any).cerroCompletamente || isLiq),
             liquidado: Boolean(isLiq),
-            PESO_TOTAL_KG: c.datosIngreso?.pesoKg || (c.TON_PROCESADAS ? c.TON_PROCESADAS * 1000 : 18000)
+            PESO_TOTAL_KG: c.datosIngreso?.pesoKg || (c.TON_PROCESADAS ? c.TON_PROCESADAS * 1000 : 0)
           } as any, "VAPORIZADO");
         }
       });
-    }
-
-    // Escanear borradores en localStorage (ej: apit_draft_ctrl_V366, apit_draft_ctrl_V368)
-    if (typeof window !== "undefined" && window.localStorage) {
-      try {
-        for (let i = 0; i < window.localStorage.length; i++) {
-          const key = window.localStorage.key(i);
-          if (key && key.startsWith("apit_draft_ctrl_")) {
-            const rawCode = key.replace("apit_draft_ctrl_", "").trim();
-            if (rawCode && rawCode !== "undefined" && rawCode !== "null") {
-              let draftObj: any = null;
-              try {
-                draftObj = JSON.parse(window.localStorage.getItem(key) || "{}");
-              } catch {}
-              const isLiq = Boolean(draftObj?.liquidado) || draftObj?.ESTADO_PROCESO === "LIQUIDADO" || draftObj?.ESTADO_PROCESO === "VAPORIZADO";
-              addBatchIfMissing({
-                BATCH_ID: rawCode,
-                CORRELATIVO: draftObj?.CORRELATIVO || rawCode,
-                CLIENTE: draftObj?.CLIENTE || draftObj?.datosIngreso?.cliente,
-                VARIEDAD: draftObj?.VARIEDAD || draftObj?.datosIngreso?.variedad,
-                ESTADO_BATCH: isLiq ? "VAPORIZADO" : (draftObj?.ESTADO_PROCESO || "CERRADO"),
-                cerroCompletamente: Boolean(draftObj?.cerroCompletamente || isLiq),
-                liquidado: Boolean(isLiq)
-              } as any, "CERRADO");
-            }
-          }
-        }
-      } catch {}
     }
 
     const isClosedState = (est?: string, cerroComp?: boolean, liquidado?: boolean) => {
@@ -294,8 +250,9 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
     const closedMap = new Map<string, BatchVaporizado>();
 
     // 1. Clasificar programaciones oficiales
-    allProgs.forEach((p, idx) => {
-      const bCode = (p.batch || p.id || `V${200 + idx}`).trim();
+    allProgs.forEach((p) => {
+      const bCode = (p.batch || p.id || "").trim();
+      if (!bCode) return;
       const bKey = bCode.toUpperCase();
       const isProgClosed = isClosedState(p.estado, (p as any).cerroCompletamente, (p as any).liquidado) || closedKeys.has(bKey);
       const batchItem: BatchVaporizado = {
@@ -304,13 +261,13 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
         FECHA_PROGRAMADA: p.fecha || new Date().toISOString().split("T")[0],
         EQUIPO: "APIT",
         ESTADO_BATCH: isProgClosed ? ((p.estado as any) || "CERRADO") : ((p.estado as any) || "PROGRAMADO"),
-        TON_PROGRAMADAS: (p.pesoTotalKg || 18000) / 1000,
-        TON_PROCESADAS: (p.pesoTotalKg || 18000) / 1000,
-        PESO_TOTAL_KG: p.pesoTotalKg || 18000,
-        CLIENTE: p.clientePrincipal || "MOLINO SAN PEDRO S.A.C.",
-        VARIEDAD: p.variedadPrincipal || "TINAJONES",
+        TON_PROGRAMADAS: (p.pesoTotalKg || 0) / 1000,
+        TON_PROCESADAS: (p.pesoTotalKg || 0) / 1000,
+        PESO_TOTAL_KG: p.pesoTotalKg || 0,
+        CLIENTE: p.clientePrincipal || "",
+        VARIEDAD: p.variedadPrincipal || "",
         TURNO: p.turno === "DIA" ? "Turno Día" : "Turno Noche",
-        OPERADOR: "Pedro Huamán",
+        OPERADOR: "",
         OBSERVACIONES: p.observacion || "",
         ...(isProgClosed ? { cerroCompletamente: true } : {})
       };
@@ -353,9 +310,9 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
           BATCH_ID: b.BATCH_ID || b.CORRELATIVO || primaryKey,
           CORRELATIVO: b.CORRELATIVO || b.BATCH_ID || primaryKey,
           ESTADO_BATCH: b.ESTADO_BATCH || "CERRADO",
-          CLIENTE: b.CLIENTE || bLotes[0]?.CLIENTE || firstLoteObj?.CLIENTE || existingClosed?.CLIENTE || "MOLINO SAN PEDRO S.A.C.",
-          VARIEDAD: b.VARIEDAD || bLotes[0]?.VARIEDAD || firstLoteObj?.VARIEDAD || existingClosed?.VARIEDAD || "TINAJONES",
-          PESO_TOTAL_KG: b.PESO_TOTAL_KG || (b as any).TOTAL_PESO_KG || sumKg || existingClosed?.PESO_TOTAL_KG || 18000
+          CLIENTE: b.CLIENTE || bLotes[0]?.CLIENTE || firstLoteObj?.CLIENTE || existingClosed?.CLIENTE || "",
+          VARIEDAD: b.VARIEDAD || bLotes[0]?.VARIEDAD || firstLoteObj?.VARIEDAD || existingClosed?.VARIEDAD || "",
+          PESO_TOTAL_KG: b.PESO_TOTAL_KG || (b as any).TOTAL_PESO_KG || sumKg || existingClosed?.PESO_TOTAL_KG || 0
         });
       } else {
         const existingActive = (key1 && activeMap.get(key1)) || (key2 && activeMap.get(key2));
@@ -520,43 +477,23 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
 
     let fromDraft: Partial<ControlVaporizado> | undefined;
     try {
-      const draftKeys = Array.from(new Set([
-        `apit_draft_ctrl_${targetBatchIdStr || selectedBatchId || ""}`,
-        `apit_draft_ctrl_${tId}`,
-        `apit_draft_ctrl_${tBatch}`,
-        `apit_draft_ctrl_${targetCorrStr || selectedBatch?.CORRELATIVO || ""}`,
-        `apit_draft_ctrl_${tCorr}`,
-        `apit_draft_ctrl_${cleanAlpha(tId)}`,
-        `apit_draft_ctrl_${cleanAlpha(tBatch)}`
-      ]));
-      for (const key of draftKeys) {
-        if (!key || key === "apit_draft_ctrl_") continue;
-        const raw = localStorage.getItem(key);
-        if (raw) {
-          try {
-            const parsed = JSON.parse(raw);
-            if (parsed && typeof parsed === "object" && matchesCtrl(parsed)) {
-              fromDraft = parsed;
-              break;
-            }
-          } catch {}
-        }
-      }
+      if (tId && tId !== "UNDEFINED" && tId !== "NULL") {
+        const draftKeys = Array.from(new Set([
+          `apit_draft_ctrl_${tId}`,
+          `apit_draft_ctrl_${tBatch}`,
+          `apit_draft_ctrl_${tCorr}`
+        ])).filter(k => k && k !== "apit_draft_ctrl_");
 
-      if (!fromDraft && typeof window !== "undefined" && window.localStorage) {
-        for (let i = 0; i < window.localStorage.length; i++) {
-          const k = window.localStorage.key(i);
-          if (k && k.startsWith("apit_draft_ctrl_")) {
-            const raw = window.localStorage.getItem(k);
-            if (raw) {
-              try {
-                const parsed = JSON.parse(raw);
-                if (parsed && typeof parsed === "object" && matchesCtrl(parsed)) {
-                  fromDraft = parsed;
-                  break;
-                }
-              } catch {}
-            }
+        for (const key of draftKeys) {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            try {
+              const parsed = JSON.parse(raw);
+              if (parsed && typeof parsed === "object" && matchesCtrl(parsed)) {
+                fromDraft = parsed;
+                break;
+              }
+            } catch {}
           }
         }
       }
@@ -797,18 +734,18 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
       const peso = bl.PESO_KG || (numSacos > 0 ? Math.round(numSacos * unitWeight) : (found?.PESO_KG || 0));
 
       const hum = (bl as any).ph ?? anHum?.HUMEDADES ?? pre?.Humedad ?? humReg?.["H. PROMEDIO"] ?? found?.HUM ?? (found as any)?.HUMEDAD ?? 14.0;
-      const ri = anHum?.RI ?? pre?.RI ?? (found as any)?.RI ?? (found as any)?.RENDIMIENTO_INTEGRAL ?? 78.4;
-      const rb = anHum?.RB ?? pre?.RB ?? (found as any)?.RB ?? (found as any)?.RENDIMIENTO_BLANCO ?? 71.4;
-      const q = (bl as any).qb ?? (bl as any).qi ?? anHum?.QB ?? anHum?.QI ?? pre?.QB ?? pre?.QI ?? (found as any)?.GRANO_QUEBRADO ?? 8.7;
-      const tt = (bl as any).tt ?? anHum?.TT ?? pre?.TT ?? (found as any)?.TOTAL_DANADOS ?? 1.6;
-      const tp = (bl as any).tp ?? anHum?.TP ?? pre?.TP ?? (found as any)?.GRANO_PICADO ?? 2.0;
-      const m = (bl as any).m ?? anHum?.M ?? pre?.M ?? (found as any)?.MANCHADOS ?? 0.5;
-      const tz = (bl as any).triz ?? anHum?.TZ ?? pre?.TZ ?? (found as any)?.TRIZADO ?? 1.4;
-      const gi = (bl as any).gi ?? anHum?.GI ?? pre?.GI ?? (found as any)?.GRANO_INMADURO ?? 0.3;
-      const gr = (bl as any).gr ?? anHum?.GR ?? pre?.GR ?? (found as any)?.GRANO_ROJO ?? 0.2;
-      const blVal = (bl as any).blInt ?? anHum?.["B.INTEGRAL"] ?? pre?.["B.INTEGRAL"] ?? (found as any)?.BLANCURA_INTEGRAL ?? 21.9;
-      const blpVal = (bl as any).blBlanco ?? anHum?.["B. PULIDO"] ?? pre?.["B. PULIDO"] ?? anSec?.Blancura_Final ?? 40.5;
-      const remVal = (bl as any).rem ?? anHum?.RM ?? pre?.RM ?? 7.0;
+      const ri = anHum?.RI ?? pre?.RI ?? (found as any)?.RI ?? (found as any)?.RENDIMIENTO_INTEGRAL;
+      const rb = anHum?.RB ?? pre?.RB ?? (found as any)?.RB ?? (found as any)?.RENDIMIENTO_BLANCO;
+      const q = (bl as any).qb ?? (bl as any).qi ?? anHum?.QB ?? anHum?.QI ?? pre?.QB ?? pre?.QI ?? (found as any)?.GRANO_QUEBRADO;
+      const tt = (bl as any).tt ?? anHum?.TT ?? pre?.TT ?? (found as any)?.TOTAL_DANADOS;
+      const tp = (bl as any).tp ?? anHum?.TP ?? pre?.TP ?? (found as any)?.GRANO_PICADO;
+      const m = (bl as any).m ?? anHum?.M ?? pre?.M ?? (found as any)?.MANCHADOS;
+      const tz = (bl as any).triz ?? anHum?.TZ ?? pre?.TZ ?? (found as any)?.TRIZADO;
+      const gi = (bl as any).gi ?? anHum?.GI ?? pre?.GI ?? (found as any)?.GRANO_INMADURO;
+      const gr = (bl as any).gr ?? anHum?.GR ?? pre?.GR ?? (found as any)?.GRANO_ROJO;
+      const blVal = (bl as any).blInt ?? anHum?.["B.INTEGRAL"] ?? pre?.["B.INTEGRAL"] ?? (found as any)?.BLANCURA_INTEGRAL;
+      const blpVal = (bl as any).blBlanco ?? anHum?.["B. PULIDO"] ?? pre?.["B. PULIDO"] ?? anSec?.Blancura_Final;
+      const remVal = (bl as any).rem ?? anHum?.RM ?? pre?.RM;
 
       const ubicacionLote = (bl as any).UBICACION || found?.PROCEDENCIA || found?.UBICACION || found?.ZONA || "";
 
@@ -816,26 +753,26 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
         ...found,
         pesoKg: peso,
         sacos: numSacos,
-        hum: Number(hum),
-        ri: Number(ri),
-        rb: Number(rb),
-        q: Number(q),
-        tt: Number(tt),
-        tp: Number(tp),
-        m: Number(m),
-        tz: Number(tz),
-        gi: Number(gi),
-        gr: Number(gr),
-        blVal: Number(blVal),
-        blpVal: Number(blpVal),
-        remVal: Number(remVal),
+        hum: hum !== undefined ? Number(hum) : undefined,
+        ri: ri !== undefined ? Number(ri) : undefined,
+        rb: rb !== undefined ? Number(rb) : undefined,
+        q: q !== undefined ? Number(q) : undefined,
+        tt: tt !== undefined ? Number(tt) : undefined,
+        tp: tp !== undefined ? Number(tp) : undefined,
+        m: m !== undefined ? Number(m) : undefined,
+        tz: tz !== undefined ? Number(tz) : undefined,
+        gi: gi !== undefined ? Number(gi) : undefined,
+        gr: gr !== undefined ? Number(gr) : undefined,
+        blVal: blVal !== undefined ? Number(blVal) : undefined,
+        blpVal: blpVal !== undefined ? Number(blpVal) : undefined,
+        remVal: remVal !== undefined ? Number(remVal) : undefined,
         procedencia: ubicacionLote,
         cliente: bl.CLIENTE || found?.CLIENTE,
         variedad: bl.VARIEDAD || found?.VARIEDAD
       };
     }).filter(Boolean);
 
-    const calcWeighted = (getter: (l: any) => number | undefined, defaultVal: number): number => {
+    const calcWeighted = (getter: (l: any) => number | undefined): number | undefined => {
       let weightSum = 0;
       let valSum = 0;
       for (const l of rawLotes) {
@@ -847,7 +784,7 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
         }
       }
       if (weightSum > 0) return parseFloat((valSum / weightSum).toFixed(1));
-      return defaultVal;
+      return undefined;
     };
 
     const progProm = progMatch?.promedios;
@@ -859,19 +796,19 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
       sumSacos: valoresBatchCalculados.numSacos,
       tiempoReposo: "",
       initialPaddy: {
-        humedad: valoresBatchCalculados.humedadPct ?? (progProm?.ph !== undefined ? progProm.ph : (selectedBatch?.HUMEDAD_PROMEDIO || 14.0)),
-        ri: progAn?.ri !== undefined ? progAn.ri : (progProm as any)?.ri !== undefined ? (progProm as any).ri : calcWeighted(l => l.ri, 78.4),
-        rb: progAn?.rb !== undefined ? progAn.rb : (progProm as any)?.rb !== undefined ? (progProm as any).rb : calcWeighted(l => l.rb, 71.4),
-        q: progProm?.qb !== undefined ? progProm.qb : (progProm?.qi !== undefined ? progProm.qi : calcWeighted(l => l.q, 8.7)),
-        tt: progProm?.tt !== undefined ? progProm.tt : calcWeighted(l => l.tt, 1.6),
-        tp: progProm?.tp !== undefined ? progProm.tp : calcWeighted(l => l.tp, 2.0),
-        m: progProm?.m !== undefined ? progProm.m : calcWeighted(l => l.m, 0.5),
-        tz: progProm?.triz !== undefined ? progProm.triz : calcWeighted(l => l.tz, 1.4),
-        gi: (progProm as any)?.gi !== undefined ? (progProm as any).gi : (progAn?.gi !== undefined ? progAn.gi : calcWeighted(l => l.gi, 0.3)),
-        gr: (progProm as any)?.gr !== undefined ? (progProm as any).gr : (progAn?.gr !== undefined ? progAn.gr : calcWeighted(l => l.gr, 0.2)),
-        bl: progProm?.blInt !== undefined ? progProm.blInt : calcWeighted(l => l.blVal, 21.9),
-        blp: progProm?.blBlanco !== undefined ? progProm.blBlanco : calcWeighted(l => l.blpVal, 40.5),
-        rem: (progProm as any)?.rem !== undefined ? (progProm as any).rem : (progAn?.rm !== undefined ? progAn.rm : calcWeighted(l => l.remVal, 7.0))
+        humedad: valoresBatchCalculados.humedadPct ?? (progProm?.ph !== undefined ? progProm.ph : selectedBatch?.HUMEDAD_PROMEDIO),
+        ri: progAn?.ri !== undefined ? progAn.ri : (progProm as any)?.ri !== undefined ? (progProm as any).ri : calcWeighted(l => l.ri),
+        rb: progAn?.rb !== undefined ? progAn.rb : (progProm as any)?.rb !== undefined ? (progProm as any).rb : calcWeighted(l => l.rb),
+        q: progProm?.qb !== undefined ? progProm.qb : (progProm?.qi !== undefined ? progProm.qi : calcWeighted(l => l.q)),
+        tt: progProm?.tt !== undefined ? progProm.tt : calcWeighted(l => l.tt),
+        tp: progProm?.tp !== undefined ? progProm.tp : calcWeighted(l => l.tp),
+        m: progProm?.m !== undefined ? progProm.m : calcWeighted(l => l.m),
+        tz: progProm?.triz !== undefined ? progProm.triz : calcWeighted(l => l.tz),
+        gi: (progProm as any)?.gi !== undefined ? (progProm as any).gi : (progAn?.gi !== undefined ? progAn.gi : calcWeighted(l => l.gi)),
+        gr: (progProm as any)?.gr !== undefined ? (progProm as any).gr : (progAn?.gr !== undefined ? progAn.gr : calcWeighted(l => l.gr)),
+        bl: progProm?.blInt !== undefined ? progProm.blInt : calcWeighted(l => l.blVal),
+        blp: progProm?.blBlanco !== undefined ? progProm.blBlanco : calcWeighted(l => l.blpVal),
+        rem: (progProm as any)?.rem !== undefined ? (progProm as any).rem : (progAn?.rm !== undefined ? progAn.rm : calcWeighted(l => l.remVal))
       }
     };
   }, [associatedBatchLotes, lotes, selectedBatch, selectedBatchId, analisisHumList, presecados, humedades, analisisSecList, progsOficialesList, valoresBatchCalculados]);
@@ -911,8 +848,8 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
             procedencia: (saved.datosIngreso?.procedencia && !["Tolva de Alimentación", "Tolvas de Recepción", "Silo B-01, Silo B-03"].includes(saved.datosIngreso.procedencia.trim())) ? saved.datosIngreso.procedencia : initialValores.procedencia,
             codigo: initCorr,
             numSacos: (saved.datosIngreso?.numSacos && !["300 SACOS", "360 SACOS", "0 SACOS"].includes(saved.datosIngreso.numSacos.trim())) ? saved.datosIngreso.numSacos : initialValores.numSacos,
-            pesoKg: (saved.datosIngreso?.pesoKg && saved.datosIngreso.pesoKg > 0 && saved.datosIngreso.pesoKg !== 18000 && saved.datosIngreso.pesoKg !== 45750) ? saved.datosIngreso.pesoKg : initialValores.pesoKg,
-            pesoTotalKg: (saved.datosIngreso?.pesoTotalKg && saved.datosIngreso.pesoTotalKg > 0 && saved.datosIngreso.pesoTotalKg !== 18000 && saved.datosIngreso.pesoTotalKg !== 45750) ? saved.datosIngreso.pesoTotalKg : initialValores.pesoTotalKg,
+            pesoKg: (saved.datosIngreso?.pesoKg && saved.datosIngreso.pesoKg > 0) ? saved.datosIngreso.pesoKg : initialValores.pesoKg,
+            pesoTotalKg: (saved.datosIngreso?.pesoTotalKg && saved.datosIngreso.pesoTotalKg > 0) ? saved.datosIngreso.pesoTotalKg : initialValores.pesoTotalKg,
             variedad: (saved.datosIngreso?.variedad && saved.datosIngreso.variedad !== "IR-43 MEJORADO" && saved.datosIngreso.variedad.trim() !== "") ? saved.datosIngreso.variedad : initialValores.variedad,
             humedadPct: saved.datosIngreso?.humedadPct !== undefined ? saved.datosIngreso.humedadPct : initialValores.humedadPct,
             tiempoReposo: saved.datosIngreso?.tiempoReposo || ""
@@ -940,7 +877,7 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
   const [analisisFinal, setAnalisisFinal] = useState<Partial<AnalisisVaporizado>>({});
 
   const [dictamenCalidad, setDictamenCalidad] = useState<"CONFORME" | "APROBADO_OBSERVADO" | "NO_CONFORME">("CONFORME");
-  const [observacionCierre, setObservacionCierre] = useState<string>("Proceso de vaporizado y secado concluido conforme en planta.");
+  const [observacionCierre, setObservacionCierre] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isClosingBatch, setIsClosingBatch] = useState(false);
@@ -1006,32 +943,23 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
 
           const finalCliente = (savedControl.CLIENTE && !["CLIENTE GENERAL", "MOLINO SAN PEDRO S.A.C.", "Cliente de Producción", "Sin cliente"].includes(savedControl.CLIENTE.trim()))
             ? savedControl.CLIENTE
-            : (valoresBatchCalculados.cliente || batchClientName || "CLIENTE GENERAL");
+            : (valoresBatchCalculados.cliente || batchClientName || "");
 
           const finalVariedad = (savedControl.VARIEDAD && savedControl.VARIEDAD !== "IR-43 MEJORADO" && savedControl.VARIEDAD.trim() !== "")
             ? savedControl.VARIEDAD
-            : (valoresBatchCalculados.variedad || batchVariedad || "TINAJONES");
+            : (valoresBatchCalculados.variedad || batchVariedad || "");
 
-          const isV374 = Boolean(
-            (currentTargetBatchId && currentTargetBatchId.includes("374")) ||
-            (currentCorrelativo && currentCorrelativo.includes("374"))
-          );
+          const finalPesoKg = (savedControl.datosIngreso?.pesoKg && savedControl.datosIngreso.pesoKg > 0)
+            ? savedControl.datosIngreso.pesoKg
+            : (valoresBatchCalculados.pesoKg || batchPaddyReceptionData.totalWeight || 0);
 
-          const finalPesoKg = (isV374 && valoresBatchCalculados.pesoKg > 0)
-            ? valoresBatchCalculados.pesoKg
-            : ((savedControl.datosIngreso?.pesoKg && savedControl.datosIngreso.pesoKg > 0 && savedControl.datosIngreso.pesoKg !== 18000 && savedControl.datosIngreso.pesoKg !== 45750)
-              ? savedControl.datosIngreso.pesoKg
-              : (valoresBatchCalculados.pesoKg || batchPaddyReceptionData.totalWeight || (isV374 ? 32237 : 0)));
-
-          const finalSacos = (isV374 && valoresBatchCalculados.numSacos)
-            ? valoresBatchCalculados.numSacos
-            : ((savedControl.datosIngreso?.numSacos && !["360 SACOS", "300 SACOS", "0 SACOS", ""].includes(savedControl.datosIngreso.numSacos.trim()))
-              ? savedControl.datosIngreso.numSacos
-              : (valoresBatchCalculados.numSacos || batchPaddyReceptionData.sumSacos || (isV374 ? "315 SACOS" : "")));
+          const finalSacos = (savedControl.datosIngreso?.numSacos && !["360 SACOS", "300 SACOS", "0 SACOS", ""].includes(savedControl.datosIngreso.numSacos.trim()))
+            ? savedControl.datosIngreso.numSacos
+            : (valoresBatchCalculados.numSacos || batchPaddyReceptionData.sumSacos || "");
 
           const finalProcedencia = (savedControl.datosIngreso?.procedencia && !["Tolva de Alimentación", "Tolvas de Recepción", "Silo B-01, Silo B-03", ""].includes(savedControl.datosIngreso.procedencia.trim()))
             ? savedControl.datosIngreso.procedencia
-            : (valoresBatchCalculados.procedencia || batchPaddyReceptionData.procedencia || "Tolva de Alimentación");
+            : (valoresBatchCalculados.procedencia || batchPaddyReceptionData.procedencia || "");
 
           const finalHumedad = savedControl.datosIngreso?.humedadPct 
             ?? valoresBatchCalculados.humedadPct
@@ -1529,7 +1457,7 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
                 <optgroup label="📋 Batches Activos (En Proceso / Pendientes)">
                   {batchesProgramadosActivos.map((b, idx) => (
                     <option key={`act-${b.BATCH_ID}`} value={b.BATCH_ID}>
-                      {idx + 1}° · {b.CORRELATIVO || b.BATCH_ID} - {b.CLIENTE ? `${b.CLIENTE.substring(0, 18)}` : (b.ESTADO_BATCH || "PROGRAMADO")} ({b.VARIEDAD || "TINAJONES"})
+                      {idx + 1}° · {b.CORRELATIVO || b.BATCH_ID} - {b.CLIENTE ? `${b.CLIENTE.substring(0, 18)}` : (b.ESTADO_BATCH || "PROGRAMADO")} {b.VARIEDAD ? `(${b.VARIEDAD})` : ""}
                     </option>
                   ))}
                 </optgroup>
@@ -1538,7 +1466,7 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
                 <optgroup label="🗂️ Batches Cerrados / Guardados (Historial)">
                   {batchesCerradosHistorial.map((b) => (
                     <option key={`cerr-${b.BATCH_ID}`} value={b.BATCH_ID}>
-                      ✓ {b.CORRELATIVO || b.BATCH_ID} - {b.CLIENTE ? `${b.CLIENTE.substring(0, 18)}` : "CERRADO"} ({b.VARIEDAD || "TINAJONES"}) [{b.ESTADO_BATCH || "GUARDADO"}]
+                      ✓ {b.CORRELATIVO || b.BATCH_ID} - {b.CLIENTE ? `${b.CLIENTE.substring(0, 18)}` : "CERRADO"} {b.VARIEDAD ? `(${b.VARIEDAD})` : ""} [{b.ESTADO_BATCH || "GUARDADO"}]
                     </option>
                   ))}
                 </optgroup>
@@ -1873,7 +1801,7 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
                       : Array.isArray((b as any).filasLote)
                       ? (b as any).filasLote.map((f: any) => f.loteId).join(", ")
                       : "—";
-                    const pesoKg = b.PESO_TOTAL_KG || (b as any).TOTAL_PESO_KG || 18000;
+                    const pesoKg = b.PESO_TOTAL_KG || (b as any).TOTAL_PESO_KG || 0;
 
                     return (
                       <tr key={b.BATCH_ID} className="hover:bg-slate-800/50 transition-colors">
@@ -1884,16 +1812,16 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
                           {(b as any).FECHA_FIN || b.FECHA_PROGRAMADA || "—"}
                         </td>
                         <td className="py-3 px-3 font-bold text-white">
-                          {b.CLIENTE || "MOLINO SAN PEDRO S.A.C."}
+                          {b.CLIENTE || "—"}
                         </td>
                         <td className="py-3 px-3 text-cyan-300 font-semibold">
-                          {b.VARIEDAD || "TINAJONES"}
+                          {b.VARIEDAD || "—"}
                         </td>
                         <td className="py-3 px-3 font-mono text-emerald-300">
                           {lotesCodigos}
                         </td>
                         <td className="py-3 px-3 text-right font-bold text-slate-200">
-                          {pesoKg.toLocaleString()} kg
+                          {pesoKg > 0 ? `${pesoKg.toLocaleString()} kg` : "—"}
                         </td>
                         <td className="py-3 px-3 text-center">
                           <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black">

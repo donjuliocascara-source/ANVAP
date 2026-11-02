@@ -562,9 +562,9 @@ export function getBlankPlantControlRecord(
         duracion: "",
         presion: chosenPresion,
         velExclusa: String(chosenVelExclusa),
-        tiempoReposo: `${chosenTiempoReposo} min`,
+        tiempoReposo: chosenTiempoReposo ? `${chosenTiempoReposo} min` : "",
         rpm: 18,
-        obs: "Inyección estándar directa"
+        obs: ""
       },
       inyeccionVaporPase1: { 
         paseNumero: 1, 
@@ -577,9 +577,9 @@ export function getBlankPlantControlRecord(
         rpm: 18, 
         vExcl: String(chosenVelExclusa),
         temperatura: 125,
-        perfil: "Acondicionamiento",
-        tiempoReposo: `${Math.round(chosenTiempoReposo / 2)} min`,
-        obs: "Pre-calentamiento gradual para evitar choque térmico" 
+        perfil: "",
+        tiempoReposo: chosenTiempoReposo ? `${Math.round(chosenTiempoReposo / 2)} min` : "",
+        obs: "" 
       },
       inyeccionVaporPase2: { 
         paseNumero: 2, 
@@ -592,11 +592,11 @@ export function getBlankPlantControlRecord(
         rpm: 18, 
         vExcl: String(chosenVelExclusa),
         temperatura: 130,
-        perfil: "Cocción Profunda",
-        tiempoReposo: `${Math.round(chosenTiempoReposo / 2)} min`,
-        obs: "Gelatinización uniforme del almidón sin trizado" 
+        perfil: "",
+        tiempoReposo: chosenTiempoReposo ? `${Math.round(chosenTiempoReposo / 2)} min` : "",
+        obs: "" 
       },
-      tiempoReposoInterPases: `${chosenTiempoReposo} min`,
+      tiempoReposoInterPases: chosenTiempoReposo ? `${chosenTiempoReposo} min` : "",
       tiempoTotalInyeccionMin: "",
       presionVapor: chosenPresion,
       rpm: 18,

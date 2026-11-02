@@ -1,8 +1,69 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Permitir lectura y escritura completa para todas las colecciones y documentos de planta
-    match /{document=**} {
+    match /programaciones/{progId} {
+      allow read, delete: if true;
+      allow create, update: if !(progId in [
+        'PROG-BATCH-1793366859160',
+        'PROG-BATCH-1793383030066',
+        'PROG-BATCH-1793382916058',
+        'PROG-BATCH-1793196419455',
+        'PROG-BATCH-1793294634610',
+        'V374'
+      ]);
+    }
+    match /lotes/{loteId} {
+      allow read, write: if true;
+    }
+    match /humedades/{id} {
+      allow read, write: if true;
+    }
+    match /analisisHumedo/{id} {
+      allow read, write: if true;
+    }
+    match /analisisSeco/{id} {
+      allow read, write: if true;
+    }
+    match /presecados/{id} {
+      allow read, write: if true;
+    }
+    match /batchesVaporizado/{id} {
+      allow read, write: if true;
+    }
+    match /batchLotes/{id} {
+      allow read, write: if true;
+    }
+    match /controlesVaporizado/{id} {
+      allow read, write: if true;
+    }
+    match /analisisVaporizados/{id} {
+      allow read, write: if true;
+    }
+    match /cocciones/{id} {
+      allow read, write: if true;
+    }
+    match /auditLogs/{id} {
+      allow read, write: if true;
+    }
+    match /systemConfig/{id} {
+      allow read, write: if true;
+    }
+    match /users/{id} {
+      allow read, write: if true;
+    }
+    match /priorizacionAudit/{id} {
+      allow read, write: if true;
+    }
+    match /priorizacionConfigs/{id} {
+      allow read, write: if true;
+    }
+    match /evaluacionConfigs/{id} {
+      allow read, write: if true;
+    }
+    match /resultadosCoccionExternos/{id} {
+      allow read, write: if true;
+    }
+    match /test/{id} {
       allow read, write: if true;
     }
   }

@@ -58,7 +58,7 @@ import { ResultadosDefectosCoccionView } from "./ResultadosDefectosCoccionView";
 import { ExportarProgramacionModal } from "./ExportarProgramacionModal";
 import { ModalSustentoExperimentalLote } from "./ModalSustentoExperimentalLote";
 import { obtenerParametrosTrabajoGuardados, guardarParametrosTrabajoLocal } from "../utils/batchEngine";
-import { localDB } from "../utils/localDB";
+import { localDB, addDeletedProgramacionTombstone, removeDeletedProgramacionTombstone, isProgramacionTombstoned } from "../utils/localDB";
 import { cloudSyncService } from "../services/cloudSyncService";
 import { compareLoteCodes, formatLoteCode } from "../utils/formatLoteCode";
 import { 
@@ -106,7 +106,10 @@ import {
   Tag,
   Filter,
   Settings,
-  Package
+  Package,
+  Wind,
+  Sun,
+  Thermometer
 } from "lucide-react";
 
 interface ProgramacionBatchOficialViewProps {
@@ -280,20 +283,62 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
     })));
   };
 
-  // Manual determined parameters
-  const [presionDet, setPresionDet] = useState<number>(0.35);
-  const [velExclDet, setVelExclDet] = useState<number>(4);
-  const [tiempoReposoDet, setTiempoReposoDet] = useState<number>(60);
-  const [tempSecadoDet, setTempSecadoDet] = useState<number>(75);
+  // === PARÁMETROS DETERMINADOS POR EL SUPERVISOR (3 ETAPAS INDUSTRIALES) ===
+  // 1. ETAPA DE VAPORIZADO
+  const [presionDet, setPresionDet] = useState<number>(0.3); // P: 0.3 bar
+  const [velExclDet, setVelExclDet] = useState<number>(6); // Esc: 6 RPM
+  const [tiempoReposoDet, setTiempoReposoDet] = useState<number>(60); // Reposo: 60 min
+  const [modoVaporizadoDet, setModoVaporizadoDet] = useState<"automático" | "manual" | string>("automático"); // Modo: automático
+
+  // 2. ETAPA DE ENFRIAMIENTO
+  const [enfriamientoTipoAireDet, setEnfriamientoTipoAireDet] = useState<string>("Con aire caliente");
+  const [enfriamientoTempAireDet, setEnfriamientoTempAireDet] = useState<number>(75); // 75°C
+  const [enfriamientoTieneReposoDet, setEnfriamientoTieneReposoDet] = useState<boolean>(false); // SIN reposo
+  const [enfriamientoTiempoReposoDet, setEnfriamientoTiempoReposoDet] = useState<number>(0);
+
+  // 3. ETAPA DE SECADO
+  const [secadoTempProgPerfil1Det, setSecadoTempProgPerfil1Det] = useState<number>(75); // T°PROG: 75°C (PERFIL 1)
+  const [secadoConfigCirculacionDet, setSecadoConfigCirculacionDet] = useState<string>("1.1/12/0.9");
+  const [secadoTempMaxDet, setSecadoTempMaxDet] = useState<number>(31); // T° máx de secado: 31°C
+  const [secadoTiempoEnfriamientoDescargaDet, setSecadoTiempoEnfriamientoDescargaDet] = useState<number>(40); // 40 min
+  const [secadoTipoAireDescargaDet, setSecadoTipoAireDescargaDet] = useState<string>("Con aire frío");
+  const [secadoHumedadDescargaDet, setSecadoHumedadDescargaDet] = useState<number>(12.5); // 12.5%
 
   // Soporte Oficial para Modalidad 1 Pase / 2 Pases en la Programación
+  const [tempSecadoDet, setTempSecadoDet] = useState<number>(75);
   const [modalidadPasesDet, setModalidadPasesDet] = useState<"1_PASE" | "2_PASES">("1_PASE");
-  const [presionPase1Det, setPresionPase1Det] = useState<number>(0.35);
-  const [presionPase2Det, setPresionPase2Det] = useState<number>(0.40);
+  const [presionPase1Det, setPresionPase1Det] = useState<number>(0.3);
+  const [presionPase2Det, setPresionPase2Det] = useState<number>(0.3);
   const [tiempoReposoPase1Det, setTiempoReposoPase1Det] = useState<number>(10);
   const [tiempoReposoPase2Det, setTiempoReposoPase2Det] = useState<number>(60);
-  const [velExclPase1Det, setVelExclPase1Det] = useState<number>(4);
-  const [velExclPase2Det, setVelExclPase2Det] = useState<number>(4);
+  const [velExclPase1Det, setVelExclPase1Det] = useState<number>(6);
+  const [velExclPase2Det, setVelExclPase2Det] = useState<number>(6);
+
+  // Carga instantánea de la Receta Estándar del Supervisor (Ej: V-364)
+  const aplicarRecetaSupervisorEjemplo = () => {
+    setPresionDet(0.3);
+    setVelExclDet(6);
+    setTiempoReposoDet(60);
+    setModoVaporizadoDet("automático");
+
+    setEnfriamientoTipoAireDet("Con aire caliente");
+    setEnfriamientoTempAireDet(75);
+    setEnfriamientoTieneReposoDet(false);
+    setEnfriamientoTiempoReposoDet(0);
+
+    setSecadoTempProgPerfil1Det(75);
+    setSecadoConfigCirculacionDet("1.1/12/0.9");
+    setSecadoTempMaxDet(31);
+    setSecadoTiempoEnfriamientoDescargaDet(40);
+    setSecadoTipoAireDescargaDet("Con aire frío");
+    setSecadoHumedadDescargaDet(12.5);
+
+    setTempSecadoDet(75);
+    setModalidadPasesDet("1_PASE");
+
+    setNotifMensaje("📋 Receta oficial del supervisor (Ejemplo V-364) aplicada: Vaporizado (P:0.3 / Esc:6RPM / Rep:60m / Auto), Enfriamiento (Aire caliente 75°C / Sin reposo), Secado (75°C P1 / 1.1/12/0.9 / 31°C / 40m aire frío / 12.5%).");
+    setTimeout(() => setNotifMensaje(null), 4500);
+  };
 
   // Success alert & Workflow Prompt for Process transition
   const [notifMensaje, setNotifMensaje] = useState<string | null>(null);
@@ -449,6 +494,17 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
     presionBar: number;
     velExclusa: number;
     tiempoReposoMin: number;
+    modoVaporizado?: string;
+    enfriamientoTipoAire?: string;
+    enfriamientoTempAireC?: number;
+    enfriamientoTieneReposo?: boolean;
+    enfriamientoTiempoReposoMin?: number;
+    secadoTempProgPerfil1C?: number;
+    secadoConfigCirculacion?: string;
+    secadoTempMaxC?: number;
+    secadoTiempoEnfriamientoDescargaMin?: number;
+    secadoTipoAireDescarga?: string;
+    secadoHumedadDescargaPct?: number;
     tempSecadoC: number;
     presionPase1: number;
     presionPase2: number;
@@ -466,16 +522,27 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
     variedadPrincipal: "",
     filasLote: [],
     modalidadPases: "1_PASE",
-    presionBar: 0.35,
-    velExclusa: 4,
+    presionBar: 0.3,
+    velExclusa: 6,
     tiempoReposoMin: 60,
+    modoVaporizado: "automático",
+    enfriamientoTipoAire: "Con aire caliente",
+    enfriamientoTempAireC: 75,
+    enfriamientoTieneReposo: false,
+    enfriamientoTiempoReposoMin: 0,
+    secadoTempProgPerfil1C: 75,
+    secadoConfigCirculacion: "1.1/12/0.9",
+    secadoTempMaxC: 31,
+    secadoTiempoEnfriamientoDescargaMin: 40,
+    secadoTipoAireDescarga: "Con aire frío",
+    secadoHumedadDescargaPct: 12.5,
     tempSecadoC: 75,
-    presionPase1: 0.35,
-    presionPase2: 0.40,
+    presionPase1: 0.3,
+    presionPase2: 0.3,
     tiempoReposoPase1: 10,
     tiempoReposoPase2: 60,
-    velExclusaPase1: 4,
-    velExclusaPase2: 4,
+    velExclusaPase1: 6,
+    velExclusaPase2: 6,
     observacion: ""
   });
 
@@ -548,6 +615,7 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
       const data = localDB.getProgramacionesOficiales();
       if (Array.isArray(data)) {
         const sinMock = data.filter(p => {
+          if (isProgramacionTombstoned(p)) return false;
           const id = (p?.id || "").trim();
           const est = (p?.estado || "").toString().trim().toUpperCase();
           return id !== "PROG-BATCH-200" && id !== "PROG-BATCH-201" && est !== "CERRADO";
@@ -1291,6 +1359,20 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
     setPresionDet(parametrosRecomendados.presionBar);
     setVelExclDet(parametrosRecomendados.velExclusa);
     setTiempoReposoDet(parametrosRecomendados.tiempoReposoMin);
+    setModoVaporizadoDet(parametrosRecomendados.modoVaporizado || "automático");
+
+    setEnfriamientoTipoAireDet(parametrosRecomendados.enfriamientoTipoAire || "Con aire caliente");
+    setEnfriamientoTempAireDet(parametrosRecomendados.enfriamientoTempAireC ?? 75);
+    setEnfriamientoTieneReposoDet(parametrosRecomendados.enfriamientoTieneReposo ?? false);
+    setEnfriamientoTiempoReposoDet(parametrosRecomendados.enfriamientoTiempoReposoMin ?? 0);
+
+    setSecadoTempProgPerfil1Det(parametrosRecomendados.secadoTempProgPerfil1C ?? parametrosRecomendados.tempSecadoC ?? 75);
+    setSecadoConfigCirculacionDet(parametrosRecomendados.secadoConfigCirculacion || "1.1/12/0.9");
+    setSecadoTempMaxDet(parametrosRecomendados.secadoTempMaxC ?? 31);
+    setSecadoTiempoEnfriamientoDescargaDet(parametrosRecomendados.secadoTiempoEnfriamientoDescargaMin ?? 40);
+    setSecadoTipoAireDescargaDet(parametrosRecomendados.secadoTipoAireDescarga || "Con aire frío");
+    setSecadoHumedadDescargaDet(parametrosRecomendados.secadoHumedadDescargaPct ?? 12.5);
+
     setTempSecadoDet(parametrosRecomendados.tempSecadoC);
 
     if (parametrosRecomendados.modalidadPases) {
@@ -1321,20 +1403,36 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
     setFilasLote([]); // Espacios vacíos: no precargar con uno predeterminado
     setSelectedLoteIdsInArmador([]);
     setObservacionProg("");
-    setPresionDet(0.35);
-    setVelExclDet(4);
+    
+    // Parámetros por defecto según estándar industrial del supervisor (V-364)
+    setPresionDet(0.3);
+    setVelExclDet(6);
     setTiempoReposoDet(60);
+    setModoVaporizadoDet("automático");
+
+    setEnfriamientoTipoAireDet("Con aire caliente");
+    setEnfriamientoTempAireDet(75);
+    setEnfriamientoTieneReposoDet(false);
+    setEnfriamientoTiempoReposoDet(0);
+
+    setSecadoTempProgPerfil1Det(75);
+    setSecadoConfigCirculacionDet("1.1/12/0.9");
+    setSecadoTempMaxDet(31);
+    setSecadoTiempoEnfriamientoDescargaDet(40);
+    setSecadoTipoAireDescargaDet("Con aire frío");
+    setSecadoHumedadDescargaDet(12.5);
+
     setTempSecadoDet(75);
     setModalidadPasesDet("1_PASE");
-    setPresionPase1Det(0.35);
-    setPresionPase2Det(0.40);
+    setPresionPase1Det(0.3);
+    setPresionPase2Det(0.3);
     setTiempoReposoPase1Det(10);
     setTiempoReposoPase2Det(60);
-    setVelExclPase1Det(4);
-    setVelExclPase2Det(4);
+    setVelExclPase1Det(6);
+    setVelExclPase2Det(6);
     setViewMode("armador");
 
-    setNotifMensaje(`✨ Armador Oficial listo para nuevo Batch ${nextCaso} (Espacios vacíos). Ingrese el código de vaporizado.`);
+    setNotifMensaje(`✨ Armador Oficial listo para nuevo Batch ${nextCaso}. Ingrese el código de vaporizado y lotes.`);
     setTimeout(() => setNotifMensaje(null), 3500);
   };
 
@@ -2001,11 +2099,29 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
       promedios,
       parametrosRecomendadosIA: { ...parametrosRecomendados },
       parametrosDeterminados: {
-        modalidadPases: modalidadPasesDet,
+        // 1. ETAPA DE VAPORIZADO
         presionBar: modalidadPasesDet === "2_PASES" ? presionPase2Det : presionDet,
         velExclusa: modalidadPasesDet === "2_PASES" ? velExclPase2Det : velExclDet,
         tiempoReposoMin: modalidadPasesDet === "2_PASES" ? tiempoReposoPase2Det : tiempoReposoDet,
-        tempSecadoC: tempSecadoDet,
+        modoVaporizado: modoVaporizadoDet,
+
+        // 2. ETAPA DE ENFRIAMIENTO
+        enfriamientoTipoAire: enfriamientoTipoAireDet,
+        enfriamientoTempAireC: enfriamientoTempAireDet,
+        enfriamientoTieneReposo: enfriamientoTieneReposoDet,
+        enfriamientoTiempoReposoMin: enfriamientoTieneReposoDet ? enfriamientoTiempoReposoDet : 0,
+
+        // 3. ETAPA DE SECADO
+        secadoTempProgPerfil1C: secadoTempProgPerfil1Det,
+        secadoConfigCirculacion: secadoConfigCirculacionDet,
+        secadoTempMaxC: secadoTempMaxDet,
+        secadoTiempoEnfriamientoDescargaMin: secadoTiempoEnfriamientoDescargaDet,
+        secadoTipoAireDescarga: secadoTipoAireDescargaDet,
+        secadoHumedadDescargaPct: secadoHumedadDescargaDet,
+
+        // Compatibilidad hacia atrás y 2 pases
+        tempSecadoC: secadoTempProgPerfil1Det || tempSecadoDet,
+        modalidadPases: modalidadPasesDet,
         presionPase1: presionPase1Det,
         presionPase2: presionPase2Det,
         tiempoReposoPase1: tiempoReposoPase1Det,
@@ -2055,7 +2171,10 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
       // Si se editó el código correlativo de un batch existente, limpiar el registro previo en batches
       if (editingOriginalBatchCode && editingOriginalBatchCode !== progObj.batch) {
         try {
+          addDeletedProgramacionTombstone(editingOriginalBatchCode);
           localDB.deleteBatch(editingOriginalBatchCode, currentUser?.nombre || "Operador", true);
+          cloudSyncService.deleteBatchFromCloud(editingOriginalBatchCode).catch(() => {});
+          cloudSyncService.deleteProgramacionFromCloud(editingOriginalBatchCode).catch(() => {});
         } catch {
           // ignore
         }
@@ -2086,6 +2205,8 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
             ESTADO_BATCH: progObj.estado,
             OPERADOR: currentUser?.nombre || "Pedro Huamán",
             OBSERVACIONES: progObj.observacion,
+            parametrosDeterminados: progObj.parametrosDeterminados,
+            parametrosRecomendadosIA: progObj.parametrosRecomendadosIA,
             permitirDesviacion: forzar || progObj.estado === "OBSERVADO",
             forzarGuardado: forzar
           } as any,
@@ -2119,7 +2240,9 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
             HUMEDAD_PROMEDIO: promedios.ph,
             ESTADO_BATCH: progObj.estado,
             OPERADOR: currentUser?.nombre || "Pedro Huamán",
-            OBSERVACIONES: progObj.observacion
+            OBSERVACIONES: progObj.observacion,
+            parametrosDeterminados: progObj.parametrosDeterminados,
+            parametrosRecomendadosIA: progObj.parametrosRecomendadosIA
           },
           filasLote.map(f => ({
             LOTE_ID: f.loteId,
@@ -2219,11 +2342,28 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
       promedios,
       parametrosRecomendadosIA: { ...parametrosRecomendados },
       parametrosDeterminados: {
-        modalidadPases: modalidadPasesDet,
+        // 1. ETAPA DE VAPORIZADO
         presionBar: modalidadPasesDet === "2_PASES" ? presionPase2Det : presionDet,
         velExclusa: modalidadPasesDet === "2_PASES" ? velExclPase2Det : velExclDet,
         tiempoReposoMin: modalidadPasesDet === "2_PASES" ? tiempoReposoPase2Det : tiempoReposoDet,
-        tempSecadoC: tempSecadoDet,
+        modoVaporizado: modoVaporizadoDet,
+
+        // 2. ETAPA DE ENFRIAMIENTO
+        enfriamientoTipoAire: enfriamientoTipoAireDet,
+        enfriamientoTempAireC: enfriamientoTempAireDet,
+        enfriamientoTieneReposo: enfriamientoTieneReposoDet,
+        enfriamientoTiempoReposoMin: enfriamientoTieneReposoDet ? enfriamientoTiempoReposoDet : 0,
+
+        // 3. ETAPA DE SECADO
+        secadoTempProgPerfil1C: secadoTempProgPerfil1Det,
+        secadoConfigCirculacion: secadoConfigCirculacionDet,
+        secadoTempMaxC: secadoTempMaxDet,
+        secadoTiempoEnfriamientoDescargaMin: secadoTiempoEnfriamientoDescargaDet,
+        secadoTipoAireDescarga: secadoTipoAireDescargaDet,
+        secadoHumedadDescargaPct: secadoHumedadDescargaDet,
+
+        tempSecadoC: secadoTempProgPerfil1Det || tempSecadoDet,
+        modalidadPases: modalidadPasesDet,
         presionPase1: presionPase1Det,
         presionPase2: presionPase2Det,
         tiempoReposoPase1: tiempoReposoPase1Det,
@@ -2262,20 +2402,35 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
       tipoServicio: f.tipoServicio || prog.tipoServicio || "VAPORIZADO Y SECADO EN APIT"
     })) : []);
     setObservacionProg(prog.observacion || "");
-    setPresionDet(prog.parametrosDeterminados?.presionBar ?? 0.35);
-    setVelExclDet(prog.parametrosDeterminados?.velExclusa ?? 4);
-    setTiempoReposoDet(prog.parametrosDeterminados?.tiempoReposoMin ?? 60);
-    setTempSecadoDet(prog.parametrosDeterminados?.tempSecadoC ?? 75);
+
+    const pDet = prog.parametrosDeterminados;
+    setPresionDet(pDet?.presionBar ?? 0.3);
+    setVelExclDet(pDet?.velExclusa ?? 6);
+    setTiempoReposoDet(pDet?.tiempoReposoMin ?? 60);
+    setModoVaporizadoDet(pDet?.modoVaporizado || "automático");
+
+    setEnfriamientoTipoAireDet(pDet?.enfriamientoTipoAire || "Con aire caliente");
+    setEnfriamientoTempAireDet(pDet?.enfriamientoTempAireC ?? 75);
+    setEnfriamientoTieneReposoDet(pDet?.enfriamientoTieneReposo ?? false);
+    setEnfriamientoTiempoReposoDet(pDet?.enfriamientoTiempoReposoMin ?? 0);
+
+    setSecadoTempProgPerfil1Det(pDet?.secadoTempProgPerfil1C ?? pDet?.tempSecadoC ?? 75);
+    setSecadoConfigCirculacionDet(pDet?.secadoConfigCirculacion || "1.1/12/0.9");
+    setSecadoTempMaxDet(pDet?.secadoTempMaxC ?? 31);
+    setSecadoTiempoEnfriamientoDescargaDet(pDet?.secadoTiempoEnfriamientoDescargaMin ?? 40);
+    setSecadoTipoAireDescargaDet(pDet?.secadoTipoAireDescarga || "Con aire frío");
+    setSecadoHumedadDescargaDet(pDet?.secadoHumedadDescargaPct ?? 12.5);
+
+    setTempSecadoDet(pDet?.tempSecadoC ?? 75);
 
     // Cargar parámetros de 1° y 2° Pase
-    const pDet = prog.parametrosDeterminados;
     setModalidadPasesDet(pDet?.modalidadPases || "1_PASE");
     setPresionPase1Det(pDet?.presionPase1 ?? (pDet?.presionBar && pDet.presionBar <= 0.35 ? pDet.presionBar : Number(((pDet?.presionBar ?? 0.40) - 0.05).toFixed(2))));
     setPresionPase2Det(pDet?.presionPase2 ?? (pDet?.presionBar ?? 0.40));
     setTiempoReposoPase1Det(pDet?.tiempoReposoPase1 ?? 10);
     setTiempoReposoPase2Det(pDet?.tiempoReposoPase2 ?? (pDet?.tiempoReposoMin ?? 60));
-    setVelExclPase1Det(pDet?.velExclusaPase1 ?? (pDet?.velExclusa ?? 4));
-    setVelExclPase2Det(pDet?.velExclusaPase2 ?? (pDet?.velExclusa ?? 4));
+    setVelExclPase1Det(pDet?.velExclusaPase1 ?? (pDet?.velExclusa ?? 6));
+    setVelExclPase2Det(pDet?.velExclusaPase2 ?? (pDet?.velExclusa ?? 6));
 
     setViewMode("armador");
     setNotifMensaje(`✏️ Modo de Edición activado para Batch ${prog.batch} (${prog.caso}). Realice los ajustes necesarios y presione "Guardar en Resumen Maestro".`);
@@ -2293,7 +2448,6 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
       nextBatch = prog.batch.replace("-2", "-3");
     }
 
-    // Al generar PARTE 2 en una V, en el Batch no se genera "PARTE 2", sino que continúa sumando progresivamente
     const nextCaso = calcularSiguienteNumeroBatch(programaciones, batches);
 
     setEditingProgId(null);
@@ -2305,12 +2459,27 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
     setTipoServicioProg(prog.tipoServicio || "VAPORIZADO Y SECADO EN APIT");
     setFilasLote(prog.filasLote.map(f => ({ ...f, tipoServicio: f.tipoServicio || prog.tipoServicio || "VAPORIZADO Y SECADO EN APIT" })));
     setObservacionProg(`Continuación Turno ${nextTurno}`);
-    setPresionDet(prog.parametrosDeterminados?.presionBar ?? 0.40);
-    setVelExclDet(prog.parametrosDeterminados?.velExclusa ?? 6);
-    setTiempoReposoDet(prog.parametrosDeterminados?.tiempoReposoMin ?? 40);
-    setTempSecadoDet(prog.parametrosDeterminados?.tempSecadoC ?? 80);
 
     const pDet = prog.parametrosDeterminados;
+    setPresionDet(pDet?.presionBar ?? 0.3);
+    setVelExclDet(pDet?.velExclusa ?? 6);
+    setTiempoReposoDet(pDet?.tiempoReposoMin ?? 60);
+    setModoVaporizadoDet(pDet?.modoVaporizado || "automático");
+
+    setEnfriamientoTipoAireDet(pDet?.enfriamientoTipoAire || "Con aire caliente");
+    setEnfriamientoTempAireDet(pDet?.enfriamientoTempAireC ?? 75);
+    setEnfriamientoTieneReposoDet(pDet?.enfriamientoTieneReposo ?? false);
+    setEnfriamientoTiempoReposoDet(pDet?.enfriamientoTiempoReposoMin ?? 0);
+
+    setSecadoTempProgPerfil1Det(pDet?.secadoTempProgPerfil1C ?? pDet?.tempSecadoC ?? 75);
+    setSecadoConfigCirculacionDet(pDet?.secadoConfigCirculacion || "1.1/12/0.9");
+    setSecadoTempMaxDet(pDet?.secadoTempMaxC ?? 31);
+    setSecadoTiempoEnfriamientoDescargaDet(pDet?.secadoTiempoEnfriamientoDescargaMin ?? 40);
+    setSecadoTipoAireDescargaDet(pDet?.secadoTipoAireDescarga || "Con aire frío");
+    setSecadoHumedadDescargaDet(pDet?.secadoHumedadDescargaPct ?? 12.5);
+
+    setTempSecadoDet(pDet?.tempSecadoC ?? 75);
+
     setModalidadPasesDet(pDet?.modalidadPases || "1_PASE");
     setPresionPase1Det(pDet?.presionPase1 ?? (pDet?.presionBar && pDet.presionBar <= 0.35 ? pDet.presionBar : Number(((pDet?.presionBar ?? 0.40) - 0.05).toFixed(2))));
     setPresionPase2Det(pDet?.presionPase2 ?? (pDet?.presionBar ?? 0.40));
@@ -2338,16 +2507,27 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
       variedadPrincipal: prog.variedadPrincipal || "",
       filasLote: Array.isArray(prog.filasLote) ? prog.filasLote.map(f => ({ ...f })) : [],
       modalidadPases: pDet?.modalidadPases || "1_PASE",
-      presionBar: pDet?.presionBar ?? 0.35,
-      velExclusa: pDet?.velExclusa ?? 4,
+      presionBar: pDet?.presionBar ?? 0.3,
+      velExclusa: pDet?.velExclusa ?? 6,
       tiempoReposoMin: pDet?.tiempoReposoMin ?? 60,
+      modoVaporizado: pDet?.modoVaporizado || "automático",
+      enfriamientoTipoAire: pDet?.enfriamientoTipoAire || "Con aire caliente",
+      enfriamientoTempAireC: pDet?.enfriamientoTempAireC ?? 75,
+      enfriamientoTieneReposo: pDet?.enfriamientoTieneReposo ?? false,
+      enfriamientoTiempoReposoMin: pDet?.enfriamientoTiempoReposoMin ?? 0,
+      secadoTempProgPerfil1C: pDet?.secadoTempProgPerfil1C ?? pDet?.tempSecadoC ?? 75,
+      secadoConfigCirculacion: pDet?.secadoConfigCirculacion || "1.1/12/0.9",
+      secadoTempMaxC: pDet?.secadoTempMaxC ?? 31,
+      secadoTiempoEnfriamientoDescargaMin: pDet?.secadoTiempoEnfriamientoDescargaMin ?? 40,
+      secadoTipoAireDescarga: pDet?.secadoTipoAireDescarga || "Con aire frío",
+      secadoHumedadDescargaPct: pDet?.secadoHumedadDescargaPct ?? 12.5,
       tempSecadoC: pDet?.tempSecadoC ?? 75,
       presionPase1: pDet?.presionPase1 ?? (pDet?.presionBar && pDet.presionBar <= 0.35 ? pDet.presionBar : Number(((pDet?.presionBar ?? 0.35) - 0.05).toFixed(2))),
       presionPase2: pDet?.presionPase2 ?? (pDet?.presionBar ?? 0.40),
       tiempoReposoPase1: pDet?.tiempoReposoPase1 ?? 10,
       tiempoReposoPase2: pDet?.tiempoReposoPase2 ?? (pDet?.tiempoReposoMin ?? 60),
-      velExclusaPase1: pDet?.velExclusaPase1 ?? (pDet?.velExclusa ?? 4),
-      velExclusaPase2: pDet?.velExclusaPase2 ?? (pDet?.velExclusa ?? 4),
+      velExclusaPase1: pDet?.velExclusaPase1 ?? (pDet?.velExclusa ?? 6),
+      velExclusaPase2: pDet?.velExclusaPase2 ?? (pDet?.velExclusa ?? 6),
       observacion: prog.observacion || ""
     });
   };
@@ -2381,11 +2561,28 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
       pesoTotalKg: pesoTotalKg || batchToQuickEdit.pesoTotalKg,
       promedios: promedios || batchToQuickEdit.promedios,
       parametrosDeterminados: {
-        modalidadPases: quickEditData.modalidadPases,
+        // 1. ETAPA DE VAPORIZADO
         presionBar: quickEditData.modalidadPases === "2_PASES" ? quickEditData.presionPase2 : quickEditData.presionBar,
         velExclusa: quickEditData.modalidadPases === "2_PASES" ? quickEditData.velExclusaPase2 : quickEditData.velExclusa,
         tiempoReposoMin: quickEditData.modalidadPases === "2_PASES" ? quickEditData.tiempoReposoPase2 : quickEditData.tiempoReposoMin,
-        tempSecadoC: quickEditData.tempSecadoC,
+        modoVaporizado: quickEditData.modoVaporizado || "automático",
+
+        // 2. ETAPA DE ENFRIAMIENTO
+        enfriamientoTipoAire: quickEditData.enfriamientoTipoAire || "Con aire caliente",
+        enfriamientoTempAireC: quickEditData.enfriamientoTempAireC ?? 75,
+        enfriamientoTieneReposo: quickEditData.enfriamientoTieneReposo ?? false,
+        enfriamientoTiempoReposoMin: quickEditData.enfriamientoTieneReposo ? (quickEditData.enfriamientoTiempoReposoMin ?? 0) : 0,
+
+        // 3. ETAPA DE SECADO
+        secadoTempProgPerfil1C: quickEditData.secadoTempProgPerfil1C ?? quickEditData.tempSecadoC,
+        secadoConfigCirculacion: quickEditData.secadoConfigCirculacion || "1.1/12/0.9",
+        secadoTempMaxC: quickEditData.secadoTempMaxC ?? 31,
+        secadoTiempoEnfriamientoDescargaMin: quickEditData.secadoTiempoEnfriamientoDescargaMin ?? 40,
+        secadoTipoAireDescarga: quickEditData.secadoTipoAireDescarga || "Con aire frío",
+        secadoHumedadDescargaPct: quickEditData.secadoHumedadDescargaPct ?? 12.5,
+
+        tempSecadoC: quickEditData.secadoTempProgPerfil1C ?? quickEditData.tempSecadoC,
+        modalidadPases: quickEditData.modalidadPases,
         presionPase1: quickEditData.presionPase1,
         presionPase2: quickEditData.presionPase2,
         tiempoReposoPase1: quickEditData.tiempoReposoPase1,
@@ -2417,7 +2614,10 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
       });
       if (originalBatch !== newBatch) {
         try {
+          addDeletedProgramacionTombstone(originalBatch);
           localDB.deleteBatch(originalBatch, currentUser?.nombre || "Operador", true);
+          cloudSyncService.deleteBatchFromCloud(originalBatch).catch(() => {});
+          cloudSyncService.deleteProgramacionFromCloud(originalBatch).catch(() => {});
         } catch {
           // ignore
         }
@@ -2457,34 +2657,40 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
     const id = batchToDelete.id;
     const batchCode = batchToDelete.batch;
     const casoName = batchToDelete.caso || "Registro";
+    const progId = (batchToDelete as any)?.PROGRAMACION_ID;
     const lotesInBatch = batchToDelete.filasLote?.map(f => f.loteId) || [];
 
     setIsDeleting(true);
 
     try {
+      // 1. Inmediatamente marcar tombstones para todos los identificadores del batch
+      const keysToPurge = [id, batchCode, casoName, progId].filter(Boolean) as string[];
+      addDeletedProgramacionTombstone(keysToPurge);
+
       if (onDeleteBatch) {
         await onDeleteBatch(batchCode);
         if (id && id !== batchCode) {
           await onDeleteBatch(id);
         }
       } else {
-        localDB.deleteBatch(batchCode);
+        localDB.deleteBatch(batchCode, currentUser?.nombre || "Operador", true);
         if (id && id !== batchCode) {
-          localDB.deleteBatch(id);
+          localDB.deleteBatch(id, currentUser?.nombre || "Operador", true);
         }
       }
 
-      // 1. Remove from local state & localStorage only after successful validation
+      // 2. Remove from local state & all localStorage copies
       setProgramaciones(prev => {
-        const next = prev.filter(p => p.id !== id && p.batch !== id && p.batch !== batchCode);
+        const next = prev.filter(p => !isProgramacionTombstoned(p) && p.id !== id && p.batch !== id && p.batch !== batchCode);
         guardarProgramacionesOficiales(next);
         return next;
       });
 
-      cloudSyncService.deleteProgramacionFromCloud(batchCode).catch(() => {});
-      if (id && id !== batchCode) {
-        cloudSyncService.deleteProgramacionFromCloud(id).catch(() => {});
-      }
+      // 3. Purge from cloud for all identifiers
+      keysToPurge.forEach(k => {
+        cloudSyncService.deleteProgramacionFromCloud(k).catch(() => {});
+        cloudSyncService.deleteBatchFromCloud(k).catch(() => {});
+      });
 
       if (lotesInBatch.length > 0) {
         localDB.bulkUpdateLotesStatus(lotesInBatch, "ANALIZADO");
@@ -5362,7 +5568,7 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
               </div>
             </div>
 
-            {/* Right: Supervisor Final Determination */}
+            {/* Right: Supervisor Final Determination - 3 Industrial Stages */}
             <div className="bg-slate-900 rounded-2xl border border-slate-750 p-5 space-y-4 shadow-xl">
               <div className="flex items-center justify-between border-b border-slate-800 pb-3 flex-wrap gap-2">
                 <div className="flex items-center gap-2">
@@ -5370,251 +5576,460 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
                     <Gauge className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-                      Parámetros Determinados por el Supervisor
+                    <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                      <span>PARÁMETROS DE OPERACIÓN - RECETA DEL SUPERVISOR</span>
                     </h3>
                     <p className="text-[11px] text-slate-400">
-                      Valores oficiales que se aplicarán en el autoclave y secadoras
+                      Valores oficiales de planta para Vaporizado, Enfriamiento y Secado
                     </p>
                   </div>
                 </div>
 
-                {/* Selector de Modalidad: 1 Pase vs 2 Pases */}
-                <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Preset V-364 Supervisor Button */}
                   <button
                     type="button"
-                    onClick={() => setModalidadPasesDet("1_PASE")}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      modalidadPasesDet === "1_PASE"
-                        ? "bg-amber-500 text-slate-950 font-black shadow-md"
-                        : "text-slate-400 hover:text-white"
-                    }`}
+                    onClick={aplicarRecetaSupervisorEjemplo}
+                    className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/50 flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-sm"
+                    title="Cargar automáticamente los parámetros del ejemplo de supervisor (V-364)"
                   >
-                    1 Pase
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Cargar Ejemplo Supervisor (V-364)</span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setModalidadPasesDet("2_PASES")}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                      modalidadPasesDet === "2_PASES"
-                        ? "bg-cyan-500 text-slate-950 font-black shadow-md"
-                        : "text-slate-400 hover:text-white"
-                    }`}
-                  >
-                    <span>2 Pases</span>
-                  </button>
+
+                  {/* Selector de Modalidad: 1 Pase vs 2 Pases */}
+                  <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => setModalidadPasesDet("1_PASE")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        modalidadPasesDet === "1_PASE"
+                          ? "bg-amber-500 text-slate-950 font-black shadow-md"
+                          : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      1 Pase
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setModalidadPasesDet("2_PASES")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                        modalidadPasesDet === "2_PASES"
+                          ? "bg-cyan-500 text-slate-950 font-black shadow-md"
+                          : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      <span>2 Pases</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              {/* Formulario según Modalidad de Pases */}
-              {modalidadPasesDet === "2_PASES" ? (
-                <div className="space-y-3.5">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                    {/* Panel 1° Pase Supervisor */}
-                    <div className="p-3.5 rounded-xl bg-slate-850/80 border-2 border-amber-500/40 space-y-3">
-                      <div className="flex items-center justify-between border-b border-amber-500/20 pb-1.5">
-                        <span className="text-xs font-black text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
-                          <Flame className="w-4 h-4 text-amber-400" />
-                          1° Pase (Acondicionamiento)
-                        </span>
-                        <span className="text-[9px] font-bold text-amber-300 bg-amber-950 px-1.5 py-0.5 rounded border border-amber-800">
-                          Pase 1
-                        </span>
-                      </div>
+              {/* ======================================================== */}
+              {/* ETAPA 1: ETAPA DE VAPORIZADO                            */}
+              {/* ======================================================== */}
+              <div className="p-3.5 rounded-xl bg-slate-850/90 border border-amber-500/40 space-y-3">
+                <div className="flex items-center justify-between border-b border-amber-500/20 pb-1.5">
+                  <span className="text-xs font-black text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Flame className="w-4 h-4 text-amber-400" />
+                    ETAPA DE VAPORIZADO
+                  </span>
+                  <span className="text-[10px] font-bold text-amber-300 bg-amber-950 px-2 py-0.5 rounded border border-amber-800">
+                    {modalidadPasesDet === "2_PASES" ? "2 Pases de Inyección" : "Inyección Directa"}
+                  </span>
+                </div>
 
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-300 mb-1">
-                          Presión 1° Pase (bar)
-                        </label>
-                        <div className="relative">
+                {modalidadPasesDet === "2_PASES" ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* 1° Pase */}
+                    <div className="p-2.5 rounded-lg bg-slate-900 border border-amber-500/30 space-y-2">
+                      <div className="text-[10px] font-black text-amber-400 uppercase tracking-wide">
+                        1° Pase (Acondicionamiento)
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <label className="block text-[10px] text-slate-400 font-bold mb-0.5">P (bar)</label>
                           <input
                             type="number"
                             step="0.05"
                             value={presionPase1Det}
                             onChange={e => setPresionPase1Det(Number(e.target.value) || 0)}
-                            className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 font-mono font-bold text-amber-400 text-sm focus:outline-none focus:border-amber-500"
+                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 font-mono font-bold text-amber-300 text-xs focus:outline-none focus:border-amber-500"
                           />
-                          <span className="absolute right-3 top-2 text-xs text-slate-500 font-bold">bar</span>
                         </div>
-                        <div className="text-[10px] text-slate-400 mt-0.5">Sugerido: {parametrosRecomendados.presionPase1} bar</div>
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-300 mb-1">
-                          Tiempo Reposo 1° Pase (min)
-                        </label>
-                        <div className="relative">
+                        <div>
+                          <label className="block text-[10px] text-slate-400 font-bold mb-0.5">Esc (RPM)</label>
+                          <input
+                            type="number"
+                            step="1"
+                            value={velExclPase1Det}
+                            onChange={e => setVelExclPase1Det(Number(e.target.value) || 0)}
+                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 font-mono font-bold text-amber-300 text-xs focus:outline-none focus:border-amber-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-slate-400 font-bold mb-0.5">Reposo (min)</label>
                           <input
                             type="number"
                             step="1"
                             value={tiempoReposoPase1Det}
                             onChange={e => setTiempoReposoPase1Det(Number(e.target.value) || 0)}
-                            className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 font-mono font-bold text-amber-400 text-sm focus:outline-none focus:border-amber-500"
+                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 font-mono font-bold text-amber-300 text-xs focus:outline-none focus:border-amber-500"
                           />
-                          <span className="absolute right-3 top-2 text-xs text-slate-500 font-bold">MIN</span>
                         </div>
-                        <div className="text-[10px] text-slate-400 mt-0.5">Sugerido: {parametrosRecomendados.tiempoReposoPase1} MIN</div>
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-300 mb-1">
-                          Vel. Esclusa 1° Pase
-                        </label>
-                        <input
-                          type="number"
-                          step="1"
-                          value={velExclPase1Det}
-                          onChange={e => setVelExclPase1Det(Number(e.target.value) || 0)}
-                          className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 font-mono font-bold text-amber-400 text-sm focus:outline-none focus:border-amber-500"
-                        />
-                        <div className="text-[10px] text-slate-400 mt-0.5">Sugerido: {parametrosRecomendados.velExclusaPase1}</div>
                       </div>
                     </div>
 
-                    {/* Panel 2° Pase Supervisor */}
-                    <div className="p-3.5 rounded-xl bg-slate-850/80 border-2 border-cyan-500/40 space-y-3">
-                      <div className="flex items-center justify-between border-b border-cyan-500/20 pb-1.5">
-                        <span className="text-xs font-black text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
-                          <Flame className="w-4 h-4 text-cyan-400" />
-                          2° Pase (Cocción Principal)
-                        </span>
-                        <span className="text-[9px] font-bold text-cyan-300 bg-cyan-950 px-1.5 py-0.5 rounded border border-cyan-800">
-                          Pase 2
-                        </span>
+                    {/* 2° Pase */}
+                    <div className="p-2.5 rounded-lg bg-slate-900 border border-cyan-500/30 space-y-2">
+                      <div className="text-[10px] font-black text-cyan-400 uppercase tracking-wide">
+                        2° Pase (Cocción Principal)
                       </div>
-
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-300 mb-1">
-                          Presión 2° Pase (bar)
-                        </label>
-                        <div className="relative">
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <label className="block text-[10px] text-slate-400 font-bold mb-0.5">P (bar)</label>
                           <input
                             type="number"
                             step="0.05"
                             value={presionPase2Det}
                             onChange={e => setPresionPase2Det(Number(e.target.value) || 0)}
-                            className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 font-mono font-bold text-cyan-300 text-sm focus:outline-none focus:border-cyan-500"
+                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 font-mono font-bold text-cyan-300 text-xs focus:outline-none focus:border-cyan-500"
                           />
-                          <span className="absolute right-3 top-2 text-xs text-slate-500 font-bold">bar</span>
                         </div>
-                        <div className="text-[10px] text-slate-400 mt-0.5">Sugerido: {parametrosRecomendados.presionPase2} bar</div>
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-300 mb-1">
-                          Tiempo Reposo 2° Pase (min)
-                        </label>
-                        <div className="relative">
+                        <div>
+                          <label className="block text-[10px] text-slate-400 font-bold mb-0.5">Esc (RPM)</label>
+                          <input
+                            type="number"
+                            step="1"
+                            value={velExclPase2Det}
+                            onChange={e => setVelExclPase2Det(Number(e.target.value) || 0)}
+                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 font-mono font-bold text-cyan-300 text-xs focus:outline-none focus:border-cyan-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-slate-400 font-bold mb-0.5">Reposo (min)</label>
                           <input
                             type="number"
                             step="1"
                             value={tiempoReposoPase2Det}
                             onChange={e => setTiempoReposoPase2Det(Number(e.target.value) || 0)}
-                            className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 font-mono font-bold text-cyan-300 text-sm focus:outline-none focus:border-cyan-500"
+                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 font-mono font-bold text-cyan-300 text-xs focus:outline-none focus:border-cyan-500"
                           />
-                          <span className="absolute right-3 top-2 text-xs text-slate-500 font-bold">MIN</span>
                         </div>
-                        <div className="text-[10px] text-slate-400 mt-0.5">Sugerido: {parametrosRecomendados.tiempoReposoPase2} MIN</div>
                       </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                        P: Presión (bar)
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          step="0.05"
+                          value={presionDet}
+                          onChange={e => setPresionDet(Number(e.target.value) || 0)}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 font-mono font-bold text-amber-400 text-sm focus:outline-none focus:border-amber-500"
+                          placeholder="0.3"
+                        />
+                        <span className="absolute right-3 top-2 text-xs text-slate-500 font-bold">bar</span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">Ej: 0.3</div>
+                    </div>
 
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-300 mb-1">
-                          Vel. Esclusa 2° Pase
-                        </label>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                        Esc: Esclusa (RPM)
+                      </label>
+                      <div className="relative">
                         <input
                           type="number"
                           step="1"
-                          value={velExclPase2Det}
-                          onChange={e => setVelExclPase2Det(Number(e.target.value) || 0)}
-                          className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 font-mono font-bold text-cyan-300 text-sm focus:outline-none focus:border-cyan-500"
+                          value={velExclDet}
+                          onChange={e => setVelExclDet(Number(e.target.value) || 0)}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 font-mono font-bold text-amber-400 text-sm focus:outline-none focus:border-amber-500"
+                          placeholder="6"
                         />
-                        <div className="text-[10px] text-slate-400 mt-0.5">Sugerido: {parametrosRecomendados.velExclusaPase2}</div>
+                        <span className="absolute right-3 top-2 text-xs text-slate-500 font-bold">RPM</span>
                       </div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">Ej: 6RPM</div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                        Reposo: Silos (min)
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          step="5"
+                          value={tiempoReposoDet}
+                          onChange={e => setTiempoReposoDet(Number(e.target.value) || 0)}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 font-mono font-bold text-amber-400 text-sm focus:outline-none focus:border-amber-500"
+                          placeholder="60"
+                        />
+                        <span className="absolute right-3 top-2 text-xs text-slate-500 font-bold">MIN</span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">Ej: 60 min</div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                        Modo de Operación
+                      </label>
+                      <select
+                        value={modoVaporizadoDet}
+                        onChange={e => setModoVaporizadoDet(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 font-bold text-amber-300 text-xs focus:outline-none focus:border-amber-500 cursor-pointer"
+                      >
+                        <option value="automático">automático</option>
+                        <option value="manual">manual</option>
+                      </select>
+                      <div className="text-[10px] text-slate-400 mt-0.5">Ej: automático</div>
                     </div>
                   </div>
+                )}
+              </div>
 
-                  {/* Temp Secado para 2 Pases */}
+              {/* ======================================================== */}
+              {/* ETAPA 2: ETAPA DE ENFRIAMIENTO                          */}
+              {/* ======================================================== */}
+              <div className="p-3.5 rounded-xl bg-slate-850/90 border border-cyan-500/40 space-y-3">
+                <div className="flex items-center justify-between border-b border-cyan-500/20 pb-1.5">
+                  <span className="text-xs font-black text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Wind className="w-4 h-4 text-cyan-400" />
+                    ETAPA DE ENFRIAMIENTO
+                  </span>
+                  <span className="text-[10px] font-bold text-cyan-300 bg-cyan-950 px-2 py-0.5 rounded border border-cyan-800">
+                    {enfriamientoTieneReposoDet ? `${enfriamientoTiempoReposoDet} min reposo` : "SIN reposo"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">
-                      Temperatura de Secado Posterior (TEMP. SECADO)
+                    <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                      Tipo de Aire de Enfriamiento
+                    </label>
+                    <select
+                      value={enfriamientoTipoAireDet}
+                      onChange={e => setEnfriamientoTipoAireDet(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 font-bold text-cyan-300 text-xs focus:outline-none focus:border-cyan-500 cursor-pointer"
+                    >
+                      <option value="Con aire caliente">Con aire caliente</option>
+                      <option value="Con aire frío">Con aire frío</option>
+                      <option value="Ambiente">Aire Ambiente</option>
+                    </select>
+                    <div className="text-[10px] text-slate-400 mt-0.5">Ej: Con aire caliente</div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                      Temperatura de Aire (°C)
                     </label>
                     <div className="relative">
                       <input
                         type="number"
-                        value={tempSecadoDet}
-                        onChange={e => setTempSecadoDet(Number(e.target.value) || 0)}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 font-mono font-bold text-amber-400 text-base focus:outline-none focus:border-amber-500"
+                        step="1"
+                        value={enfriamientoTempAireDet}
+                        onChange={e => setEnfriamientoTempAireDet(Number(e.target.value) || 0)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 font-mono font-bold text-cyan-300 text-sm focus:outline-none focus:border-cyan-500"
+                        placeholder="75"
                       />
-                      <span className="absolute right-3 top-3 text-xs text-slate-500 font-bold">°C</span>
+                      <span className="absolute right-3 top-2 text-xs text-slate-500 font-bold">°C</span>
                     </div>
-                    <div className="text-[10px] text-slate-400 mt-1">Sugerido: {parametrosRecomendados.tempSecadoC} °C</div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">Ej: 75°C</div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                      Condición de Reposo
+                    </label>
+                    <div className="flex items-center gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-700">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEnfriamientoTieneReposoDet(false);
+                          setEnfriamientoTiempoReposoDet(0);
+                        }}
+                        className={`flex-1 py-1.5 rounded-lg text-[11px] font-black transition-all cursor-pointer ${
+                          !enfriamientoTieneReposoDet
+                            ? "bg-cyan-500 text-slate-950 shadow-md"
+                            : "text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        SIN reposo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEnfriamientoTieneReposoDet(true);
+                          if (enfriamientoTiempoReposoDet === 0) setEnfriamientoTiempoReposoDet(15);
+                        }}
+                        className={`flex-1 py-1.5 rounded-lg text-[11px] font-black transition-all cursor-pointer ${
+                          enfriamientoTieneReposoDet
+                            ? "bg-amber-500 text-slate-950 shadow-md"
+                            : "text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        CON reposo
+                      </button>
+                    </div>
+                    {enfriamientoTieneReposoDet && (
+                      <div className="mt-1.5 relative">
+                        <input
+                          type="number"
+                          step="1"
+                          value={enfriamientoTiempoReposoDet}
+                          onChange={e => setEnfriamientoTiempoReposoDet(Number(e.target.value) || 0)}
+                          placeholder="Minutos de reposo"
+                          className="w-full bg-slate-950 border border-amber-500/50 rounded-lg p-1 text-xs font-mono font-bold text-amber-300 text-center"
+                        />
+                        <span className="absolute right-2 top-1 text-[10px] text-slate-400">min</span>
+                      </div>
+                    )}
+                    <div className="text-[10px] text-slate-400 mt-0.5">Ej: SIN reposo</div>
                   </div>
                 </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-4">
+              </div>
+
+              {/* ======================================================== */}
+              {/* ETAPA 3: ETAPA DE SECADO                                */}
+              {/* ======================================================== */}
+              <div className="p-3.5 rounded-xl bg-slate-850/90 border border-emerald-500/40 space-y-3">
+                <div className="flex items-center justify-between border-b border-emerald-500/20 pb-1.5">
+                  <span className="text-xs font-black text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Sun className="w-4 h-4 text-emerald-400" />
+                    ETAPA DE SECADO
+                  </span>
+                  <span className="text-[10px] font-bold text-emerald-300 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
+                    T°PROG: {secadoTempProgPerfil1Det}°C (PERFIL 1)
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">
-                      Presión en Bar (DE.)
+                    <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                      T°PROG: Perfil 1 (°C)
                     </label>
                     <div className="relative">
                       <input
                         type="number"
-                        step="0.05"
-                        value={presionDet}
-                        onChange={e => setPresionDet(Number(e.target.value) || 0)}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 font-mono font-bold text-amber-400 text-base focus:outline-none focus:border-amber-500"
+                        step="1"
+                        value={secadoTempProgPerfil1Det}
+                        onChange={e => {
+                          const v = Number(e.target.value) || 0;
+                          setSecadoTempProgPerfil1Det(v);
+                          setTempSecadoDet(v);
+                        }}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 font-mono font-bold text-emerald-300 text-sm focus:outline-none focus:border-emerald-500"
+                        placeholder="75"
                       />
-                      <span className="absolute right-3 top-3 text-xs text-slate-500 font-bold">bar</span>
+                      <span className="absolute right-3 top-2 text-xs text-slate-500 font-bold">°C</span>
                     </div>
-                    <div className="text-[10px] text-slate-400 mt-1">Sugerido: {parametrosRecomendados.presionBar} bar</div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">Ej: 75°C (PERFIL 1)</div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">
-                      Velocidad de Esclusa (V. EXCL.)
+                    <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                      Configuración de Circulación
                     </label>
                     <input
-                      type="number"
-                      value={velExclDet}
-                      onChange={e => setVelExclDet(Number(e.target.value) || 0)}
-                      className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 font-mono font-bold text-amber-400 text-base focus:outline-none focus:border-amber-500"
+                      type="text"
+                      value={secadoConfigCirculacionDet}
+                      onChange={e => setSecadoConfigCirculacionDet(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 font-mono font-bold text-emerald-300 text-sm focus:outline-none focus:border-emerald-500"
+                      placeholder="1.1/12/0.9"
                     />
-                    <div className="text-[10px] text-slate-400 mt-1">Sugerido: {parametrosRecomendados.velExclusa}</div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">Ej: 1.1/12/0.9</div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">
-                      Tiempo de Reposo (T. REPOSO)
+                    <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                      T° máx de Secado (°C)
                     </label>
                     <div className="relative">
                       <input
                         type="number"
-                        value={tiempoReposoDet}
-                        onChange={e => setTiempoReposoDet(Number(e.target.value) || 0)}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 font-mono font-bold text-amber-400 text-base focus:outline-none focus:border-amber-500"
+                        step="1"
+                        value={secadoTempMaxDet}
+                        onChange={e => setSecadoTempMaxDet(Number(e.target.value) || 0)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 font-mono font-bold text-emerald-300 text-sm focus:outline-none focus:border-emerald-500"
+                        placeholder="31"
                       />
-                      <span className="absolute right-3 top-3 text-xs text-slate-500 font-bold">MIN</span>
+                      <span className="absolute right-3 top-2 text-xs text-slate-500 font-bold">°C</span>
                     </div>
-                    <div className="text-[10px] text-slate-400 mt-1">Sugerido: {parametrosRecomendados.tiempoReposoMin} MIN</div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">
-                      Temperatura de Secado (TEMP. SECADO)
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        value={tempSecadoDet}
-                        onChange={e => setTempSecadoDet(Number(e.target.value) || 0)}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 font-mono font-bold text-amber-400 text-base focus:outline-none focus:border-amber-500"
-                      />
-                      <span className="absolute right-3 top-3 text-xs text-slate-500 font-bold">°C</span>
-                    </div>
-                    <div className="text-[10px] text-slate-400 mt-1">Sugerido: {parametrosRecomendados.tempSecadoC} °C</div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">Ej: 31°C</div>
                   </div>
                 </div>
-              )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-800">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                      Enfriamiento para Descarga
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="relative">
+                        <input
+                          type="number"
+                          step="5"
+                          value={secadoTiempoEnfriamientoDescargaDet}
+                          onChange={e => setSecadoTiempoEnfriamientoDescargaDet(Number(e.target.value) || 0)}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 font-mono font-bold text-cyan-300 text-sm focus:outline-none focus:border-cyan-500"
+                          placeholder="40"
+                        />
+                        <span className="absolute right-2 top-2 text-[10px] text-slate-400 font-bold">min</span>
+                      </div>
+                      <select
+                        value={secadoTipoAireDescargaDet}
+                        onChange={e => setSecadoTipoAireDescargaDet(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 font-bold text-cyan-300 text-xs focus:outline-none focus:border-cyan-500 cursor-pointer"
+                      >
+                        <option value="Con aire frío">Con aire frío</option>
+                        <option value="Con aire caliente">Con aire caliente</option>
+                        <option value="Ambiente">Ambiente</option>
+                      </select>
+                    </div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">Ej: 40 min con aire frío</div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                      Humedad de Descarga Objetivo (%)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={secadoHumedadDescargaDet}
+                        onChange={e => setSecadoHumedadDescargaDet(Number(e.target.value) || 0)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 font-mono font-bold text-emerald-400 text-sm focus:outline-none focus:border-emerald-500"
+                        placeholder="12.5"
+                      />
+                      <span className="absolute right-3 top-2 text-xs text-slate-500 font-bold">%</span>
+                    </div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">Ej: 12.5%</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Ficha Resumen de Receta Oficial (Texto idéntico al solicitado por supervisor) */}
+              <div className="p-3 rounded-xl bg-slate-950 border border-amber-500/30 text-[11px] space-y-1.5 font-mono">
+                <div className="text-amber-400 font-black text-xs uppercase flex items-center justify-between">
+                  <span>V - {casoNombre || "364"} • PARÁMETROS DE OPERACIÓN</span>
+                  <span className="text-[9px] text-slate-400 font-normal">Supervisión Oficial Planta</span>
+                </div>
+                <div className="text-slate-300">
+                  <span className="text-amber-300 font-bold">ETAPA DE VAPORIZADO:</span> P: {modalidadPasesDet === "2_PASES" ? `${presionPase2Det} (Pase 2)` : presionDet} bar | Esc: {modalidadPasesDet === "2_PASES" ? `${velExclPase2Det}` : velExclDet}RPM | Reposo: {modalidadPasesDet === "2_PASES" ? `${tiempoReposoPase2Det}` : tiempoReposoDet} min | Modo: {modoVaporizadoDet}
+                </div>
+                <div className="text-slate-300">
+                  <span className="text-cyan-300 font-bold">ETAPA DE ENFRIAMIENTO:</span> {enfriamientoTipoAireDet} de {enfriamientoTempAireDet}°C | {enfriamientoTieneReposoDet ? `CON reposo (${enfriamientoTiempoReposoDet} min)` : "SIN reposo"}
+                </div>
+                <div className="text-slate-300">
+                  <span className="text-emerald-300 font-bold">ETAPA DE SECADO:</span> T°PROG: {secadoTempProgPerfil1Det}°C (PERFIL 1) | Circulación: {secadoConfigCirculacionDet} | T° máx secado: {secadoTempMaxDet}°C | Descarga: {secadoTiempoEnfriamientoDescargaDet} min {secadoTipoAireDescargaDet} | Humedad: {secadoHumedadDescargaDet}%
+                </div>
+              </div>
 
               <div className="pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2 text-xs">
@@ -6278,46 +6693,173 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
                     </div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    <div>
-                      <label className="text-[10px] text-slate-400 block mb-1">Presión (bar)</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={quickEditData.presionBar}
-                        onChange={(e) => setQuickEditData(prev => ({ ...prev, presionBar: parseFloat(e.target.value) || 0 }))}
-                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-amber-300 font-mono font-bold text-center"
-                      />
+                  <div className="space-y-3">
+                    {/* ETAPA DE VAPORIZADO */}
+                    <div className="p-2.5 rounded-lg bg-slate-900/90 border border-amber-500/30">
+                      <div className="text-[10px] font-black text-amber-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <Flame className="w-3.5 h-3.5 text-amber-400" />
+                          ETAPA DE VAPORIZADO
+                        </span>
+                        <span className="text-[9px] text-amber-500/80 font-mono">P: 0.3 | Esc: 6RPM | Reposo: 60m</span>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <div>
+                          <label className="text-[9px] text-slate-400 block mb-0.5 font-medium">P (Presión bar)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={quickEditData.presionBar}
+                            onChange={(e) => setQuickEditData(prev => ({ ...prev, presionBar: parseFloat(e.target.value) || 0 }))}
+                            className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-amber-300 font-mono font-bold text-center text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[9px] text-slate-400 block mb-0.5 font-medium">Esc (RPM)</label>
+                          <input
+                            type="number"
+                            step="1"
+                            value={quickEditData.velExclusa}
+                            onChange={(e) => setQuickEditData(prev => ({ ...prev, velExclusa: parseInt(e.target.value) || 0 }))}
+                            className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-amber-300 font-mono font-bold text-center text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[9px] text-slate-400 block mb-0.5 font-medium">Reposo (min)</label>
+                          <input
+                            type="number"
+                            step="5"
+                            value={quickEditData.tiempoReposoMin}
+                            onChange={(e) => setQuickEditData(prev => ({ ...prev, tiempoReposoMin: parseInt(e.target.value) || 0 }))}
+                            className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-amber-300 font-mono font-bold text-center text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[9px] text-slate-400 block mb-0.5 font-medium">Modo</label>
+                          <select
+                            value={quickEditData.modoVaporizado || "automático"}
+                            onChange={(e) => setQuickEditData(prev => ({ ...prev, modoVaporizado: e.target.value }))}
+                            className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-amber-300 font-bold text-xs"
+                          >
+                            <option value="automático">automático</option>
+                            <option value="manual">manual</option>
+                          </select>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <label className="text-[10px] text-slate-400 block mb-1">Vel. Esclusa</label>
-                      <input
-                        type="number"
-                        step="1"
-                        value={quickEditData.velExclusa}
-                        onChange={(e) => setQuickEditData(prev => ({ ...prev, velExclusa: parseInt(e.target.value) || 0 }))}
-                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-amber-300 font-mono font-bold text-center"
-                      />
+
+                    {/* ETAPA DE ENFRIAMIENTO */}
+                    <div className="p-2.5 rounded-lg bg-slate-900/90 border border-cyan-500/30">
+                      <div className="text-[10px] font-black text-cyan-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <Wind className="w-3.5 h-3.5 text-cyan-400" />
+                          ETAPA DE ENFRIAMIENTO
+                        </span>
+                        <span className="text-[9px] text-cyan-500/80 font-mono">Aire caliente 75°C | SIN reposo</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div>
+                          <label className="text-[9px] text-slate-400 block mb-0.5 font-medium">Tipo de Aire</label>
+                          <input
+                            type="text"
+                            value={quickEditData.enfriamientoTipoAire || "Con aire caliente"}
+                            onChange={(e) => setQuickEditData(prev => ({ ...prev, enfriamientoTipoAire: e.target.value }))}
+                            className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-cyan-300 font-bold text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[9px] text-slate-400 block mb-0.5 font-medium">T° Aire (°C)</label>
+                          <input
+                            type="number"
+                            step="1"
+                            value={quickEditData.enfriamientoTempAireC}
+                            onChange={(e) => setQuickEditData(prev => ({ ...prev, enfriamientoTempAireC: parseFloat(e.target.value) || 0 }))}
+                            className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-cyan-300 font-mono font-bold text-center text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[9px] text-slate-400 block mb-0.5 font-medium">Condición Reposo</label>
+                          <select
+                            value={quickEditData.enfriamientoTieneReposo ? "CON_REPOSO" : "SIN_REPOSO"}
+                            onChange={(e) => setQuickEditData(prev => ({ ...prev, enfriamientoTieneReposo: e.target.value === "CON_REPOSO" }))}
+                            className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-cyan-300 font-bold text-xs"
+                          >
+                            <option value="SIN_REPOSO">SIN reposo</option>
+                            <option value="CON_REPOSO">CON reposo</option>
+                          </select>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <label className="text-[10px] text-slate-400 block mb-1">T. Reposo (min)</label>
-                      <input
-                        type="number"
-                        step="5"
-                        value={quickEditData.tiempoReposoMin}
-                        onChange={(e) => setQuickEditData(prev => ({ ...prev, tiempoReposoMin: parseInt(e.target.value) || 0 }))}
-                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-amber-300 font-mono font-bold text-center"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] text-slate-400 block mb-1">T. Secado (°C)</label>
-                      <input
-                        type="number"
-                        step="1"
-                        value={quickEditData.tempSecadoC}
-                        onChange={(e) => setQuickEditData(prev => ({ ...prev, tempSecadoC: parseInt(e.target.value) || 0 }))}
-                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-amber-300 font-mono font-bold text-center"
-                      />
+
+                    {/* ETAPA DE SECADO */}
+                    <div className="p-2.5 rounded-lg bg-slate-900/90 border border-orange-500/30">
+                      <div className="text-[10px] font-black text-orange-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <Sun className="w-3.5 h-3.5 text-orange-400" />
+                          ETAPA DE SECADO
+                        </span>
+                        <span className="text-[9px] text-orange-500/80 font-mono">T°: 75°C | Circ: 1.1/12/0.9 | Descarga: 12.5%</span>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        <div>
+                          <label className="text-[9px] text-slate-400 block mb-0.5 font-medium">T°PROG Perfil 1 (°C)</label>
+                          <input
+                            type="number"
+                            step="1"
+                            value={quickEditData.secadoTempProgPerfil1C}
+                            onChange={(e) => setQuickEditData(prev => ({ ...prev, secadoTempProgPerfil1C: parseFloat(e.target.value) || 0, tempSecadoC: parseFloat(e.target.value) || 0 }))}
+                            className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-orange-300 font-mono font-bold text-center text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[9px] text-slate-400 block mb-0.5 font-medium">Config. Circulación</label>
+                          <input
+                            type="text"
+                            value={quickEditData.secadoConfigCirculacion || "1.1/12/0.9"}
+                            onChange={(e) => setQuickEditData(prev => ({ ...prev, secadoConfigCirculacion: e.target.value }))}
+                            className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-orange-300 font-mono font-bold text-center text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[9px] text-slate-400 block mb-0.5 font-medium">T° máx Secado (°C)</label>
+                          <input
+                            type="number"
+                            step="1"
+                            value={quickEditData.secadoTempMaxC}
+                            onChange={(e) => setQuickEditData(prev => ({ ...prev, secadoTempMaxC: parseFloat(e.target.value) || 0 }))}
+                            className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-orange-300 font-mono font-bold text-center text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[9px] text-slate-400 block mb-0.5 font-medium">Enfriamiento Descarga (min)</label>
+                          <input
+                            type="number"
+                            step="5"
+                            value={quickEditData.secadoTiempoEnfriamientoDescargaMin}
+                            onChange={(e) => setQuickEditData(prev => ({ ...prev, secadoTiempoEnfriamientoDescargaMin: parseInt(e.target.value) || 0 }))}
+                            className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-orange-300 font-mono font-bold text-center text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[9px] text-slate-400 block mb-0.5 font-medium">Tipo Aire Descarga</label>
+                          <input
+                            type="text"
+                            value={quickEditData.secadoTipoAireDescarga || "con aire frío"}
+                            onChange={(e) => setQuickEditData(prev => ({ ...prev, secadoTipoAireDescarga: e.target.value }))}
+                            className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-orange-300 font-bold text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[9px] text-slate-400 block mb-0.5 font-medium">Humedad Descarga (%)</label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            value={quickEditData.secadoHumedadDescargaPct}
+                            onChange={(e) => setQuickEditData(prev => ({ ...prev, secadoHumedadDescargaPct: parseFloat(e.target.value) || 0 }))}
+                            className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-orange-300 font-mono font-bold text-center text-xs"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}

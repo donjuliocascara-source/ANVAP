@@ -10,7 +10,7 @@ import {
   Unsubscribe
 } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType, cleanFirestoreData } from "../lib/firebase";
-import { localDB, getDeletedLotesTombstones } from "../utils/localDB";
+import { localDB, getDeletedLotesTombstones, getDeletedProgramacionesTombstones, removeDeletedProgramacionTombstone } from "../utils/localDB";
 import { formatLoteCode } from "../utils/formatLoteCode";
 import { Lote, RegistroHumedad, AnalisisHumedo, AnalisisSeco, Presecado, BatchVaporizado, BatchLote, ControlVaporizado, AnalisisVaporizado, ProgramacionApit, UserProfile } from "../types";
 
@@ -79,7 +79,7 @@ class CloudSyncService {
     rejecters: Array<(e: any) => void>;
   }> = new Map();
 
-  private readonly OFFLINE_QUEUE_KEY = "apit_offline_cloud_queue_v1";
+  private readonly OFFLINE_QUEUE_KEY = "apit_offline_cloud_queue_v2_prod";
 
   public status: CloudSyncStatus = {
     isOnline: typeof navigator !== "undefined" ? navigator.onLine : true,
@@ -91,6 +91,18 @@ class CloudSyncService {
 
   constructor() {
     if (typeof window !== "undefined") {
+      try {
+        const prodResetFlag = "apit_zero_state_reset_v10_prod";
+        if (window.localStorage) {
+          window.localStorage.removeItem("apit_offline_cloud_queue_v1");
+          if (window.localStorage.getItem(prodResetFlag) !== "true") {
+            window.localStorage.removeItem(this.OFFLINE_QUEUE_KEY);
+            this.pendingDocWrites.clear();
+          }
+        }
+      } catch {
+        // ignore
+      }
       window.addEventListener("online", () => {
         this.status.isOnline = true;
         this.notifyStatus();
@@ -336,6 +348,14 @@ class CloudSyncService {
       // 0.1 Purgar de Firestore cualquier registro del batch 201 / V201
       for (const legacyBatchId of ["V201", "201", "PROG-BATCH-201", "BAT-V201", "BATCH-V201"]) {
         this.deleteBatchFromCloud(legacyBatchId).catch(() => {});
+      }
+
+      // 0.2 Purgar programaciones marcadas para eliminación (tombstones)
+      const progTombstones = getDeletedProgramacionesTombstones();
+      if (progTombstones.size > 0) {
+        await Promise.allSettled(
+          Array.from(progTombstones).map((delKey) => this.deleteProgramacionFromCloud(delKey))
+        );
       }
 
       // 1. Descarga inicial de todas las colecciones principales y combinación con local
@@ -1019,6 +1039,20 @@ class CloudSyncService {
     return this.enqueueWrite(async () => {
       try {
         const cleanId = batchId.toString().trim().replace(/[\/\s]/g, "_");
+        const normKey = batchId.toString().trim().toUpperCase().replace(/^(BATCH|BAT|B)[\s\-_:]*/i, "").replace(/[\s\-_]/g, "");
+
+        // Cancelar y remover cualquier escritura pendiente en coalescencia
+        for (const k of Array.from(this.pendingDocWrites.keys())) {
+          if (
+            (k.startsWith("batchesVaporizado/") || k.startsWith("programaciones/") || k.startsWith("batchLotes/")) &&
+            (k.includes(cleanId) || (normKey && k.includes(normKey)))
+          ) {
+            const pending = this.pendingDocWrites.get(k);
+            if (pending?.timer) clearTimeout(pending.timer);
+            this.pendingDocWrites.delete(k);
+          }
+        }
+
         const deleteOps: Promise<any>[] = [
           deleteDoc(doc(db, "batchesVaporizado", cleanId)),
           deleteDoc(doc(db, "controlesVaporizado", cleanId)),
@@ -1032,7 +1066,36 @@ class CloudSyncService {
           const blSnap = await getDocs(collection(db, "batchLotes"));
           blSnap.docs.forEach((d) => {
             const data = d.data();
-            if (data?.BATCH_ID === batchId || data?.BATCH_ID === cleanId || d.id.startsWith(cleanId)) {
+            const bIdUpper = (data?.BATCH_ID || "").toString().trim().toUpperCase();
+            if (
+              bIdUpper === batchId.toUpperCase() || 
+              bIdUpper === cleanId.toUpperCase() || 
+              d.id.startsWith(cleanId) ||
+              (normKey && bIdUpper.includes(normKey))
+            ) {
+              deleteOps.push(deleteDoc(d.ref));
+            }
+          });
+        } catch {}
+
+        try {
+          const bvSnap = await getDocs(collection(db, "batchesVaporizado"));
+          bvSnap.docs.forEach((d) => {
+            const data = d.data();
+            const bId = (data?.BATCH_ID || data?.CORRELATIVO || "").toString().trim().toUpperCase();
+            if (bId === batchId.toUpperCase() || bId === cleanId.toUpperCase() || d.id === cleanId || (normKey && bId.includes(normKey))) {
+              deleteOps.push(deleteDoc(d.ref));
+            }
+          });
+        } catch {}
+
+        try {
+          const progSnap = await getDocs(collection(db, "programaciones"));
+          progSnap.docs.forEach((d) => {
+            const data = d.data();
+            const dBatch = (data?.batch || "").toString().trim().toUpperCase();
+            const dId = (data?.id || "").toString().trim().toUpperCase();
+            if (dBatch === batchId.toUpperCase() || dId === batchId.toUpperCase() || d.id === cleanId || (normKey && dBatch.includes(normKey))) {
               deleteOps.push(deleteDoc(d.ref));
             }
           });
@@ -1079,6 +1142,8 @@ class CloudSyncService {
    */
   public async syncBatch(batch: BatchVaporizado): Promise<void> {
     if (!batch || !batch.BATCH_ID) return;
+    const lotesActuales = localDB.getLotes();
+    if (!lotesActuales || lotesActuales.length === 0) return;
     const cleanId = batch.BATCH_ID.toString().trim().replace(/[\/\s]/g, "_");
     return this.queueDocWrite("batchesVaporizado", cleanId, batch, { merge: true, debounceMs: 0 });
   }
@@ -1177,6 +1242,8 @@ class CloudSyncService {
    */
   public async syncControl(control: ControlVaporizado): Promise<void> {
     if (!control || (!control.CONTROL_VAPORIZADO_ID && !control.BATCH_ID)) return;
+    const lotesActuales = localDB.getLotes();
+    if (!lotesActuales || lotesActuales.length === 0) return;
     const cleanId = (control.CONTROL_VAPORIZADO_ID || control.BATCH_ID).toString().trim().replace(/[\/\s]/g, "_");
     return this.queueDocWrite("controlesVaporizado", cleanId, control, { merge: true, debounceMs: 0 });
   }
@@ -1186,6 +1253,8 @@ class CloudSyncService {
    */
   public async syncAnalisisVaporizado(av: AnalisisVaporizado): Promise<void> {
     if (!av || !av.ANALISIS_VAPORIZADO_ID) return;
+    const lotesActuales = localDB.getLotes();
+    if (!lotesActuales || lotesActuales.length === 0) return;
     const cleanId = av.ANALISIS_VAPORIZADO_ID.toString().trim().replace(/[\/\s]/g, "_");
     return this.queueDocWrite("analisisVaporizados", cleanId, av, { merge: true, debounceMs: 0 });
   }
@@ -1214,6 +1283,9 @@ class CloudSyncService {
   public async syncProgramacion(prog: ProgramacionApit | any): Promise<void> {
     const rawId = prog?.PROGRAMACION_ID || prog?.id || prog?.batch;
     if (!prog || !rawId) return;
+    const lotesActuales = localDB.getLotes();
+    if (!lotesActuales || lotesActuales.length === 0) return;
+    removeDeletedProgramacionTombstone([prog?.id, prog?.batch, prog?.PROGRAMACION_ID].filter(Boolean) as string[]);
     const cleanId = rawId.toString().trim().replace(/[\/\s]/g, "_");
     return this.queueDocWrite("programaciones", cleanId, {
       ...prog,
@@ -1229,10 +1301,51 @@ class CloudSyncService {
     return this.enqueueWrite(async () => {
       try {
         const cleanId = progId.toString().trim().replace(/[\/\s]/g, "_");
-        const deleteOps = [
+        const normKey = progId.toString().trim().toUpperCase().replace(/^(BATCH|BAT|B|PROG|PROG-BATCH)[\s\-_:]*/i, "").replace(/[\s\-_]/g, "");
+
+        // Cancelar y remover cualquier escritura pendiente en coalescencia para esta programación
+        for (const k of Array.from(this.pendingDocWrites.keys())) {
+          if (k.startsWith("programaciones/") && (k.includes(cleanId) || (normKey && k.includes(normKey)))) {
+            const pending = this.pendingDocWrites.get(k);
+            if (pending?.timer) clearTimeout(pending.timer);
+            this.pendingDocWrites.delete(k);
+          }
+        }
+
+        const deleteOps: Promise<any>[] = [
           deleteDoc(doc(db, "programaciones", cleanId)),
           deleteDoc(doc(db, "programaciones", `PROG-${cleanId}`))
         ];
+
+        // Buscar y eliminar en Firestore cualquier documento cuya clave o datos coincidan
+        try {
+          const progSnap = await getDocs(collection(db, "programaciones"));
+          progSnap.docs.forEach((d) => {
+            const data = d.data();
+            const dBatch = (data?.batch || "").toString().trim().toUpperCase();
+            const dId = (data?.id || "").toString().trim().toUpperCase();
+            const dProgId = (data?.PROGRAMACION_ID || "").toString().trim().toUpperCase();
+            const dCaso = (data?.caso || "").toString().trim().toUpperCase();
+            const docIdUpper = d.id.toUpperCase();
+
+            const matches = 
+              d.id === cleanId ||
+              docIdUpper === cleanId.toUpperCase() ||
+              dBatch === progId.toUpperCase() ||
+              dId === progId.toUpperCase() ||
+              dProgId === progId.toUpperCase() ||
+              dCaso === progId.toUpperCase() ||
+              (normKey && (
+                dBatch.replace(/^(BATCH|BAT|B)[\s\-_:]*/i, "").replace(/[\s\-_]/g, "") === normKey ||
+                docIdUpper.includes(normKey)
+              ));
+
+            if (matches) {
+              deleteOps.push(deleteDoc(d.ref));
+            }
+          });
+        } catch {}
+
         await Promise.allSettled(deleteOps);
         this.status.lastSyncTime = new Date();
         this.notifyStatus();

@@ -532,10 +532,41 @@ export interface ParadaFallaMecanica {
 }
 
 export interface ParametrosOperativosBatch {
+  // === 1. ETAPA DE VAPORIZADO ===
+  presionBar?: number; // P: Presión en bar (ej: 0.3)
+  velExclusa?: number; // Esc: Velocidad de esclusa en RPM (ej: 6)
+  tiempoReposoMin?: number; // Reposo en minutos (ej: 60)
+  modoVaporizado?: "automático" | "manual" | string; // Modo: automático / manual
+
+  // === 2. ETAPA DE ENFRIAMIENTO ===
+  enfriamientoTipoAire?: string; // ej: "Con aire caliente", "Con aire frío", "Ambiente"
+  enfriamientoTempAireC?: number; // ej: 75 (°C)
+  enfriamientoTieneReposo?: boolean; // false = "SIN reposo", true = "CON reposo"
+  enfriamientoTiempoReposoMin?: number; // minutos si aplica reposo
+
+  // === 3. ETAPA DE SECADO ===
+  secadoTempProgPerfil1C?: number; // T°PROG: 75°C (PERFIL 1)
+  secadoConfigCirculacion?: string; // Configuración de circulación (ej: "1.1/12/0.9")
+  secadoTempMaxC?: number; // T° máx de secado (ej: 31°C)
+  secadoTiempoEnfriamientoDescargaMin?: number; // Enfriamiento para descarga (ej: 40 min)
+  secadoTipoAireDescarga?: string; // ej: "Con aire frío"
+  secadoHumedadDescargaPct?: number; // Humedad de descarga (ej: 12.5%)
+
+  // Compatibilidad hacia atrás y modalidad 2 pases si aplica
+  tempSecadoC?: number;
+  justificacion?: string;
+  modalidadPases?: "1_PASE" | "2_PASES";
+  presionPase1?: number;
+  presionPase2?: number;
+  tiempoReposoPase1?: number;
+  tiempoReposoPase2?: number;
+  velExclusaPase1?: number;
+  velExclusaPase2?: number;
+
+  // Campos heredados
   presionVaporBar?: number;
   temperaturaVaporC?: number;
   tiempoInyeccionMin?: number;
-  tiempoReposoMin?: number;
   rpm?: number;
   temperaturaSecadoC?: number;
   tiempoSecadoMin?: number;

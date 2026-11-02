@@ -180,8 +180,8 @@ export interface LocalDatabaseSchema {
   resultadosCoccionExternos?: any[];
 }
 
-const STORAGE_KEY = "arroz_apit_local_db_v9_clean";
-const ZERO_STATE_RESET_FLAG = "apit_zero_state_reset_v9";
+const STORAGE_KEY = "arroz_apit_local_db_v10_prod";
+const ZERO_STATE_RESET_FLAG = "apit_zero_state_reset_v11_clean_prod";
 
 const INITIAL_DATA: LocalDatabaseSchema = {
   lotes: [],
@@ -395,6 +395,98 @@ export function removeDeletedLoteTombstone(loteId: string): void {
   } catch {
     // ignore
   }
+}
+
+const DELETED_PROGRAMACIONES_TOMBSTONE_KEY = "arroz_apit_deleted_programaciones_v1";
+
+export function getDeletedProgramacionesTombstones(): Set<string> {
+  const set = new Set<string>();
+  if (typeof window === "undefined" || !window.localStorage) return set;
+  try {
+    const raw = window.localStorage.getItem(DELETED_PROGRAMACIONES_TOMBSTONE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        parsed.forEach((k: string) => {
+          if (k) {
+            const clean = k.toString().trim().toUpperCase();
+            set.add(clean);
+            const norm = clean.replace(/^(BATCH|BAT|B|PROG|PROG-BATCH)[\s\-_:]*/i, "").replace(/[\s\-_]/g, "");
+            if (norm) set.add(norm);
+          }
+        });
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return set;
+}
+
+export function addDeletedProgramacionTombstone(keys: string | string[]): void {
+  if (typeof window === "undefined" || !window.localStorage) return;
+  try {
+    const set = getDeletedProgramacionesTombstones();
+    const list = Array.isArray(keys) ? keys : [keys];
+    list.forEach(k => {
+      if (!k) return;
+      const clean = k.toString().trim().toUpperCase();
+      set.add(clean);
+      const norm = clean.replace(/^(BATCH|BAT|B|PROG|PROG-BATCH)[\s\-_:]*/i, "").replace(/[\s\-_]/g, "");
+      if (norm) set.add(norm);
+      set.add(`PROG-${clean}`);
+      set.add(`BATCH-${clean}`);
+    });
+    window.localStorage.setItem(DELETED_PROGRAMACIONES_TOMBSTONE_KEY, JSON.stringify(Array.from(set)));
+  } catch {
+    // ignore
+  }
+}
+
+export function removeDeletedProgramacionTombstone(keys: string | string[]): void {
+  if (typeof window === "undefined" || !window.localStorage) return;
+  try {
+    const set = getDeletedProgramacionesTombstones();
+    const list = Array.isArray(keys) ? keys : [keys];
+    let changed = false;
+    list.forEach(k => {
+      if (!k) return;
+      const clean = k.toString().trim().toUpperCase();
+      if (set.delete(clean)) changed = true;
+      const norm = clean.replace(/^(BATCH|BAT|B|PROG|PROG-BATCH)[\s\-_:]*/i, "").replace(/[\s\-_]/g, "");
+      if (norm && set.delete(norm)) changed = true;
+      if (set.delete(`PROG-${clean}`)) changed = true;
+      if (set.delete(`BATCH-${clean}`)) changed = true;
+    });
+    if (changed) {
+      window.localStorage.setItem(DELETED_PROGRAMACIONES_TOMBSTONE_KEY, JSON.stringify(Array.from(set)));
+    }
+  } catch {
+    // ignore
+  }
+}
+
+export function isProgramacionTombstoned(p: any): boolean {
+  if (!p) return false;
+  const tombstones = getDeletedProgramacionesTombstones();
+  if (tombstones.size === 0) return false;
+  const candidates: (string | undefined)[] = [
+    p?.id,
+    p?.batch,
+    p?.caso,
+    p?.PROGRAMACION_ID,
+    p?.CORRELATIVO,
+    p?.BATCH_ID
+  ];
+
+  for (const raw of candidates) {
+    if (!raw) continue;
+    const c = raw.toString().trim().toUpperCase();
+    if (tombstones.has(c)) return true;
+    const norm = c.replace(/^(BATCH|BAT|B|PROG|PROG-BATCH)[\s\-_:]*/i, "").replace(/[\s\-_]/g, "");
+    if (norm && tombstones.has(norm)) return true;
+  }
+  return false;
 }
 
 /**
@@ -958,29 +1050,26 @@ export function deduplicateAndMigrateLotes(db: LocalDatabaseSchema): void {
         const k = normalizeBatchKey(p?.batch || p?.id);
         if (k) pMap.set(k, p);
       });
-      for (const lsKey of ["molino_programaciones_batch_oficiales_v4", "molino_programaciones_batch_oficiales_v3", "programaciones_batch_oficial_v1"]) {
-        const raw = window.localStorage.getItem(lsKey);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed)) {
-            parsed.forEach((p: any) => {
-              const k = normalizeBatchKey(p?.batch || p?.id);
-              if (!k) return;
-              const existing = pMap.get(k);
-              if (!existing) {
-                pMap.set(k, p);
+      const rawProd = window.localStorage.getItem("molino_programaciones_batch_oficiales_v5_prod");
+      if (rawProd) {
+        const parsed = JSON.parse(rawProd);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((p: any) => {
+            const k = normalizeBatchKey(p?.batch || p?.id);
+            if (!k) return;
+            const existing = pMap.get(k);
+            if (!existing) {
+              pMap.set(k, p);
+            } else {
+              const existingTime = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+              const pTime = p.updatedAt ? new Date(p.updatedAt).getTime() : 0;
+              if (existingTime >= pTime) {
+                pMap.set(k, { ...p, ...existing });
               } else {
-                const existingTime = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
-                const pTime = p.updatedAt ? new Date(p.updatedAt).getTime() : 0;
-                if (existingTime >= pTime) {
-                  // In-memory or existing batch was updated more recently; keep existing edits
-                  pMap.set(k, { ...p, ...existing });
-                } else {
-                  pMap.set(k, { ...existing, ...p });
-                }
+                pMap.set(k, { ...existing, ...p });
               }
-            });
-          }
+            }
+          });
         }
       }
       db.programacionesOficiales = Array.from(pMap.values());
@@ -1089,299 +1178,7 @@ export function deduplicateAndMigrateLotes(db: LocalDatabaseSchema): void {
     }
   });
 
-  // 6.0e RECONCILIACIÓN Y AUTOCURACIÓN DE UNIÓN DE LOTES EN V374:
-  // En V374 se junta un saldo de la 8477 de 145 sacos (que se hizo en otra V pero solo se secó en APIT, fue 320 de 465 y quedan 145)
-  // con un lote 8481 del mismo cliente (170 de 450 sacos). La unión suma 315 sacos.
-  // El cálculo del peso se determina hallando el peso unitario (peso total del lote / total sacos):
-  // Lote 8477: 47,290 kg / 465 sacos = 101.6989 kg/saco -> 145 sacos = 14,746 kg
-  // Lote 8481: 46,300 kg / 450 sacos = 102.8889 kg/saco -> 170 sacos = 17,491 kg
-  // Total peso unión V374 = 14,746 + 17,491 = 32,237 kg (32.24 TN)
-  if (!Array.isArray(db.lotes)) db.lotes = [];
-  let l8477 = db.lotes.find((l: any) => compareLoteCodes(l?.LOTE_ID, "8477") || compareLoteCodes(l?.CODIGO_LOTE, "8477"));
-  let l8481 = db.lotes.find((l: any) => compareLoteCodes(l?.LOTE_ID, "8481") || compareLoteCodes(l?.CODIGO_LOTE, "8481"));
 
-  const clienteUnion = l8481?.CLIENTE || l8477?.CLIENTE || "URBINA SAAVEDRA CLAUDIO MARTIN";
-  const variedadUnion = l8481?.VARIEDAD || l8477?.VARIEDAD || "VALOR";
-
-  if (!l8477) {
-    l8477 = {
-      LOTE_ID: "C08477",
-      CODIGO_LOTE: "8477",
-      CLIENTE: clienteUnion,
-      VARIEDAD: variedadUnion,
-      SACOS: 465,
-      PESO_KG: 47290,
-      HUMEDAD: 27.28,
-      DESV: 0.64,
-      BL_INT: 22.0,
-      BL_BLANCO: 39.0,
-      QI: 3.3,
-      QB: 9.0,
-      TT: 3.0,
-      TP: 8.1,
-      TPUN: 0,
-      M: 1.5,
-      TZ: 1.0,
-      FECHA_INGRESO: new Date().toISOString().split("T")[0],
-      ESTADO_LOTE: "PROGRAMADO"
-    } as any;
-    db.lotes.push(l8477);
-  } else {
-    l8477.SACOS = Number(l8477.SACOS) > 0 ? Number(l8477.SACOS) : 465;
-    if (!l8477.PESO_KG || l8477.PESO_KG === 23250 || l8477.PESO_KG === 7250) {
-      l8477.PESO_KG = 47290;
-    }
-    if (!l8477.CLIENTE || l8477.CLIENTE === "Sin Cliente" || l8477.CLIENTE === "MOLINO DON JULIO S.A.C.") {
-      l8477.CLIENTE = clienteUnion;
-    }
-    if (!l8477.VARIEDAD || isGenericFallbackVar(l8477.VARIEDAD)) {
-      l8477.VARIEDAD = variedadUnion;
-    }
-  }
-
-  if (!l8481) {
-    l8481 = {
-      LOTE_ID: "C08481",
-      CODIGO_LOTE: "8481",
-      CLIENTE: clienteUnion,
-      VARIEDAD: variedadUnion,
-      SACOS: 450,
-      PESO_KG: 46300,
-      HUMEDAD: 26.49,
-      DESV: 1.16,
-      BL_INT: 22.1,
-      BL_BLANCO: 38.2,
-      QI: 5.0,
-      QB: 12.8,
-      TT: 2.6,
-      TP: 5.8,
-      TPUN: 0,
-      M: 2.3,
-      TZ: 1.6,
-      FECHA_INGRESO: new Date().toISOString().split("T")[0],
-      ESTADO_LOTE: "PROGRAMADO"
-    } as any;
-    db.lotes.push(l8481);
-  } else {
-    l8481.SACOS = Number(l8481.SACOS) > 0 ? Number(l8481.SACOS) : 450;
-    if (!l8481.PESO_KG || l8481.PESO_KG === 22500 || l8481.PESO_KG === 8500) {
-      l8481.PESO_KG = 46300;
-    }
-    if (!l8481.CLIENTE || l8481.CLIENTE === "Sin Cliente" || l8481.CLIENTE === "MOLINO DON JULIO S.A.C.") {
-      l8481.CLIENTE = clienteUnion;
-    }
-    if (!l8481.VARIEDAD || isGenericFallbackVar(l8481.VARIEDAD)) {
-      l8481.VARIEDAD = variedadUnion;
-    }
-  }
-
-  // Hallar peso unitario real (PESO_KG / SACOS)
-  const pesoUnit77 = (Number(l8477.PESO_KG) > 0 && Number(l8477.SACOS) > 0)
-    ? (Number(l8477.PESO_KG) / Number(l8477.SACOS))
-    : (47290 / 465);
-  const pesoProg77 = Math.round(145 * pesoUnit77); // 14,746 kg
-
-  const pesoUnit81 = (Number(l8481.PESO_KG) > 0 && Number(l8481.SACOS) > 0)
-    ? (Number(l8481.PESO_KG) / Number(l8481.SACOS))
-    : (46300 / 450);
-  const pesoProg81 = Math.round(170 * pesoUnit81); // 17,491 kg
-
-  const totalPesoV374 = pesoProg77 + pesoProg81; // 32,237 kg
-
-  const row8477 = {
-    loteId: "C08477",
-    cliente: l8477.CLIENTE || clienteUnion,
-    variedad: l8477.VARIEDAD || variedadUnion,
-    sacos: 465,
-    sacProg: 145,
-    peso: Number(l8477.PESO_KG) || 47290,
-    pesoProg: pesoProg77,
-    ph: Number((l8477 as any).HUMEDAD || (l8477 as any).HUM) || 13.8,
-    desv: Number((l8477 as any).DESV) || 0.64,
-    blInt: Number((l8477 as any).BL_INT) || 22.0,
-    blBlanco: Number((l8477 as any).BL_BLANCO) || 39.0,
-    qi: Number((l8477 as any).QI) || 3.3,
-    qb: Number((l8477 as any).QB) || 9.0,
-    tt: Number((l8477 as any).TT) || 3.0,
-    tp: Number((l8477 as any).TP) || 8.1,
-    tpun: Number((l8477 as any).TPUN) || 0,
-    m: Number((l8477 as any).M) || 1.5,
-    triz: Number((l8477 as any).TZ) || 1.0,
-    condicion: "APTO" as const,
-    tipoServicio: "VAPORIZADO Y SECADO EN APIT"
-  };
-
-  const row8481 = {
-    loteId: "C08481",
-    cliente: l8481.CLIENTE || clienteUnion,
-    variedad: l8481.VARIEDAD || variedadUnion,
-    sacos: 450,
-    sacProg: 170,
-    peso: Number(l8481.PESO_KG) || 46300,
-    pesoProg: pesoProg81,
-    ph: Number((l8481 as any).HUMEDAD || (l8481 as any).HUM) || 13.6,
-    desv: Number((l8481 as any).DESV) || 1.16,
-    blInt: Number((l8481 as any).BL_INT) || 22.1,
-    blBlanco: Number((l8481 as any).BL_BLANCO) || 38.2,
-    qi: Number((l8481 as any).QI) || 5.0,
-    qb: Number((l8481 as any).QB) || 12.8,
-    tt: Number((l8481 as any).TT) || 2.6,
-    tp: Number((l8481 as any).TP) || 5.8,
-    tpun: Number((l8481 as any).TPUN) || 0,
-    m: Number((l8481 as any).M) || 2.3,
-    triz: Number((l8481 as any).TZ) || 1.6,
-    condicion: "APTO" as const,
-    tipoServicio: "VAPORIZADO Y SECADO EN APIT"
-  };
-
-  const defaultPromedios = {
-    ph: 13.7,
-    desv: 0.9,
-    blInt: 22.05,
-    blBlanco: 38.6,
-    qi: 4.15,
-    qb: 10.9,
-    tt: 2.8,
-    tp: 6.95,
-    tpun: 0,
-    m: 1.9,
-    triz: 1.3,
-    condicion: "APTO" as const
-  };
-
-  const defaultParams = {
-    presionBar: 0.35,
-    velExclusa: 6,
-    tiempoReposoMin: 40,
-    tempSecadoC: 80,
-    modalidadPases: "1_PASE" as const,
-    presionPase1: 0.35,
-    presionPase2: 0.35
-  };
-
-  if (!Array.isArray(db.programacionesOficiales)) db.programacionesOficiales = [];
-  let p374 = db.programacionesOficiales.find((p: any) =>
-    sameBatchKey(p?.batch, "V374") || sameBatchKey(p?.id, "V374") || sameBatchKey(p?.caso, "V374")
-  );
-
-  if (p374) {
-    p374.filasLote = [
-      {
-        ...row8477,
-        sacos: 465,
-        sacProg: 145,
-        peso: Number(l8477.PESO_KG) || 47290,
-        pesoProg: pesoProg77,
-        loteId: "C08477",
-        cliente: l8477.CLIENTE || clienteUnion,
-        variedad: l8477.VARIEDAD || variedadUnion
-      },
-      {
-        ...row8481,
-        sacos: 450,
-        sacProg: 170,
-        peso: Number(l8481.PESO_KG) || 46300,
-        pesoProg: pesoProg81,
-        loteId: "C08481",
-        cliente: l8481.CLIENTE || clienteUnion,
-        variedad: l8481.VARIEDAD || variedadUnion
-      }
-    ];
-    p374.totalSacosProg = 315;
-    p374.pesoTotalKg = totalPesoV374;
-    p374.clientePrincipal = clienteUnion;
-    p374.variedadPrincipal = variedadUnion;
-    p374.lotes = ["C08477", "C08481"];
-    if (!p374.promedios) p374.promedios = { ...defaultPromedios };
-    if (!p374.parametrosDeterminados) p374.parametrosDeterminados = { ...defaultParams };
-    if (!p374.parametrosRecomendadosIA) p374.parametrosRecomendadosIA = { ...defaultParams };
-    if (!p374.estado || p374.estado === "CERRADO") {
-      p374.estado = "PROGRAMADO";
-    }
-  } else {
-    p374 = {
-      id: "V374",
-      batch: "V374",
-      caso: "V374",
-      fecha: new Date().toISOString().split("T")[0],
-      turno: "DIA",
-      clientePrincipal: clienteUnion,
-      variedadPrincipal: variedadUnion,
-      totalSacosProg: 315,
-      pesoTotalKg: totalPesoV374,
-      tipoServicio: "VAPORIZADO Y SECADO EN APIT",
-      estado: "PROGRAMADO",
-      observacion: "Unión de saldo C08477 (145 sacos / 14,746 kg) con C08481 (170 sacos / 17,491 kg) de URBINA SAAVEDRA CLAUDIO MARTIN. Total: 315 sacos / 32,237 kg.",
-      filasLote: [row8477, row8481],
-      lotes: ["C08477", "C08481"],
-      promedios: { ...defaultPromedios },
-      parametrosDeterminados: { ...defaultParams },
-      parametrosRecomendadosIA: { ...defaultParams }
-    };
-    db.programacionesOficiales.push(p374);
-  }
-
-  (db.programacionesOficiales || []).forEach((prog: any) => {
-    if (!prog) return;
-    if (!prog.promedios) prog.promedios = { ...defaultPromedios };
-    if (!prog.parametrosDeterminados) prog.parametrosDeterminados = { ...defaultParams };
-    if (!prog.parametrosRecomendadosIA) prog.parametrosRecomendadosIA = { ...defaultParams };
-  });
-
-  // Asegurar db.batchLotes para V374 con los pesos unitarios reales
-  if (!Array.isArray(db.batchLotes)) db.batchLotes = [];
-  const bl8477 = db.batchLotes.find((bl: any) => sameBatchKey(bl?.BATCH_ID, "V374") && compareLoteCodes(bl?.LOTE_ID, "8477"));
-  if (bl8477) {
-    bl8477.SACOS = 145;
-    bl8477.PESO_KG = pesoProg77;
-    bl8477.CLIENTE = clienteUnion;
-    bl8477.VARIEDAD = variedadUnion;
-  } else {
-    db.batchLotes.push({
-      BATCH_LOTE_ID: "BL-V374-C08477",
-      BATCH_ID: "V374",
-      LOTE_ID: "C08477",
-      SACOS: 145,
-      PESO_KG: pesoProg77,
-      CLIENTE: clienteUnion,
-      VARIEDAD: variedadUnion,
-      ORDEN: 1,
-      ESTADO: "PROGRAMADO"
-    });
-  }
-
-  const bl8481 = db.batchLotes.find((bl: any) => sameBatchKey(bl?.BATCH_ID, "V374") && compareLoteCodes(bl?.LOTE_ID, "8481"));
-  if (bl8481) {
-    bl8481.SACOS = 170;
-    bl8481.PESO_KG = pesoProg81;
-    bl8481.CLIENTE = clienteUnion;
-    bl8481.VARIEDAD = variedadUnion;
-  } else {
-    db.batchLotes.push({
-      BATCH_LOTE_ID: "BL-V374-C08481",
-      BATCH_ID: "V374",
-      LOTE_ID: "C08481",
-      SACOS: 170,
-      PESO_KG: pesoProg81,
-      CLIENTE: clienteUnion,
-      VARIEDAD: variedadUnion,
-      ORDEN: 2,
-      ESTADO: "PROGRAMADO"
-    });
-  }
-
-  // Asegurar en db.batchesVaporizado
-  if (!Array.isArray(db.batchesVaporizado)) db.batchesVaporizado = [];
-  let b374 = db.batchesVaporizado.find((b: any) => sameBatchKey(b?.BATCH_ID, "V374") || sameBatchKey(b?.CORRELATIVO, "V374"));
-  if (b374) {
-    b374.LOTES_UNION = ["C08477", "C08481"];
-    b374.TOTAL_SACOS = 315;
-    b374.TOTAL_PESO_KG = totalPesoV374;
-    b374.PESO_TOTAL_KG = totalPesoV374;
-    b374.CLIENTE = clienteUnion;
-    b374.VARIEDAD = variedadUnion;
-    b374.filasLote = p374.filasLote;
-  }
 
   // Reconciliación general para evitar pérdida de códigos en cualquier unión o saldo:
   // Si db.batchLotes tiene lotes asignados para un batch pero filasLote perdió alguno de ellos, restaurarlo
@@ -2302,8 +2099,7 @@ export function deduplicateAndMigrateLotes(db: LocalDatabaseSchema): void {
     const afterLen = JSON.stringify(db.programacionesOficiales);
     if (beforeLen !== afterLen && typeof window !== "undefined" && window.localStorage) {
       try {
-        window.localStorage.setItem("programaciones_batch_oficial_v1", afterLen);
-        window.localStorage.setItem("molino_programaciones_batch_oficiales_v3", afterLen);
+        window.localStorage.setItem("molino_programaciones_batch_oficiales_v5_prod", afterLen);
       } catch {
         // ignore
       }
@@ -2561,9 +2357,9 @@ class LocalDBService {
       return this.cache!;
     }
 
-    // Reinicio total en cero por única vez (v9_clean) para subir la aplicación limpia
+    // Reinicio total en cero por única vez (v10_prod) para publicar la aplicación 100% limpia sin datos subidos
     try {
-      const hasZeroResetV9 = window.localStorage.getItem(ZERO_STATE_RESET_FLAG) === "true";
+      const hasZeroResetV10 = window.localStorage.getItem(ZERO_STATE_RESET_FLAG) === "true";
       const staleKeys = [
         "arroz_apit_local_db_v1",
         "arroz_apit_local_db_v2",
@@ -2574,12 +2370,13 @@ class LocalDBService {
         "arroz_apit_local_db_v7",
         "arroz_apit_local_db_v8",
         "arroz_apit_local_db_v8_clean",
+        "arroz_apit_local_db_v9_clean",
         "molino_programaciones_batch_oficiales_v1",
         "molino_programaciones_batch_oficiales_v2",
         "molino_programaciones_batch_oficiales_v3"
       ];
 
-      if (!hasZeroResetV9) {
+      if (!hasZeroResetV10) {
         window.localStorage.setItem(ZERO_STATE_RESET_FLAG, "true");
         const keysToPurgeOnReset = [
           ...staleKeys,
@@ -2598,7 +2395,9 @@ class LocalDBService {
           "APIT_HISTORICO_RECETAS_SECADO_V1",
           "arroz_apit_deleted_lotes_v2",
           "arroz_apit_unlinked_new_lotes_v5",
-          "anvap_deleted_batches_v1"
+          "arroz_apit_deleted_programaciones_v1",
+          "anvap_deleted_batches_v1",
+          "apit_offline_cloud_queue_v1"
         ];
         keysToPurgeOnReset.forEach((k) => window.localStorage.removeItem(k));
         this.cleanupStaleLocalStorage();
@@ -2612,6 +2411,7 @@ class LocalDBService {
           window.indexedDB.deleteDatabase("ArrozApitStorage_v7");
           window.indexedDB.deleteDatabase("ArrozApitStorage_v8");
           window.indexedDB.deleteDatabase("ArrozApitStorage_v8_clean");
+          window.indexedDB.deleteDatabase("ArrozApitStorage_v9_clean");
         }
       } else {
         for (const k of staleKeys) {
@@ -4132,22 +3932,23 @@ class LocalDBService {
       db.programacionesOficiales = db.programacionesOficiales.filter(p => !matchesBatch(p.id) && !matchesBatch(p.batch) && !matchesBatch(p.caso));
     }
 
-    // Clean from localStorage "programaciones_batch_oficial_v1"
+    // Clean from all localStorage versions of programaciones
     if (typeof window !== "undefined" && window.localStorage) {
       try {
-        const saved = window.localStorage.getItem("programaciones_batch_oficial_v1");
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed)) {
-            const filtered = parsed.filter((p: any) => !matchesBatch(p.id) && !matchesBatch(p.batch) && !matchesBatch(p.caso));
-            window.localStorage.setItem("programaciones_batch_oficial_v1", JSON.stringify(filtered));
-            window.dispatchEvent(new CustomEvent("programaciones-oficiales-updated", { detail: filtered }));
-          }
-        }
+        const serialized = JSON.stringify(db.programacionesOficiales);
+        window.localStorage.setItem("programaciones_batch_oficial_v1", serialized);
+        window.localStorage.setItem("molino_programaciones_batch_oficiales_v3", serialized);
+        window.localStorage.setItem("molino_programaciones_batch_oficiales_v4", serialized);
+        window.localStorage.setItem("molino_programaciones_batch_oficiales_v2", serialized);
+        window.localStorage.setItem("molino_programaciones_batch_oficiales_v1", serialized);
+        window.dispatchEvent(new CustomEvent("programaciones-oficiales-updated", { detail: db.programacionesOficiales }));
       } catch {
         // ignore
       }
     }
+
+    // Registrar tombstones para todos los identificadores del batch para que nunca resucite en nube o local
+    addDeletedProgramacionTombstone(Array.from(matchedKeys));
 
     // Revert lotes back to ANALIZADO and clear any batch references
     lotesInBatch.forEach(normLoteId => {
@@ -4164,7 +3965,10 @@ class LocalDBService {
 
     this.addAuditLog(`Eliminación del Batch ${rawId}`, user);
     this.persist();
-    this.cloudBridge?.deleteBatchFromCloud(rawId).catch(() => {});
+    matchedKeys.forEach(k => {
+      this.cloudBridge?.deleteBatchFromCloud(k).catch(() => {});
+      this.cloudBridge?.deleteProgramacionFromCloud(k).catch(() => {});
+    });
     return true;
   }
 
@@ -5102,7 +4906,8 @@ class LocalDBService {
 
   // --- PROGRAMACIONES OFICIALES ---
   public getProgramacionesOficiales(): any[] {
-    return this.load().programacionesOficiales || [];
+    const list = this.load().programacionesOficiales || [];
+    return list.filter(p => !isProgramacionTombstoned(p));
   }
 
   public saveProgramacionOficial(prog: any, user: string = "Operador"): any {
@@ -5120,6 +4925,31 @@ class LocalDBService {
     const targetOriginalBatch = (prog.originalBatch || prog.originalBatchCode || "").toString().trim().toUpperCase();
     const targetId = id.toString().trim().toUpperCase();
     const targetOriginalId = (prog.originalId || "").toString().trim().toUpperCase();
+
+    // Si el batch o el ID cambiaron durante la edición, purgar el registro anterior de nube y memoria
+    if (targetOriginalBatch && targetOriginalBatch !== targetBatch) {
+      addDeletedProgramacionTombstone(targetOriginalBatch);
+      this.cloudBridge?.deleteBatchFromCloud(targetOriginalBatch).catch(() => {});
+      this.cloudBridge?.deleteProgramacionFromCloud(targetOriginalBatch).catch(() => {});
+      db.batchesVaporizado = (db.batchesVaporizado || []).filter(b => 
+        (b.BATCH_ID || "").toUpperCase() !== targetOriginalBatch &&
+        (b.CORRELATIVO || "").toUpperCase() !== targetOriginalBatch
+      );
+      db.programacionesOficiales = (db.programacionesOficiales || []).filter((p: any) =>
+        (p.batch || "").toUpperCase() !== targetOriginalBatch &&
+        (p.id || "").toUpperCase() !== targetOriginalBatch
+      );
+    }
+    if (targetOriginalId && targetOriginalId !== targetId) {
+      addDeletedProgramacionTombstone(targetOriginalId);
+      this.cloudBridge?.deleteProgramacionFromCloud(targetOriginalId).catch(() => {});
+      db.programacionesOficiales = (db.programacionesOficiales || []).filter((p: any) =>
+        (p.id || "").toUpperCase() !== targetOriginalId
+      );
+    }
+
+    // Asegurar que la nueva versión activa no quede bloqueada por ningún tombstone
+    removeDeletedProgramacionTombstone([progObj.id, progObj.batch, progObj.PROGRAMACION_ID].filter(Boolean) as string[]);
 
     const idx = db.programacionesOficiales.findIndex((p: any) => {
       const pId = (p?.id || "").toString().trim().toUpperCase();
@@ -5171,15 +5001,40 @@ class LocalDBService {
         db.batchesVaporizado[bIdx] = { ...db.batchesVaporizado[bIdx], ...batchPayload };
       }
 
+      // Sincronizar batchLotes con exactitud removiendo los lotes que se hayan quitado de la mezcla
+      if (!Array.isArray(db.batchLotes)) db.batchLotes = [];
+      const currentAssignedLoteIds = new Set<string>();
+      if (Array.isArray(progObj.filasLote)) {
+        progObj.filasLote.forEach((f: any) => {
+          const lid = sanitizeLoteCode(f?.loteId || f?.LOTE_ID);
+          if (lid) currentAssignedLoteIds.add(lid);
+        });
+      }
+
+      // Revertir a ANALIZADO lotes retirados del batch
+      db.batchLotes
+        .filter(bl => (bl.BATCH_ID === progObj.batch || (targetOriginalBatch && bl.BATCH_ID === targetOriginalBatch)))
+        .forEach(bl => {
+          const lCode = sanitizeLoteCode(bl.LOTE_ID);
+          if (lCode && !currentAssignedLoteIds.has(lCode)) {
+            const lIdx = db.lotes.findIndex(l => sanitizeLoteCode(l.LOTE_ID) === lCode);
+            if (lIdx !== -1 && db.lotes[lIdx].ESTADO_LOTE === "PROGRAMADO") {
+              db.lotes[lIdx].ESTADO_LOTE = "ANALIZADO";
+              unfreezeLoteWaitingDays(db.lotes[lIdx]);
+              delete (db.lotes[lIdx] as any).BATCH_ID;
+            }
+          }
+        });
+
+      // Limpiar antiguos batchLotes para este batch antes de registrar la mezcla actualizada
+      db.batchLotes = db.batchLotes.filter(bl => 
+        bl.BATCH_ID !== progObj.batch && (!targetOriginalBatch || bl.BATCH_ID !== targetOriginalBatch)
+      );
+
       if (Array.isArray(progObj.filasLote) && progObj.filasLote.length > 0) {
-        if (!Array.isArray(db.batchLotes)) db.batchLotes = [];
         progObj.filasLote.forEach((f: any, fIdx: number) => {
           const lId = f.loteId || f.LOTE_ID;
           if (!lId) return;
-          const blIdx = db.batchLotes.findIndex(bl => 
-            (bl.BATCH_ID === progObj.batch || (targetOriginalBatch && bl.BATCH_ID === targetOriginalBatch)) &&
-            bl.LOTE_ID === lId
-          );
           const blItem = {
             BATCH_LOTE_ID: `BL-${progObj.batch}-${lId}-${fIdx + 1}`,
             BATCH_ID: progObj.batch,
@@ -5193,22 +5048,16 @@ class LocalDBService {
             TIPO_SERVICIO: f.tipoServicio || progObj.tipoServicio,
             updatedAt: nowIso
           };
-          if (blIdx !== -1) {
-            db.batchLotes[blIdx] = { ...db.batchLotes[blIdx], ...blItem };
-          } else {
-            db.batchLotes.push(blItem);
-          }
+          db.batchLotes.push(blItem);
         });
       }
     }
 
-    // Guardar en localStorage ANTES de deduplicateAndMigrateLotes para que la versión recién editada prevalezca
+    // Guardar en todas las versiones de localStorage ANTES de deduplicateAndMigrateLotes
     if (typeof window !== "undefined" && window.localStorage) {
       try {
         const serialized = JSON.stringify(db.programacionesOficiales);
-        window.localStorage.setItem("programaciones_batch_oficial_v1", serialized);
-        window.localStorage.setItem("molino_programaciones_batch_oficiales_v3", serialized);
-        window.localStorage.setItem("molino_programaciones_batch_oficiales_v4", serialized);
+        window.localStorage.setItem("molino_programaciones_batch_oficiales_v5_prod", serialized);
         window.dispatchEvent(new CustomEvent("programaciones-oficiales-updated", { detail: db.programacionesOficiales }));
       } catch {
         // ignore
@@ -5222,8 +5071,11 @@ class LocalDBService {
   }
 
   public deleteProgramacionOficial(id: string, user: string = "Operador"): boolean {
-    const res = this.deleteBatch(id, user);
-    this.cloudBridge?.deleteProgramacionFromCloud(id).catch(() => {});
+    const rawId = (id || "").toString().trim();
+    if (!rawId) return false;
+    addDeletedProgramacionTombstone(rawId);
+    const res = this.deleteBatch(rawId, user, true);
+    this.cloudBridge?.deleteProgramacionFromCloud(rawId).catch(() => {});
     return res;
   }
 
@@ -5989,12 +5841,22 @@ class LocalDBService {
         break;
       }
       case "batchesVaporizado": {
-        db.batchesVaporizado = items || [];
+        const bTombstones = getDeletedProgramacionesTombstones();
+        db.batchesVaporizado = (items || []).filter((b: any) => {
+          const bId = (b?.BATCH_ID || b?.CORRELATIVO || b?.id || "").toString().trim().toUpperCase();
+          const bNorm = bId.replace(/^(BATCH|BAT|B)[\s\-_:]*/i, "").replace(/[\s\-_]/g, "");
+          return !bTombstones.has(bId) && (!bNorm || !bTombstones.has(bNorm));
+        });
         deduplicateAndMigrateLotes(db);
         break;
       }
       case "batchLotes": {
-        db.batchLotes = items || [];
+        const bTombstones = getDeletedProgramacionesTombstones();
+        db.batchLotes = (items || []).filter((bl: any) => {
+          const bId = (bl?.BATCH_ID || bl?.correlativo || "").toString().trim().toUpperCase();
+          const bNorm = bId.replace(/^(BATCH|BAT|B)[\s\-_:]*/i, "").replace(/[\s\-_]/g, "");
+          return !bTombstones.has(bId) && (!bNorm || !bTombstones.has(bNorm));
+        });
         deduplicateAndMigrateLotes(db);
         break;
       }
@@ -6051,10 +5913,18 @@ class LocalDBService {
         const cloudProgs = items || [];
         const progMap = new Map<string, any>();
         (db.programacionesOficiales || []).forEach((p: any) => {
-          const k = normalizeBatchKey(p?.batch || p?.id || p?.PROGRAMACION_ID);
-          if (k) progMap.set(k, p);
+          if (!isProgramacionTombstoned(p)) {
+            const k = normalizeBatchKey(p?.batch || p?.id || p?.PROGRAMACION_ID);
+            if (k) progMap.set(k, p);
+          }
         });
         cloudProgs.forEach((cp: any) => {
+          if (isProgramacionTombstoned(cp)) {
+            // Si Firestore nos envía un registro que fue eliminado por el usuario, purgarlo
+            const purgeId = cp?.id || cp?.batch || cp?.PROGRAMACION_ID;
+            if (purgeId) this.cloudBridge?.deleteProgramacionFromCloud(purgeId).catch(() => {});
+            return;
+          }
           const k = normalizeBatchKey(cp?.batch || cp?.id || cp?.PROGRAMACION_ID);
           if (!k) return;
           const localItem = progMap.get(k);
@@ -6070,7 +5940,7 @@ class LocalDBService {
             }
           }
         });
-        const mergedProgs = Array.from(progMap.values());
+        const mergedProgs = Array.from(progMap.values()).filter(p => !isProgramacionTombstoned(p));
         db.programacionesOficiales = mergedProgs;
         db.programacionApit = mergedProgs;
         if (typeof window !== "undefined" && window.localStorage) {
@@ -6079,6 +5949,8 @@ class LocalDBService {
             window.localStorage.setItem("programaciones_batch_oficial_v1", serialized);
             window.localStorage.setItem("molino_programaciones_batch_oficiales_v3", serialized);
             window.localStorage.setItem("molino_programaciones_batch_oficiales_v4", serialized);
+            window.localStorage.setItem("molino_programaciones_batch_oficiales_v2", serialized);
+            window.localStorage.setItem("molino_programaciones_batch_oficiales_v1", serialized);
             window.dispatchEvent(new CustomEvent("programaciones-oficiales-updated", { detail: mergedProgs }));
           } catch {
             // ignore
@@ -6205,28 +6077,42 @@ class LocalDBService {
     }
 
     if (Array.isArray(cloudData.batchesVaporizado) && cloudData.batchesVaporizado.length > 0) {
+      const bTombstones = getDeletedProgramacionesTombstones();
       const map = new Map<string, any>();
       (db.batchesVaporizado || []).forEach((item: any) => {
         const k = (item?.BATCH_ID || item?.CORRELATIVO || "").toString().trim().toUpperCase();
-        if (k) map.set(k, item);
+        const kNorm = k.replace(/^(BATCH|BAT|B)[\s\-_:]*/i, "").replace(/[\s\-_]/g, "");
+        if (k && !bTombstones.has(k) && (!kNorm || !bTombstones.has(kNorm))) map.set(k, item);
       });
       cloudData.batchesVaporizado.forEach((item: any) => {
         const k = (item?.BATCH_ID || item?.CORRELATIVO || "").toString().trim().toUpperCase();
-        if (k) map.set(k, { ...map.get(k), ...item });
+        const kNorm = k.replace(/^(BATCH|BAT|B)[\s\-_:]*/i, "").replace(/[\s\-_]/g, "");
+        if (k && !bTombstones.has(k) && (!kNorm || !bTombstones.has(kNorm))) {
+          map.set(k, { ...map.get(k), ...item });
+        }
       });
       db.batchesVaporizado = Array.from(map.values());
       changed = true;
     }
 
     if (Array.isArray(cloudData.batchLotes) && cloudData.batchLotes.length > 0) {
+      const bTombstones = getDeletedProgramacionesTombstones();
       const map = new Map<string, any>();
       (db.batchLotes || []).forEach((item: any) => {
-        const k = `${item?.BATCH_ID || ""}_${formatLoteCode(item?.LOTE_ID) || item?.LOTE_ID || ""}`;
-        if (k !== "_") map.set(k, item);
+        const bId = (item?.BATCH_ID || item?.correlativo || "").toString().trim().toUpperCase();
+        const bNorm = bId.replace(/^(BATCH|BAT|B)[\s\-_:]*/i, "").replace(/[\s\-_]/g, "");
+        if (bId && !bTombstones.has(bId) && (!bNorm || !bTombstones.has(bNorm))) {
+          const k = `${item?.BATCH_ID || ""}_${formatLoteCode(item?.LOTE_ID) || item?.LOTE_ID || ""}`;
+          if (k !== "_") map.set(k, item);
+        }
       });
       cloudData.batchLotes.forEach((item: any) => {
-        const k = `${item?.BATCH_ID || ""}_${formatLoteCode(item?.LOTE_ID) || item?.LOTE_ID || ""}`;
-        if (k !== "_") map.set(k, { ...map.get(k), ...item });
+        const bId = (item?.BATCH_ID || item?.correlativo || "").toString().trim().toUpperCase();
+        const bNorm = bId.replace(/^(BATCH|BAT|B)[\s\-_:]*/i, "").replace(/[\s\-_]/g, "");
+        if (bId && !bTombstones.has(bId) && (!bNorm || !bTombstones.has(bNorm))) {
+          const k = `${item?.BATCH_ID || ""}_${formatLoteCode(item?.LOTE_ID) || item?.LOTE_ID || ""}`;
+          if (k !== "_") map.set(k, { ...map.get(k), ...item });
+        }
       });
       db.batchLotes = Array.from(map.values());
       changed = true;
@@ -6263,10 +6149,13 @@ class LocalDBService {
     if (Array.isArray(cloudData.programacionesOficiales) && cloudData.programacionesOficiales.length > 0) {
       const progMap = new Map<string, any>();
       (db.programacionesOficiales || []).forEach((p: any) => {
-        const key = p?.PROGRAMACION_ID || p?.id || p?.fecha || p?.FECHA || p?.batch || p?.CORRELATIVO;
-        if (key) progMap.set(String(key).trim().toUpperCase(), p);
+        if (!isProgramacionTombstoned(p)) {
+          const key = p?.PROGRAMACION_ID || p?.id || p?.fecha || p?.FECHA || p?.batch || p?.CORRELATIVO;
+          if (key) progMap.set(String(key).trim().toUpperCase(), p);
+        }
       });
       cloudData.programacionesOficiales.forEach((cp: any) => {
+        if (isProgramacionTombstoned(cp)) return;
         const key = cp?.PROGRAMACION_ID || cp?.id || cp?.fecha || cp?.FECHA || cp?.batch || cp?.CORRELATIVO;
         if (key) {
           const kUpper = String(key).trim().toUpperCase();
@@ -6284,15 +6173,18 @@ class LocalDBService {
           }
         }
       });
-      db.programacionesOficiales = Array.from(progMap.values());
-      db.programacionApit = db.programacionesOficiales;
+      const finalProgs = Array.from(progMap.values()).filter(p => !isProgramacionTombstoned(p));
+      db.programacionesOficiales = finalProgs;
+      db.programacionApit = finalProgs;
       if (typeof window !== "undefined" && window.localStorage) {
         try {
-          const serialized = JSON.stringify(db.programacionesOficiales);
+          const serialized = JSON.stringify(finalProgs);
           window.localStorage.setItem("programaciones_batch_oficial_v1", serialized);
           window.localStorage.setItem("molino_programaciones_batch_oficiales_v3", serialized);
           window.localStorage.setItem("molino_programaciones_batch_oficiales_v4", serialized);
-          window.dispatchEvent(new CustomEvent("programaciones-oficiales-updated", { detail: db.programacionesOficiales }));
+          window.localStorage.setItem("molino_programaciones_batch_oficiales_v2", serialized);
+          window.localStorage.setItem("molino_programaciones_batch_oficiales_v1", serialized);
+          window.dispatchEvent(new CustomEvent("programaciones-oficiales-updated", { detail: finalProgs }));
         } catch {
           // ignore
         }
