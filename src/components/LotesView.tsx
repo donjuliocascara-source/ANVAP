@@ -38,13 +38,23 @@ import {
   CheckCircle2,
   Sliders,
   BarChart3,
-  Trash2
+  Trash2,
+  Calendar,
+  ChevronDown,
+  SlidersHorizontal,
+  RotateCcw,
+  X,
+  Percent,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from "lucide-react";
 import { HumedadView } from "./HumedadView";
 import { AnalisisHumedoView } from "./AnalisisHumedoView";
 import { formatLoteCode } from "../utils/formatLoteCode";
 import { buscarCoccionParaBatch, obtenerResultadosCoccionLocales } from "../utils/integracionCoccionService";
 import { localDB } from "../utils/localDB";
+import { normalizeDateToISO, calcularDiasTranscurridos } from "../utils/priorizacionService";
 
 export const VARIEDADES_ARROZ_OPCIONES = [
   "TINAJONES",
@@ -109,6 +119,47 @@ export const LotesView: React.FC<LotesViewProps> = ({
   const [activeLoteFocusId, setActiveLoteFocusId] = useState<string>(initialLoteId || lotes[0]?.LOTE_ID || "");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedEstado, setSelectedEstado] = useState("");
+  // Filtros Específicos Solicitados
+  const [filtroVariedad, setFiltroVariedad] = useState<string>("TODOS");
+  const [filtroHumedadMin, setFiltroHumedadMin] = useState<string>("");
+  const [filtroHumedadMax, setFiltroHumedadMax] = useState<string>("");
+  const [filtroDiasEsperaMin, setFiltroDiasEsperaMin] = useState<string>("");
+  const [filtroDiasEsperaMax, setFiltroDiasEsperaMax] = useState<string>("");
+  const [filtroFechaDesde, setFiltroFechaDesde] = useState<string>("");
+  const [filtroFechaHasta, setFiltroFechaHasta] = useState<string>("");
+  const [filtroQuebradoMin, setFiltroQuebradoMin] = useState<string>("");
+  const [filtroQuebradoMax, setFiltroQuebradoMax] = useState<string>("");
+  const [isFiltrosAvanzadosOpen, setIsFiltrosAvanzadosOpen] = useState<boolean>(false);
+
+  // Ordenamiento Solicitado: Humedad, Días en Espera, Fecha de Ingreso, % Quebrado y Variedad (Mayor a Menor / Menor a Mayor)
+  const [criterioOrden, setCriterioOrden] = useState<"ninguno" | "humedad" | "diasEspera" | "fechaIngreso" | "quebrado" | "variedad">("ninguno");
+  const [direccionOrden, setDireccionOrden] = useState<"desc" | "asc">("desc");
+
+  const handleToggleOrden = (criterio: "humedad" | "diasEspera" | "fechaIngreso" | "quebrado" | "variedad") => {
+    if (criterioOrden === criterio) {
+      if (direccionOrden === "desc") {
+        setDireccionOrden("asc");
+      } else {
+        setCriterioOrden("ninguno");
+        setDireccionOrden("desc");
+      }
+    } else {
+      setCriterioOrden(criterio);
+      setDireccionOrden(criterio === "variedad" ? "asc" : "desc");
+    }
+  };
+
+  const handleSelectOrden = (valor: string) => {
+    if (valor === "ninguno") {
+      setCriterioOrden("ninguno");
+      setDireccionOrden("desc");
+      return;
+    }
+    const [crit, dir] = valor.split("_") as ["humedad" | "diasEspera" | "fechaIngreso" | "quebrado" | "variedad", "asc" | "desc"];
+    setCriterioOrden(crit);
+    setDireccionOrden(dir || "desc");
+  };
+
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [savedSuccessLoteId, setSavedSuccessLoteId] = useState<string | null>(null);
   const [isCustomVariedad, setIsCustomVariedad] = useState(false);
@@ -368,17 +419,183 @@ export const LotesView: React.FC<LotesViewProps> = ({
     }
   };
 
+  // Lista de variedades disponibles
+  const variedadesDisponibles = useMemo(() => {
+    const set = new Set<string>();
+    VARIEDADES_ARROZ_OPCIONES.forEach((v) => {
+      if (v && v !== "OTRA") set.add(v.trim().toUpperCase());
+    });
+    lotes.forEach((l) => {
+      if (l.VARIEDAD) {
+        const u = l.VARIEDAD.trim().toUpperCase();
+        if (u) set.add(u);
+      }
+    });
+    return Array.from(set).sort();
+  }, [lotes]);
+
+  const activeAdvancedFilterCount = useMemo(() => {
+    let count = 0;
+    if (filtroVariedad && filtroVariedad !== "TODOS") count++;
+    if (filtroHumedadMin !== "" || filtroHumedadMax !== "") count++;
+    if (filtroDiasEsperaMin !== "" || filtroDiasEsperaMax !== "") count++;
+    if (filtroFechaDesde !== "" || filtroFechaHasta !== "") count++;
+    if (filtroQuebradoMin !== "" || filtroQuebradoMax !== "") count++;
+    return count;
+  }, [
+    filtroVariedad,
+    filtroHumedadMin,
+    filtroHumedadMax,
+    filtroDiasEsperaMin,
+    filtroDiasEsperaMax,
+    filtroFechaDesde,
+    filtroFechaHasta,
+    filtroQuebradoMin,
+    filtroQuebradoMax
+  ]);
+
+  const handleLimpiarFiltrosAvanzados = () => {
+    setFiltroVariedad("TODOS");
+    setFiltroHumedadMin("");
+    setFiltroHumedadMax("");
+    setFiltroDiasEsperaMin("");
+    setFiltroDiasEsperaMax("");
+    setFiltroFechaDesde("");
+    setFiltroFechaHasta("");
+    setFiltroQuebradoMin("");
+    setFiltroQuebradoMax("");
+  };
+
+  const handleLimpiarTodosLosFiltros = () => {
+    setSearchTerm("");
+    setSelectedEstado("");
+    handleLimpiarFiltrosAvanzados();
+  };
+
   // Filters
   const filteredLotes = lotes.filter((l) => {
     const comp = getComputedLoteStatus(l);
+    const humInfo = getLoteHumidityInfo(l.LOTE_ID, l.HUM);
+    const anHumedo = getLoteAnalisisHumedo(l.LOTE_ID);
+
     const matchesSearch = 
       (l.LOTE_ID || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (l.CLIENTE || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (l.VARIEDAD || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (l.ZONA || "").toLowerCase().includes(searchTerm.toLowerCase());
     const matchesEstado = selectedEstado ? comp.estado === selectedEstado || l.ESTADO_LOTE === selectedEstado : true;
-    return matchesSearch && matchesEstado;
+
+    // 1. Variedad
+    let matchesVariedad = true;
+    if (filtroVariedad && filtroVariedad !== "TODOS") {
+      const vLote = (l.VARIEDAD || anHumedo?.VARIEDAD || "").toString().trim().toUpperCase();
+      matchesVariedad = vLote === filtroVariedad.trim().toUpperCase();
+    }
+
+    // 2. Humedad
+    let matchesHumedad = true;
+    const humVal = Number(humInfo?.hum || l.HUM || l.HUMEDAD || anHumedo?.HUMEDADES || 0);
+    if (filtroHumedadMin !== "" && !isNaN(Number(filtroHumedadMin))) {
+      if (humVal < Number(filtroHumedadMin)) matchesHumedad = false;
+    }
+    if (filtroHumedadMax !== "" && !isNaN(Number(filtroHumedadMax))) {
+      if (humVal > Number(filtroHumedadMax)) matchesHumedad = false;
+    }
+
+    // 3. Días en espera
+    let matchesDiasEspera = true;
+    const diasVal = l.FECHA_INGRESO ? calcularDiasTranscurridos(l.FECHA_INGRESO) : 0;
+    if (filtroDiasEsperaMin !== "" && !isNaN(Number(filtroDiasEsperaMin))) {
+      if (diasVal < Number(filtroDiasEsperaMin)) matchesDiasEspera = false;
+    }
+    if (filtroDiasEsperaMax !== "" && !isNaN(Number(filtroDiasEsperaMax))) {
+      if (diasVal > Number(filtroDiasEsperaMax)) matchesDiasEspera = false;
+    }
+
+    // 4. Fecha de ingreso
+    let matchesFecha = true;
+    const fIngresoISO = l.FECHA_INGRESO ? normalizeDateToISO(l.FECHA_INGRESO) : "";
+    if (filtroFechaDesde !== "") {
+      if (!fIngresoISO || fIngresoISO < filtroFechaDesde) matchesFecha = false;
+    }
+    if (filtroFechaHasta !== "") {
+      if (!fIngresoISO || fIngresoISO > filtroFechaHasta) matchesFecha = false;
+    }
+
+    // 5. Quebrado
+    let matchesQuebrado = true;
+    const qb = anHumedo?.QB !== undefined && anHumedo.QB !== null ? Number(anHumedo.QB) : undefined;
+    const qi = anHumedo?.QI !== undefined && anHumedo.QI !== null ? Number(anHumedo.QI) : undefined;
+    const quebradoVal = qb !== undefined ? qb : (qi !== undefined ? qi : undefined);
+    if (filtroQuebradoMin !== "" && !isNaN(Number(filtroQuebradoMin))) {
+      if (quebradoVal === undefined || quebradoVal < Number(filtroQuebradoMin)) matchesQuebrado = false;
+    }
+    if (filtroQuebradoMax !== "" && !isNaN(Number(filtroQuebradoMax))) {
+      if (quebradoVal === undefined || quebradoVal > Number(filtroQuebradoMax)) matchesQuebrado = false;
+    }
+
+    return (
+      matchesSearch && 
+      matchesEstado && 
+      matchesVariedad && 
+      matchesHumedad && 
+      matchesDiasEspera && 
+      matchesFecha && 
+      matchesQuebrado
+    );
   });
+
+  // Ordenamiento de Lotes (De Mayor a Menor / Menor a Mayor en Humedad, Días en Espera, Fecha de Ingreso, % Quebrado y Variedad)
+  const sortedLotes = useMemo(() => {
+    if (criterioOrden === "ninguno") return filteredLotes;
+
+    const list = [...filteredLotes];
+    return list.sort((a, b) => {
+      const humA = getLoteHumidityInfo(a.LOTE_ID, a.HUM);
+      const humB = getLoteHumidityInfo(b.LOTE_ID, b.HUM);
+      const anA = getLoteAnalisisHumedo(a.LOTE_ID);
+      const anB = getLoteAnalisisHumedo(b.LOTE_ID);
+
+      if (criterioOrden === "humedad") {
+        const valA = Number(humA?.hum || a.HUM || a.HUMEDAD || anA?.HUMEDADES || 0);
+        const valB = Number(humB?.hum || b.HUM || b.HUMEDAD || anB?.HUMEDADES || 0);
+        return direccionOrden === "desc" ? valB - valA : valA - valB;
+      }
+
+      if (criterioOrden === "diasEspera") {
+        const valA = a.FECHA_INGRESO ? calcularDiasTranscurridos(a.FECHA_INGRESO) : 0;
+        const valB = b.FECHA_INGRESO ? calcularDiasTranscurridos(b.FECHA_INGRESO) : 0;
+        return direccionOrden === "desc" ? valB - valA : valA - valB;
+      }
+
+      if (criterioOrden === "fechaIngreso") {
+        const isoA = a.FECHA_INGRESO ? normalizeDateToISO(a.FECHA_INGRESO) : "";
+        const isoB = b.FECHA_INGRESO ? normalizeDateToISO(b.FECHA_INGRESO) : "";
+        const timeA = isoA ? new Date(isoA).getTime() : 0;
+        const timeB = isoB ? new Date(isoB).getTime() : 0;
+        return direccionOrden === "desc" ? timeB - timeA : timeA - timeB;
+      }
+
+      if (criterioOrden === "quebrado") {
+        const getQ = (item: Lote, an: AnalisisHumedo | undefined) => {
+          const qb = an?.QB !== undefined && an.QB !== null ? Number(an.QB) : undefined;
+          const qi = an?.QI !== undefined && an.QI !== null ? Number(an.QI) : undefined;
+          return qb !== undefined ? qb : (qi !== undefined ? qi : -1);
+        };
+        const valA = getQ(a, anA);
+        const valB = getQ(b, anB);
+        return direccionOrden === "desc" ? valB - valA : valA - valB;
+      }
+
+      if (criterioOrden === "variedad") {
+        const varA = (a.VARIEDAD || anA?.VARIEDAD || "").toString().trim().toUpperCase();
+        const varB = (b.VARIEDAD || anB?.VARIEDAD || "").toString().trim().toUpperCase();
+        return direccionOrden === "desc" ? varB.localeCompare(varA) : varA.localeCompare(varB);
+      }
+
+      return 0;
+    });
+  }, [filteredLotes, criterioOrden, direccionOrden, humedades, analisisHumedos]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -520,7 +737,7 @@ export const LotesView: React.FC<LotesViewProps> = ({
               />
             </div>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
               <Filter className="w-4 h-4 text-slate-400 hidden sm:block" />
               <select
                 id="select-lote-filter-estado"
@@ -534,12 +751,585 @@ export const LotesView: React.FC<LotesViewProps> = ({
                   <option key={est.ESTADO_ID} value={est.ESTADO}>{est.ESTADO}</option>
                 ))}
               </select>
+
+              <button
+                type="button"
+                id="btn-toggle-filtros-lotes-view"
+                onClick={() => setIsFiltrosAvanzadosOpen(!isFiltrosAvanzadosOpen)}
+                className={`w-full sm:w-auto px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-between sm:justify-start gap-1.5 cursor-pointer border ${
+                  activeAdvancedFilterCount > 0
+                    ? "bg-amber-500/20 text-amber-300 border-amber-500/60 shadow-sm ring-1 ring-amber-500/40"
+                    : isFiltrosAvanzadosOpen
+                    ? "bg-slate-700 text-white border-slate-500 shadow-sm"
+                    : "bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-800 hover:text-white"
+                }`}
+                title="Filtrar por humedad, días en espera, fecha de ingreso, quebrado y variedad"
+              >
+                <div className="flex items-center gap-1.5">
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span>Filtros Específicos</span>
+                </div>
+                {activeAdvancedFilterCount > 0 ? (
+                  <span className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 font-mono font-bold text-[10px] flex items-center justify-center">
+                    {activeAdvancedFilterCount}
+                  </span>
+                ) : (
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isFiltrosAvanzadosOpen ? "rotate-180" : ""}`} />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Panel de Filtros Específicos Solicitados (Variedad, Humedad, Días en Espera, Fecha de Ingreso, Quebrado) */}
+          {(isFiltrosAvanzadosOpen || activeAdvancedFilterCount > 0) && (
+            <div className="bg-slate-850/95 border border-slate-700/80 rounded-xl p-3.5 space-y-3 shadow-md animate-fade-in backdrop-blur-sm">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                <div className="flex items-center gap-2">
+                  <SlidersHorizontal className="w-4 h-4 text-amber-400" />
+                  <span className="text-xs font-bold text-white uppercase tracking-wider">Filtros de Parámetros de Lotes</span>
+                  <span className="text-[11px] text-slate-400 hidden sm:inline">
+                    (Humedad, Días en Espera, Fecha de Ingreso, % Quebrado y Variedad)
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {activeAdvancedFilterCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleLimpiarFiltrosAvanzados}
+                      className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-amber-200 rounded text-xs flex items-center gap-1 cursor-pointer transition-colors border border-amber-500/30"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>Restablecer Filtros ({activeAdvancedFilterCount})</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setIsFiltrosAvanzadosOpen(false)}
+                    className="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800 transition-colors"
+                    title="Ocultar panel de filtros"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Grid de 5 Filtros */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                {/* 1. Variedad */}
+                <div className="bg-slate-900/80 p-2.5 rounded-lg border border-slate-850 space-y-1.5 flex flex-col justify-between">
+                  <label className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Package className="w-3.5 h-3.5 text-amber-400" />
+                      Variedad
+                    </span>
+                    {filtroVariedad !== "TODOS" && (
+                      <button
+                        type="button"
+                        onClick={() => setFiltroVariedad("TODOS")}
+                        className="text-[10px] text-amber-400 hover:text-amber-300 cursor-pointer"
+                      >
+                        Borrar
+                      </button>
+                    )}
+                  </label>
+                  <select
+                    id="filtro-lote-variedad-lotesview"
+                    aria-label="Filtrar por variedad de arroz"
+                    value={filtroVariedad}
+                    onChange={(e) => setFiltroVariedad(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-750 rounded-md px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500 font-medium"
+                  >
+                    <option value="TODOS">Todas las Variedades</option>
+                    {variedadesDisponibles.map((v) => (
+                      <option key={v} value={v}>
+                        {v}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="text-[10px] text-slate-500 truncate">
+                    {filtroVariedad !== "TODOS" ? `Activo: ${filtroVariedad}` : `${variedadesDisponibles.length} variedades`}
+                  </div>
+                </div>
+
+                {/* 2. Humedad */}
+                <div className="bg-slate-900/80 p-2.5 rounded-lg border border-slate-850 space-y-1.5 flex flex-col justify-between">
+                  <label className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Droplet className="w-3.5 h-3.5 text-sky-400" />
+                      Humedad (%)
+                    </span>
+                    {(filtroHumedadMin !== "" || filtroHumedadMax !== "") && (
+                      <button
+                        type="button"
+                        onClick={() => { setFiltroHumedadMin(""); setFiltroHumedadMax(""); }}
+                        className="text-[10px] text-amber-400 hover:text-amber-300 cursor-pointer"
+                      >
+                        Borrar
+                      </button>
+                    )}
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      id="filtro-lote-humedad-min-lotesview"
+                      type="number"
+                      step="0.1"
+                      placeholder="Min %"
+                      value={filtroHumedadMin}
+                      onChange={(e) => setFiltroHumedadMin(e.target.value)}
+                      className="w-1/2 bg-slate-950 border border-slate-750 rounded-md px-2 py-1 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-sky-500 font-mono"
+                    />
+                    <span className="text-slate-500 text-xs">-</span>
+                    <input
+                      id="filtro-lote-humedad-max-lotesview"
+                      type="number"
+                      step="0.1"
+                      placeholder="Max %"
+                      value={filtroHumedadMax}
+                      onChange={(e) => setFiltroHumedadMax(e.target.value)}
+                      className="w-1/2 bg-slate-950 border border-slate-750 rounded-md px-2 py-1 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-sky-500 font-mono"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1 flex-wrap pt-0.5">
+                    <button
+                      type="button"
+                      onClick={() => { setFiltroHumedadMin(""); setFiltroHumedadMax("13.0"); }}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono cursor-pointer transition-colors ${
+                        filtroHumedadMin === "" && filtroHumedadMax === "13.0"
+                          ? "bg-sky-600 text-white font-bold"
+                          : "bg-slate-800 text-slate-400 hover:bg-slate-750 hover:text-white"
+                      }`}
+                    >
+                      &lt;13%
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setFiltroHumedadMin("13.0"); setFiltroHumedadMax("15.0"); }}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono cursor-pointer transition-colors ${
+                        filtroHumedadMin === "13.0" && filtroHumedadMax === "15.0"
+                          ? "bg-sky-600 text-white font-bold"
+                          : "bg-slate-800 text-slate-400 hover:bg-slate-750 hover:text-white"
+                      }`}
+                    >
+                      13-15%
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setFiltroHumedadMin("15.1"); setFiltroHumedadMax(""); }}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono cursor-pointer transition-colors ${
+                        filtroHumedadMin === "15.1" && filtroHumedadMax === ""
+                          ? "bg-sky-600 text-white font-bold"
+                          : "bg-slate-800 text-slate-400 hover:bg-slate-750 hover:text-white"
+                      }`}
+                    >
+                      &gt;15%
+                    </button>
+                  </div>
+                </div>
+
+                {/* 3. Días en Espera */}
+                <div className="bg-slate-900/80 p-2.5 rounded-lg border border-slate-855 space-y-1.5 flex flex-col justify-between">
+                  <label className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-amber-400" />
+                      Días en Espera
+                    </span>
+                    {(filtroDiasEsperaMin !== "" || filtroDiasEsperaMax !== "") && (
+                      <button
+                        type="button"
+                        onClick={() => { setFiltroDiasEsperaMin(""); setFiltroDiasEsperaMax(""); }}
+                        className="text-[10px] text-amber-400 hover:text-amber-300 cursor-pointer"
+                      >
+                        Borrar
+                      </button>
+                    )}
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      id="filtro-lote-dias-min-lotesview"
+                      type="number"
+                      min="0"
+                      placeholder="Min d"
+                      value={filtroDiasEsperaMin}
+                      onChange={(e) => setFiltroDiasEsperaMin(e.target.value)}
+                      className="w-1/2 bg-slate-950 border border-slate-750 rounded-md px-2 py-1 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-500 font-mono"
+                    />
+                    <span className="text-slate-500 text-xs">-</span>
+                    <input
+                      id="filtro-lote-dias-max-lotesview"
+                      type="number"
+                      min="0"
+                      placeholder="Max d"
+                      value={filtroDiasEsperaMax}
+                      onChange={(e) => setFiltroDiasEsperaMax(e.target.value)}
+                      className="w-1/2 bg-slate-950 border border-slate-750 rounded-md px-2 py-1 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-500 font-mono"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1 flex-wrap pt-0.5">
+                    <button
+                      type="button"
+                      onClick={() => { setFiltroDiasEsperaMin("0"); setFiltroDiasEsperaMax("5"); }}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono cursor-pointer transition-colors ${
+                        filtroDiasEsperaMin === "0" && filtroDiasEsperaMax === "5"
+                          ? "bg-amber-600 text-white font-bold"
+                          : "bg-slate-800 text-slate-400 hover:bg-slate-750 hover:text-white"
+                      }`}
+                    >
+                      0-5d
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setFiltroDiasEsperaMin("6"); setFiltroDiasEsperaMax("15"); }}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono cursor-pointer transition-colors ${
+                        filtroDiasEsperaMin === "6" && filtroDiasEsperaMax === "15"
+                          ? "bg-amber-600 text-white font-bold"
+                          : "bg-slate-800 text-slate-400 hover:bg-slate-750 hover:text-white"
+                      }`}
+                    >
+                      6-15d
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setFiltroDiasEsperaMin("16"); setFiltroDiasEsperaMax(""); }}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono cursor-pointer transition-colors ${
+                        filtroDiasEsperaMin === "16" && filtroDiasEsperaMax === ""
+                          ? "bg-amber-600 text-white font-bold"
+                          : "bg-slate-800 text-slate-400 hover:bg-slate-750 hover:text-white"
+                      }`}
+                    >
+                      &gt;15d
+                    </button>
+                  </div>
+                </div>
+
+                {/* 4. Fecha de Ingreso */}
+                <div className="bg-slate-900/80 p-2.5 rounded-lg border border-slate-850 space-y-1.5 flex flex-col justify-between">
+                  <label className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-indigo-400" />
+                      Fecha de Ingreso
+                    </span>
+                    {(filtroFechaDesde !== "" || filtroFechaHasta !== "") && (
+                      <button
+                        type="button"
+                        onClick={() => { setFiltroFechaDesde(""); setFiltroFechaHasta(""); }}
+                        className="text-[10px] text-amber-400 hover:text-amber-300 cursor-pointer"
+                      >
+                        Borrar
+                      </button>
+                    )}
+                  </label>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] text-slate-500 w-10 shrink-0">Desde:</span>
+                      <input
+                        id="filtro-lote-fecha-desde-lotesview"
+                        type="date"
+                        value={filtroFechaDesde}
+                        onChange={(e) => setFiltroFechaDesde(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-750 rounded-md px-1.5 py-0.5 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] text-slate-500 w-10 shrink-0">Hasta:</span>
+                      <input
+                        id="filtro-lote-fecha-hasta-lotesview"
+                        type="date"
+                        value={filtroFechaHasta}
+                        onChange={(e) => setFiltroFechaHasta(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-750 rounded-md px-1.5 py-0.5 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 5. % Quebrado */}
+                <div className="bg-slate-900/80 p-2.5 rounded-lg border border-slate-850 space-y-1.5 flex flex-col justify-between">
+                  <label className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Percent className="w-3.5 h-3.5 text-rose-400" />
+                      % Quebrado
+                    </span>
+                    {(filtroQuebradoMin !== "" || filtroQuebradoMax !== "") && (
+                      <button
+                        type="button"
+                        onClick={() => { setFiltroQuebradoMin(""); setFiltroQuebradoMax(""); }}
+                        className="text-[10px] text-amber-400 hover:text-amber-300 cursor-pointer"
+                      >
+                        Borrar
+                      </button>
+                    )}
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      id="filtro-lote-quebrado-min-lotesview"
+                      type="number"
+                      step="0.1"
+                      placeholder="Min %"
+                      value={filtroQuebradoMin}
+                      onChange={(e) => setFiltroQuebradoMin(e.target.value)}
+                      className="w-1/2 bg-slate-950 border border-slate-750 rounded-md px-2 py-1 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-rose-500 font-mono"
+                    />
+                    <span className="text-slate-500 text-xs">-</span>
+                    <input
+                      id="filtro-lote-quebrado-max-lotesview"
+                      type="number"
+                      step="0.1"
+                      placeholder="Max %"
+                      value={filtroQuebradoMax}
+                      onChange={(e) => setFiltroQuebradoMax(e.target.value)}
+                      className="w-1/2 bg-slate-950 border border-slate-750 rounded-md px-2 py-1 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-rose-500 font-mono"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1 flex-wrap pt-0.5">
+                    <button
+                      type="button"
+                      onClick={() => { setFiltroQuebradoMin(""); setFiltroQuebradoMax("15.0"); }}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono cursor-pointer transition-colors ${
+                        filtroQuebradoMin === "" && filtroQuebradoMax === "15.0"
+                          ? "bg-rose-600 text-white font-bold"
+                          : "bg-slate-800 text-slate-400 hover:bg-slate-750 hover:text-white"
+                      }`}
+                    >
+                      &lt;15%
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setFiltroQuebradoMin("15.0"); setFiltroQuebradoMax("20.0"); }}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono cursor-pointer transition-colors ${
+                        filtroQuebradoMin === "15.0" && filtroQuebradoMax === "20.0"
+                          ? "bg-rose-600 text-white font-bold"
+                          : "bg-slate-800 text-slate-400 hover:bg-slate-750 hover:text-white"
+                      }`}
+                    >
+                      15-20%
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setFiltroQuebradoMin("20.1"); setFiltroQuebradoMax(""); }}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono cursor-pointer transition-colors ${
+                        filtroQuebradoMin === "20.1" && filtroQuebradoMax === ""
+                          ? "bg-rose-600 text-white font-bold"
+                          : "bg-slate-800 text-slate-400 hover:bg-slate-750 hover:text-white"
+                      }`}
+                    >
+                      &gt;20%
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Badges / Chips de Filtros Activos */}
+              {activeAdvancedFilterCount > 0 && (
+                <div className="flex items-center gap-2 flex-wrap pt-1.5 border-t border-slate-800/80">
+                  <span className="text-[11px] font-semibold text-slate-400">Filtros aplicados:</span>
+                  {filtroVariedad !== "TODOS" && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                      <span>🌾 Variedad: {filtroVariedad}</span>
+                      <button type="button" onClick={() => setFiltroVariedad("TODOS")} className="hover:text-white cursor-pointer">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  )}
+                  {(filtroHumedadMin !== "" || filtroHumedadMax !== "") && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/20 text-sky-300 border border-sky-500/40">
+                      <span>💧 Humedad: {filtroHumedadMin || "0"}% - {filtroHumedadMax || "∞"}%</span>
+                      <button type="button" onClick={() => { setFiltroHumedadMin(""); setFiltroHumedadMax(""); }} className="hover:text-white cursor-pointer">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  )}
+                  {(filtroDiasEsperaMin !== "" || filtroDiasEsperaMax !== "") && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                      <span>⏱️ Espera: {filtroDiasEsperaMin || "0"}d - {filtroDiasEsperaMax || "∞"}d</span>
+                      <button type="button" onClick={() => { setFiltroDiasEsperaMin(""); setFiltroDiasEsperaMax(""); }} className="hover:text-white cursor-pointer">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  )}
+                  {(filtroFechaDesde !== "" || filtroFechaHasta !== "") && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+                      <span>📅 Fecha: {filtroFechaDesde || "Inicio"} a {filtroFechaHasta || "Hoy"}</span>
+                      <button type="button" onClick={() => { setFiltroFechaDesde(""); setFiltroFechaHasta(""); }} className="hover:text-white cursor-pointer">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  )}
+                  {(filtroQuebradoMin !== "" || filtroQuebradoMax !== "") && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40">
+                      <span>📉 Quebrado: {filtroQuebradoMin || "0"}% - {filtroQuebradoMax || "∞"}%</span>
+                      <button type="button" onClick={() => { setFiltroQuebradoMin(""); setFiltroQuebradoMax(""); }} className="hover:text-white cursor-pointer">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  )}
+                  <span className="text-[11px] text-slate-400 ml-auto font-mono">
+                    {filteredLotes.length} lote{filteredLotes.length !== 1 ? "s" : ""} coincidente{filteredLotes.length !== 1 ? "s" : ""}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* BARRA DE ORDENAMIENTO (De Mayor a Menor / Menor a Mayor) */}
+          <div className="bg-slate-850 p-2.5 rounded-xl border border-slate-750 flex flex-wrap items-center justify-between gap-2 shadow-sm">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5 shrink-0">
+                <ArrowUpDown className="w-3.5 h-3.5" />
+                <span>Ordenar Lotes:</span>
+              </span>
+
+              {/* Botón rápido Humedad */}
+              <button
+                type="button"
+                id="btn-orden-humedad-lotesview"
+                onClick={() => handleToggleOrden("humedad")}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                  criterioOrden === "humedad"
+                    ? "bg-amber-500 text-slate-950 border-amber-400 shadow-sm"
+                    : "bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-800 hover:text-white"
+                }`}
+                title="Ordenar por Humedad: Primero Mayor a Menor (↓), o Menor a Mayor (↑)"
+              >
+                <span>💧 Humedad</span>
+                {criterioOrden === "humedad" ? (
+                  <span className="bg-slate-950/20 px-1 rounded text-[10px] font-mono">
+                    {direccionOrden === "desc" ? "Mayor a Menor ↓" : "Menor a Mayor ↑"}
+                  </span>
+                ) : (
+                  <span className="text-[10px] opacity-60">Mayor a Menor</span>
+                )}
+              </button>
+
+              {/* Botón rápido Días en Espera */}
+              <button
+                type="button"
+                id="btn-orden-dias-lotesview"
+                onClick={() => handleToggleOrden("diasEspera")}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                  criterioOrden === "diasEspera"
+                    ? "bg-amber-500 text-slate-950 border-amber-400 shadow-sm"
+                    : "bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-800 hover:text-white"
+                }`}
+                title="Ordenar por Días en Espera: Primero Mayor a Menor (↓ Más crítico), o Menor a Mayor (↑)"
+              >
+                <span>⏳ Días en Espera</span>
+                {criterioOrden === "diasEspera" ? (
+                  <span className="bg-slate-950/20 px-1 rounded text-[10px] font-mono">
+                    {direccionOrden === "desc" ? "Mayor a Menor ↓" : "Menor a Mayor ↑"}
+                  </span>
+                ) : (
+                  <span className="text-[10px] opacity-60">Mayor a Menor</span>
+                )}
+              </button>
+
+              {/* Botón rápido Fecha de Ingreso */}
+              <button
+                type="button"
+                id="btn-orden-fecha-lotesview"
+                onClick={() => handleToggleOrden("fechaIngreso")}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                  criterioOrden === "fechaIngreso"
+                    ? "bg-amber-500 text-slate-950 border-amber-400 shadow-sm"
+                    : "bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-800 hover:text-white"
+                }`}
+                title="Ordenar por Fecha de Ingreso: Más reciente (↓) o más antiguo (↑)"
+              >
+                <span>📅 Fecha Ingreso</span>
+                {criterioOrden === "fechaIngreso" ? (
+                  <span className="bg-slate-950/20 px-1 rounded text-[10px] font-mono">
+                    {direccionOrden === "desc" ? "Más Reciente ↓" : "Más Antiguo ↑"}
+                  </span>
+                ) : (
+                  <span className="text-[10px] opacity-60">Reciente</span>
+                )}
+              </button>
+
+              {/* Botón rápido % Quebrado */}
+              <button
+                type="button"
+                id="btn-orden-quebrado-lotesview"
+                onClick={() => handleToggleOrden("quebrado")}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                  criterioOrden === "quebrado"
+                    ? "bg-amber-500 text-slate-950 border-amber-400 shadow-sm"
+                    : "bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-800 hover:text-white"
+                }`}
+                title="Ordenar por % Quebrado: Primero Mayor a Menor (↓), o Menor a Mayor (↑)"
+              >
+                <span>🌾 % Quebrado</span>
+                {criterioOrden === "quebrado" ? (
+                  <span className="bg-slate-950/20 px-1 rounded text-[10px] font-mono">
+                    {direccionOrden === "desc" ? "Mayor a Menor ↓" : "Menor a Mayor ↑"}
+                  </span>
+                ) : (
+                  <span className="text-[10px] opacity-60">Mayor a Menor</span>
+                )}
+              </button>
+
+              {/* Botón rápido Variedad */}
+              <button
+                type="button"
+                id="btn-orden-variedad-lotesview"
+                onClick={() => handleToggleOrden("variedad")}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                  criterioOrden === "variedad"
+                    ? "bg-amber-500 text-slate-950 border-amber-400 shadow-sm"
+                    : "bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-800 hover:text-white"
+                }`}
+                title="Ordenar por Variedad: Alfabético A → Z o Z → A"
+              >
+                <span>🔤 Variedad</span>
+                {criterioOrden === "variedad" ? (
+                  <span className="bg-slate-950/20 px-1 rounded text-[10px] font-mono">
+                    {direccionOrden === "asc" ? "A → Z ↑" : "Z → A ↓"}
+                  </span>
+                ) : (
+                  <span className="text-[10px] opacity-60">A → Z</span>
+                )}
+              </button>
+            </div>
+
+            {/* Selector desplegable y botón restablecer orden */}
+            <div className="flex items-center gap-2 ml-auto">
+              <select
+                aria-label="Seleccionar criterio de ordenamiento"
+                value={criterioOrden === "ninguno" ? "ninguno" : `${criterioOrden}_${direccionOrden}`}
+                onChange={(e) => handleSelectOrden(e.target.value)}
+                className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-amber-500 font-medium cursor-pointer"
+              >
+                <option value="ninguno">Orden Original (Sin ordenar)</option>
+                <option value="humedad_desc">💧 Humedad: Mayor a Menor (↓)</option>
+                <option value="humedad_asc">💧 Humedad: Menor a Mayor (↑)</option>
+                <option value="diasEspera_desc">⏳ Días en Espera: Mayor a Menor (↓ Más crítico)</option>
+                <option value="diasEspera_asc">⏳ Días en Espera: Menor a Mayor (↑)</option>
+                <option value="fechaIngreso_desc">📅 Fecha Ingreso: Más reciente a más antiguo (↓)</option>
+                <option value="fechaIngreso_asc">📅 Fecha Ingreso: Más antiguo a más reciente (↑)</option>
+                <option value="quebrado_desc">🌾 % Quebrado: Mayor a Menor (↓ Más quebrado)</option>
+                <option value="quebrado_asc">🌾 % Quebrado: Menor a Mayor (↑ Menos quebrado)</option>
+                <option value="variedad_asc">🔤 Variedad: A → Z (↑)</option>
+                <option value="variedad_desc">🔤 Variedad: Z → A (↓)</option>
+              </select>
+
+              {criterioOrden !== "ninguno" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCriterioOrden("ninguno");
+                    setDireccionOrden("desc");
+                  }}
+                  className="px-2 py-1 bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white rounded text-xs flex items-center gap-1 border border-slate-700 cursor-pointer"
+                  title="Restablecer orden predeterminado de los lotes"
+                >
+                  <RotateCcw className="w-3 h-3 text-amber-400" />
+                  <span className="hidden sm:inline">Restablecer</span>
+                </button>
+              )}
             </div>
           </div>
 
           {/* Lotes Cards / Table View */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredLotes.map((lote) => {
+            {sortedLotes.map((lote) => {
               const compStatus = getComputedLoteStatus(lote);
               const humInfo = getLoteHumidityInfo(lote.LOTE_ID, lote.HUM);
               const anHumedo = getLoteAnalisisHumedo(lote.LOTE_ID);
