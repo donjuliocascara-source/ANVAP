@@ -637,12 +637,14 @@ export interface ControlVaporizado {
   etapaReposo2?: PerfilSecadoPlant[];
   perfilesSecado?: PerfilSecadoPlant[];
   etapaEnfriamientoFinal?: PerfilSecadoPlant[];
+  etapaReposoFinal?: PerfilSecadoPlant[];
   resumenEtapas?: {
     tiempoReposo1?: string | number;
     tiempoEnfriamiento?: string | number;
     tiempoReposo2?: string | number;
     tiempoSecadoTotal?: string | number;
     tiempoEnfriamientoFinal?: string | number;
+    tiempoReposoFinal?: string | number;
   };
   recetaSecado?: Array<{ perfil: number; tiempo: number; temp: number }>;
   carga: {

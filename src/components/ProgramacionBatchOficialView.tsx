@@ -7048,7 +7048,7 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
         programacionSeleccionada={batchParaExportar}
-        todasLasProgramaciones={programacionesFiltradas.length > 0 ? programacionesFiltradas : programaciones}
+        todasLasProgramaciones={programaciones.length > 0 ? programaciones : programacionesFiltradas}
         capacidadMaximaKg={capacidadMaximaKg}
         filtroTurno={filtroTurno}
         filtroFecha={filtroFecha}

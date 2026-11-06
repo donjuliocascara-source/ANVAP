@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { 
   X, 
   Download, 
@@ -14,6 +14,8 @@ import {
   Layers,
   Building,
   Flame,
+  Wind,
+  Sun,
   CheckCircle2,
   AlertTriangle
 } from "lucide-react";
@@ -61,32 +63,72 @@ export const ExportarProgramacionModal: React.FC<ExportarProgramacionModalProps>
   const [copiadoExito, setCopiadoExito] = useState(false);
 
   const previewRef = useRef<HTMLDivElement>(null);
+  const modalOpenedRef = useRef(false);
 
+  // Lista consolidada y deduplicada de todos los batches disponibles para exportar
+  const listaBatchesDisponibles = useMemo(() => {
+    const list: ProgramacionBatchOficial[] = [];
+    const seen = new Set<string>();
+
+    // 1. Si hay un batch seleccionado específicamente (ej. armado en memoria), incluirlo
+    if (programacionSeleccionada) {
+      const code = (programacionSeleccionada.batch || programacionSeleccionada.id || "").trim().toUpperCase();
+      if (code) {
+        seen.add(code);
+        if (programacionSeleccionada.id) seen.add(programacionSeleccionada.id.trim().toUpperCase());
+        list.push(programacionSeleccionada);
+      }
+    }
+
+    // 2. Incluir todas las programaciones disponibles
+    (todasLasProgramaciones || []).forEach(p => {
+      const bCode = (p.batch || "").trim().toUpperCase();
+      const idCode = (p.id || "").trim().toUpperCase();
+      if ((bCode && seen.has(bCode)) || (idCode && seen.has(idCode))) {
+        return;
+      }
+      if (bCode) seen.add(bCode);
+      if (idCode) seen.add(idCode);
+      list.push(p);
+    });
+
+    return list;
+  }, [todasLasProgramaciones, programacionSeleccionada]);
+
+  // Batch actual a mostrar en la Ficha Individual
+  const batchActual = useMemo(() => {
+    if (selectedBatchKey) {
+      const target = selectedBatchKey.trim().toUpperCase();
+      const encontrado = listaBatchesDisponibles.find(
+        p => (p.id && p.id.trim().toUpperCase() === target) ||
+             (p.batch && p.batch.trim().toUpperCase() === target)
+      );
+      if (encontrado) return encontrado;
+    }
+    return programacionSeleccionada || listaBatchesDisponibles[0] || null;
+  }, [selectedBatchKey, listaBatchesDisponibles, programacionSeleccionada]);
+
+  // Inicialización ÚNICAMENTE al abrir el modal (evita resets molestos al interactuar)
   useEffect(() => {
     if (isOpen) {
-      if (initialModo) {
-        setModoExportacion(initialModo);
-      } else {
-        setModoExportacion(programacionSeleccionada ? "batch_individual" : "sabana_completa");
+      if (!modalOpenedRef.current) {
+        modalOpenedRef.current = true;
+        const modo = initialModo || (programacionSeleccionada ? "batch_individual" : "sabana_completa");
+        setModoExportacion(modo);
+        const initialKey = programacionSeleccionada?.id || 
+                           programacionSeleccionada?.batch || 
+                           todasLasProgramaciones[0]?.id || 
+                           todasLasProgramaciones[0]?.batch || 
+                           "";
+        setSelectedBatchKey(initialKey);
+        setTemaExportacion("claro");
       }
-      if (programacionSeleccionada) {
-        setSelectedBatchKey(programacionSeleccionada.id || programacionSeleccionada.batch || "");
-      } else if (todasLasProgramaciones.length > 0) {
-        setSelectedBatchKey(todasLasProgramaciones[0].id || todasLasProgramaciones[0].batch || "");
-      }
-      setTemaExportacion("claro");
+    } else {
+      modalOpenedRef.current = false;
     }
-  }, [isOpen, programacionSeleccionada, initialModo, todasLasProgramaciones]);
+  }, [isOpen, initialModo, programacionSeleccionada?.id, programacionSeleccionada?.batch]);
 
   if (!isOpen) return null;
-
-  const batchActual =
-    (programacionSeleccionada && (programacionSeleccionada.id === selectedBatchKey || programacionSeleccionada.batch === selectedBatchKey)
-      ? programacionSeleccionada
-      : todasLasProgramaciones.find(p => p.id === selectedBatchKey || p.batch === selectedBatchKey)) ||
-    programacionSeleccionada ||
-    todasLasProgramaciones[0] ||
-    null;
 
   // Notificación temporal
   const mostrarNotif = (msg: string) => {
@@ -125,6 +167,11 @@ export const ExportarProgramacionModal: React.FC<ExportarProgramacionModalProps>
   // Genera el texto resumen para WhatsApp
   const obtenerTextoResumenWhatsApp = () => {
     if (modoExportacion === "batch_individual" && batchActual) {
+      const p = batchActual.parametrosDeterminados;
+      const enfriamientoReposoTxt = p?.enfriamientoTieneReposo 
+        ? `CON reposo (${p?.enfriamientoTiempoReposoMin ?? 0} min)` 
+        : `SIN reposo`;
+
       return (
         `🌾 *MOLINO DON JULIO S.A.C.* 🌾\n` +
         `📋 *FICHA DE PROGRAMACIÓN DE BATCH OFICIAL*\n\n` +
@@ -134,24 +181,33 @@ export const ExportarProgramacionModal: React.FC<ExportarProgramacionModalProps>
         `🌾 *Variedad:* ${batchActual.variedadPrincipal}\n` +
         `📦 *Carga Programada:* ${batchActual.totalSacosProg} sacos (${((batchActual.pesoTotalKg || 0) / 1000).toFixed(1)} TN)\n` +
         `💧 *P(H) Promedio:* ${batchActual.promedios?.ph || 14.0}% (Desv: ${batchActual.promedios?.desv || 1.2})\n\n` +
-        `⚙️ *PARÁMETROS OPERATIVOS DE PLANTA:*\n` +
-        `• Modalidad: ${batchActual.parametrosDeterminados?.modalidadPases || "1_PASE"}\n` +
-        `• Presión Vapor: ${batchActual.parametrosDeterminados?.presionBar ?? 0.40} bar\n` +
-        `• Vel. Esclusa: ${batchActual.parametrosDeterminados?.velExclusa ?? 6}\n` +
-        `• Tiempo Reposo: ${batchActual.parametrosDeterminados?.tiempoReposoMin ?? 40} min\n` +
-        `• Temp. Secado: ${batchActual.parametrosDeterminados?.tempSecadoC ?? 80} °C\n` +
-        (batchActual.observacion ? `📝 *Observación:* ${batchActual.observacion}\n` : "") +
+        `📋 *PARÁMETROS DETERMINADOS POR EL SUPERVISOR:*\n\n` +
+        `🔥 *1. ETAPA DE VAPORIZADO:*\n` +
+        `• P: ${p?.presionBar ?? 0.3} bar\n` +
+        `• Esc: ${p?.velExclusa ?? 6} RPM\n` +
+        `• Reposo: ${p?.tiempoReposoMin ?? 60} min\n` +
+        `• Modo: ${p?.modoVaporizado || "automático"}\n\n` +
+        `💨 *2. ETAPA DE ENFRIAMIENTO:*\n` +
+        `• ${p?.enfriamientoTipoAire || "Con aire caliente"} de ${p?.enfriamientoTempAireC ?? 75}°C\n` +
+        `• ${enfriamientoReposoTxt}\n\n` +
+        `☀️ *3. ETAPA DE SECADO:*\n` +
+        `• T°PROG: ${p?.secadoTempProgPerfil1C ?? p?.tempSecadoC ?? 75}°C (PERFIL 1)\n` +
+        `• Configuración de circulación: ${p?.secadoConfigCirculacion || "1.1/12/0.9"}\n` +
+        `• T° máx de secado: ${p?.secadoTempMaxC ?? 31}°C\n` +
+        `• Enfriamiento para descarga: ${p?.secadoTiempoEnfriamientoDescargaMin ?? 40} min ${p?.secadoTipoAireDescarga || "con aire frío"}\n` +
+        `• Humedad de descarga: ${p?.secadoHumedadDescargaPct ?? 12.5}%\n` +
+        (batchActual.observacion ? `\n📝 *Observación:* ${batchActual.observacion}\n` : "") +
         `\n🏭 *PLANTA DE VAPORIZADO APIT*`
       );
     } else {
-      const totalSacos = todasLasProgramaciones.reduce((acc, p) => acc + (p.totalSacosProg || 0), 0);
-      const totalTn = (todasLasProgramaciones.reduce((acc, p) => acc + (p.pesoTotalKg || 0), 0) / 1000).toFixed(1);
-      const listaBatches = todasLasProgramaciones.map(p => `• Batch ${p.batch}: ${p.clientePrincipal} (${p.totalSacosProg} sacos)`).join("\n");
+      const totalSacos = listaBatchesDisponibles.reduce((acc, p) => acc + (p.totalSacosProg || 0), 0);
+      const totalTn = (listaBatchesDisponibles.reduce((acc, p) => acc + (p.pesoTotalKg || 0), 0) / 1000).toFixed(1);
+      const listaBatches = listaBatchesDisponibles.map(p => `• Batch ${p.batch}: ${p.clientePrincipal} (${p.totalSacosProg} sacos)`).join("\n");
       return (
         `🌾 *MOLINO DON JULIO S.A.C.* 🌾\n` +
         `📋 *SÁBANA DE PROGRAMACIÓN VAPORIZADO APIT*\n` +
         `📅 *Fecha:* ${filtroFecha || new Date().toISOString().split("T")[0]} | *Turno:* ${filtroTurno}\n\n` +
-        `📊 *Total Batches:* ${todasLasProgramaciones.length}\n` +
+        `📊 *Total Batches:* ${listaBatchesDisponibles.length}\n` +
         `📦 *Total Volumen:* ${totalSacos} sacos (${totalTn} TN)\n\n` +
         `📝 *Detalle de Batches:*\n${listaBatches}\n\n` +
         `🏭 *PLANTA DE VAPORIZADO APIT*`
@@ -458,31 +514,48 @@ export const ExportarProgramacionModal: React.FC<ExportarProgramacionModalProps>
           margin: { left: 10, right: 10 }
         });
 
-        // Parámetros Operativos
+        // Parámetros Determinados por el Supervisor
         const finalY = (doc as any).lastAutoTable?.finalY || 100;
         doc.setFillColor(254, 243, 199); // Amber 100
-        doc.roundedRect(10, finalY + 6, 277, 24, 2, 2, "F");
+        doc.roundedRect(10, finalY + 4, 277, 36, 2, 2, "F");
 
-        doc.setFontSize(9);
+        doc.setFontSize(8.5);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(146, 64, 14); // Amber 800
-        doc.text("PARÁMETROS OPERATIVOS DETERMINADOS DE PLANTA:", 14, finalY + 12);
+        doc.text("PARÁMETROS DETERMINADOS POR EL SUPERVISOR (RECETA DE OPERACIÓN):", 14, finalY + 10);
 
-        doc.setFontSize(8);
+        doc.setFontSize(7);
         doc.setFont("helvetica", "normal");
         doc.setTextColor(15, 23, 42);
         const p = batchActual.parametrosDeterminados;
-        doc.text(`• Presión de Caldera / Vapor: ${p.presionBar} bar`, 14, finalY + 18);
-        doc.text(`• Velocidad de Esclusa: Nivel ${p.velExclusa}`, 85, finalY + 18);
-        doc.text(`• Tiempo de Reposo: ${p.tiempoReposoMin} minutos`, 150, finalY + 18);
-        doc.text(`• Temperatura de Secado: ${p.tempSecadoC} °C`, 215, finalY + 18);
+
+        // 1. Etapa de Vaporizado
+        doc.setFont("helvetica", "bold");
+        doc.text("1. ETAPA DE VAPORIZADO:", 14, finalY + 16);
+        doc.setFont("helvetica", "normal");
+        doc.text(`P: ${p?.presionBar ?? 0.3} bar   |   Esc: ${p?.velExclusa ?? 6} RPM   |   Reposo: ${p?.tiempoReposoMin ?? 60} min   |   Modo: ${p?.modoVaporizado || "automático"}`, 60, finalY + 16);
+
+        // 2. Etapa de Enfriamiento
+        doc.setFont("helvetica", "bold");
+        doc.text("2. ETAPA DE ENFRIAMIENTO:", 14, finalY + 22);
+        doc.setFont("helvetica", "normal");
+        const enfriamientoReposoTxt = p?.enfriamientoTieneReposo ? `CON reposo (${p?.enfriamientoTiempoReposoMin ?? 0} min)` : "SIN reposo";
+        doc.text(`${p?.enfriamientoTipoAire || "Con aire caliente"} de ${p?.enfriamientoTempAireC ?? 75}°C   |   ${enfriamientoReposoTxt}`, 60, finalY + 22);
+
+        // 3. Etapa de Secado
+        doc.setFont("helvetica", "bold");
+        doc.text("3. ETAPA DE SECADO:", 14, finalY + 28);
+        doc.setFont("helvetica", "normal");
+        doc.text(`T°PROG: ${p?.secadoTempProgPerfil1C ?? p?.tempSecadoC ?? 75}°C (PERFIL 1)   |   Circulación: ${p?.secadoConfigCirculacion || "1.1/12/0.9"}   |   T° máx: ${p?.secadoTempMaxC ?? 31}°C   |   Descarga: ${p?.secadoTiempoEnfriamientoDescargaMin ?? 40} min ${p?.secadoTipoAireDescarga || "con aire frío"}   |   Humedad: ${p?.secadoHumedadDescargaPct ?? 12.5}%`, 60, finalY + 28);
 
         if (batchActual.observacion) {
-          doc.text(`Observación: ${batchActual.observacion}`, 14, finalY + 25);
+          doc.setFontSize(6.5);
+          doc.setTextColor(100, 116, 139);
+          doc.text(`Observación: ${batchActual.observacion}`, 14, finalY + 34);
         }
 
         // Bloque de Firmas
-        const sigY = Math.min(finalY + 38, 180);
+        const sigY = Math.min(finalY + 48, 185);
         doc.setDrawColor(148, 163, 184);
         doc.line(20, sigY, 80, sigY);
         doc.line(110, sigY, 170, sigY);
@@ -522,7 +595,7 @@ export const ExportarProgramacionModal: React.FC<ExportarProgramacionModalProps>
         ];
 
         const bodyRows: any[] = [];
-        for (const prog of todasLasProgramaciones) {
+        for (const prog of listaBatchesDisponibles) {
           const filas = prog.filasLote && prog.filasLote.length > 0 ? prog.filasLote : [{
             loteId: prog.batch,
             cliente: prog.clientePrincipal,
@@ -562,10 +635,10 @@ export const ExportarProgramacionModal: React.FC<ExportarProgramacionModalProps>
               idx === 0 ? `${prog.promedios?.qb ?? f.qb}%` : "",
               idx === 0 ? `${prog.promedios?.tt ?? f.tt}%` : "",
               idx === 0 ? (prog.promedios?.condicion ?? "APTO") : "",
-              idx === 0 ? `${prog.parametrosDeterminados?.presionBar ?? 0.40} bar` : "",
+              idx === 0 ? `${prog.parametrosDeterminados?.presionBar ?? 0.3} bar` : "",
               idx === 0 ? `${prog.parametrosDeterminados?.velExclusa ?? 6}` : "",
-              idx === 0 ? `${prog.parametrosDeterminados?.tiempoReposoMin ?? 40}m` : "",
-              idx === 0 ? `${prog.parametrosDeterminados?.tempSecadoC ?? 80}°C` : ""
+              idx === 0 ? `${prog.parametrosDeterminados?.tiempoReposoMin ?? 60}m` : "",
+              idx === 0 ? `${prog.parametrosDeterminados?.secadoTempProgPerfil1C ?? prog.parametrosDeterminados?.tempSecadoC ?? 75}°C` : ""
             ]);
           });
         }
@@ -694,48 +767,59 @@ export const ExportarProgramacionModal: React.FC<ExportarProgramacionModalProps>
         {/* Action Controls & Toggles Bar */}
         <div className="p-3 sm:px-6 bg-slate-900 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
           {/* Selector de Modo */}
+          {/* Selector de Modo */}
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-bold text-slate-400">Alcance:</span>
             <div className="flex rounded-lg overflow-hidden border border-slate-700 bg-slate-800 p-0.5">
-              {batchActual && (
-                <button
-                  type="button"
-                  onClick={() => setModoExportacion("batch_individual")}
-                  className={`px-3 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${
-                    modoExportacion === "batch_individual"
-                      ? "bg-amber-500 text-slate-950 shadow"
-                      : "text-slate-300 hover:text-white"
-                  }`}
-                >
-                  Ficha Batch ({batchActual.batch})
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => setModoExportacion("batch_individual")}
+                className={`px-3 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                  modoExportacion === "batch_individual"
+                    ? "bg-amber-500 text-slate-950 font-black shadow"
+                    : "text-slate-300 hover:text-white"
+                }`}
+                title="Ver resumen y parámetros del supervisor por batch individual"
+              >
+                📋 Resumen por Batch {batchActual ? `(${batchActual.batch})` : ""}
+              </button>
               <button
                 type="button"
                 onClick={() => setModoExportacion("sabana_completa")}
                 className={`px-3 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${
                   modoExportacion === "sabana_completa"
-                    ? "bg-amber-500 text-slate-950 shadow"
+                    ? "bg-amber-500 text-slate-950 font-black shadow"
                     : "text-slate-300 hover:text-white"
                 }`}
+                title="Ver la sábana completa con todos los batches programados"
               >
-                Sábana Completa ({todasLasProgramaciones.length} Batches)
+                📊 Sábana Completa ({listaBatchesDisponibles.length} Batches)
               </button>
             </div>
 
-            {modoExportacion === "batch_individual" && todasLasProgramaciones.length > 1 && (
-              <select
-                value={batchActual?.id || batchActual?.batch || ""}
-                onChange={(e) => setSelectedBatchKey(e.target.value)}
-                className="bg-slate-800 border border-amber-500/40 rounded-lg px-2.5 py-1 text-xs font-bold text-amber-300 focus:outline-none focus:border-amber-400 cursor-pointer"
-                title="Seleccionar Batch para imprimir su ficha"
-              >
-                {todasLasProgramaciones.map((p, idx) => (
-                  <option key={p.id || p.batch || idx} value={p.id || p.batch}>
-                    Batch {p.batch} — {p.clientePrincipal} ({p.fecha})
-                  </option>
-                ))}
-              </select>
+            {/* Selector de Batch disponible para navegación fluida */}
+            {listaBatchesDisponibles.length > 0 && (
+              <div className="flex items-center gap-1.5 ml-1">
+                <span className="text-[11px] font-bold text-slate-400">Ver Batch:</span>
+                <select
+                  value={batchActual?.id || batchActual?.batch || ""}
+                  onChange={(e) => {
+                    setSelectedBatchKey(e.target.value);
+                    setModoExportacion("batch_individual");
+                  }}
+                  className="bg-slate-800 border border-amber-500/40 rounded-lg px-2.5 py-1 text-xs font-bold text-amber-300 focus:outline-none focus:border-amber-400 cursor-pointer max-w-[280px] truncate"
+                  title="Seleccionar Batch para ver su resumen individual y parámetros"
+                >
+                  {listaBatchesDisponibles.map((p, idx) => {
+                    const optKey = p.id || p.batch || `batch-${idx}`;
+                    return (
+                      <option key={optKey} value={optKey}>
+                        Batch {p.batch} — {p.clientePrincipal || "Cliente"} ({p.totalSacosProg || 0} sacos)
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
             )}
           </div>
 
@@ -868,12 +952,15 @@ export const ExportarProgramacionModal: React.FC<ExportarProgramacionModalProps>
 
             {/* Banner Amarillo idéntico a la Hoja de Planta */}
             <div className="bg-yellow-400 text-slate-950 py-2 px-4 rounded-lg font-black text-xs sm:text-sm uppercase tracking-widest text-center shadow-inner mb-4">
-              RESUMEN DE PROGRAMACION DE BATCH - VAPORIZADO APIT
+              {modoExportacion === "batch_individual"
+                ? `RESUMEN DE PROGRAMACIÓN DE BATCH ${batchActual ? `- ${batchActual.batch}` : ""} - VAPORIZADO APIT`
+                : `SÁBANA GENERAL DE PROGRAMACIÓN DE BATCHES (${listaBatchesDisponibles.length} BATCHES) - VAPORIZADO APIT`}
             </div>
 
             {/* MODO 1: FICHA BATCH INDIVIDUAL */}
-            {modoExportacion === "batch_individual" && batchActual && (
-              <div className="space-y-4">
+            {modoExportacion === "batch_individual" && (
+              batchActual ? (
+                <div className="space-y-4">
                 {/* Meta Banner del Batch */}
                 <div className={`p-4 rounded-xl border grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs ${
                   temaExportacion === "claro" ? "bg-slate-50 border-slate-200" : "bg-slate-850 border-slate-700"
@@ -983,44 +1070,140 @@ export const ExportarProgramacionModal: React.FC<ExportarProgramacionModalProps>
                   </table>
                 </div>
 
-                {/* Parámetros Operativos de Planta */}
+                {/* Parámetros Determinados por el Supervisor */}
                 <div className={`p-4 rounded-xl border ${
-                  temaExportacion === "claro" ? "bg-amber-50/70 border-amber-300" : "bg-amber-950/20 border-amber-500/40"
+                  temaExportacion === "claro" ? "bg-amber-50/80 border-amber-300" : "bg-amber-950/20 border-amber-500/40"
                 }`}>
-                  <div className="text-xs font-black uppercase tracking-wider text-amber-800 dark:text-amber-400 mb-2 flex items-center gap-1.5">
-                    <Flame className="w-4 h-4" />
-                    Parámetros Operativos de Vaporizado Determinados:
+                  <div className="flex items-center justify-between border-b pb-2 mb-3 border-amber-300/50 dark:border-amber-500/30">
+                    <div className="text-xs font-black uppercase tracking-wider text-amber-900 dark:text-amber-300 flex items-center gap-2">
+                      <Flame className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                      <span>Parámetros Determinados por el Supervisor</span>
+                    </div>
+                    <span className="text-[10px] font-bold text-amber-800 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/70 px-2 py-0.5 rounded border border-amber-300 dark:border-amber-600/40">
+                      Receta de Operación de Planta
+                    </span>
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                    <div className={`p-2.5 rounded-lg border ${temaExportacion === "claro" ? "bg-white border-amber-200" : "bg-slate-900 border-slate-750"}`}>
-                      <span className="text-[10px] text-slate-500 uppercase block">Presión de Vapor:</span>
-                      <span className="text-base font-black text-slate-900 dark:text-white">
-                        {batchActual.parametrosDeterminados?.presionBar ?? 0.40} bar
-                      </span>
+
+                  {/* 3 Etapas: 1. Vaporizado, 2. Enfriamiento, 3. Secado */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {/* 1. ETAPA DE VAPORIZADO */}
+                    <div className={`p-3 rounded-lg border ${
+                      temaExportacion === "claro" ? "bg-white border-amber-200 shadow-xs" : "bg-slate-900 border-amber-500/30"
+                    }`}>
+                      <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-amber-200 dark:border-amber-500/20">
+                        <span className="text-[11px] font-black uppercase tracking-wider text-amber-800 dark:text-amber-400 flex items-center gap-1.5">
+                          <Flame className="w-3.5 h-3.5 text-amber-500" />
+                          1. Etapa de Vaporizado
+                        </span>
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                          {batchActual.parametrosDeterminados?.modoVaporizado || "automático"}
+                        </span>
+                      </div>
+                      <div className="space-y-1 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400">P (Presión):</span>
+                          <span className="font-mono font-black text-slate-900 dark:text-white">
+                            {batchActual.parametrosDeterminados?.presionBar ?? 0.3} bar
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400">Esc (Esclusa):</span>
+                          <span className="font-mono font-black text-slate-900 dark:text-white">
+                            {batchActual.parametrosDeterminados?.velExclusa ?? 6} RPM
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400">Reposo:</span>
+                          <span className="font-mono font-black text-slate-900 dark:text-white">
+                            {batchActual.parametrosDeterminados?.tiempoReposoMin ?? 60} min
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <div className={`p-2.5 rounded-lg border ${temaExportacion === "claro" ? "bg-white border-amber-200" : "bg-slate-900 border-slate-750"}`}>
-                      <span className="text-[10px] text-slate-500 uppercase block">Velocidad de Esclusa:</span>
-                      <span className="text-base font-black text-slate-900 dark:text-white">
-                        Nivel {batchActual.parametrosDeterminados?.velExclusa ?? 6}
-                      </span>
+
+                    {/* 2. ETAPA DE ENFRIAMIENTO */}
+                    <div className={`p-3 rounded-lg border ${
+                      temaExportacion === "claro" ? "bg-white border-cyan-200 shadow-xs" : "bg-slate-900 border-cyan-500/30"
+                    }`}>
+                      <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-cyan-200 dark:border-cyan-500/20">
+                        <span className="text-[11px] font-black uppercase tracking-wider text-cyan-800 dark:text-cyan-400 flex items-center gap-1.5">
+                          <Wind className="w-3.5 h-3.5 text-cyan-500" />
+                          2. Etapa de Enfriamiento
+                        </span>
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase bg-cyan-100 text-cyan-800 dark:bg-cyan-950 dark:text-cyan-300">
+                          {batchActual.parametrosDeterminados?.enfriamientoTieneReposo 
+                            ? `CON reposo (${batchActual.parametrosDeterminados?.enfriamientoTiempoReposoMin ?? 0}m)` 
+                            : "SIN reposo"}
+                        </span>
+                      </div>
+                      <div className="space-y-1 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400">Flujo de Aire:</span>
+                          <span className="font-bold text-slate-900 dark:text-white">
+                            {batchActual.parametrosDeterminados?.enfriamientoTipoAire || "Con aire caliente"}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400">Temperatura Aire:</span>
+                          <span className="font-mono font-black text-cyan-700 dark:text-cyan-300">
+                            {batchActual.parametrosDeterminados?.enfriamientoTempAireC ?? 75}°C
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400">Condición:</span>
+                          <span className="font-bold text-slate-800 dark:text-slate-200">
+                            {batchActual.parametrosDeterminados?.enfriamientoTieneReposo ? "Con reposo programado" : "SIN reposo"}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <div className={`p-2.5 rounded-lg border ${temaExportacion === "claro" ? "bg-white border-amber-200" : "bg-slate-900 border-slate-750"}`}>
-                      <span className="text-[10px] text-slate-500 uppercase block">Tiempo en Reposo:</span>
-                      <span className="text-base font-black text-slate-900 dark:text-white">
-                        {batchActual.parametrosDeterminados?.tiempoReposoMin ?? 40} min
-                      </span>
-                    </div>
-                    <div className={`p-2.5 rounded-lg border ${temaExportacion === "claro" ? "bg-white border-amber-200" : "bg-slate-900 border-slate-750"}`}>
-                      <span className="text-[10px] text-slate-500 uppercase block">Temperatura de Secado:</span>
-                      <span className="text-base font-black text-slate-900 dark:text-white">
-                        {batchActual.parametrosDeterminados?.tempSecadoC ?? 80} °C
-                      </span>
+
+                    {/* 3. ETAPA DE SECADO */}
+                    <div className={`p-3 rounded-lg border ${
+                      temaExportacion === "claro" ? "bg-white border-orange-200 shadow-xs" : "bg-slate-900 border-orange-500/30"
+                    }`}>
+                      <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-orange-200 dark:border-orange-500/20">
+                        <span className="text-[11px] font-black uppercase tracking-wider text-orange-800 dark:text-orange-400 flex items-center gap-1.5">
+                          <Sun className="w-3.5 h-3.5 text-orange-500" />
+                          3. Etapa de Secado
+                        </span>
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                          Humedad: {batchActual.parametrosDeterminados?.secadoHumedadDescargaPct ?? 12.5}%
+                        </span>
+                      </div>
+                      <div className="space-y-1 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400">T°PROG (Perfil 1):</span>
+                          <span className="font-mono font-black text-slate-900 dark:text-white">
+                            {batchActual.parametrosDeterminados?.secadoTempProgPerfil1C ?? batchActual.parametrosDeterminados?.tempSecadoC ?? 75}°C
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400">Circulación:</span>
+                          <span className="font-mono font-bold text-orange-700 dark:text-orange-300">
+                            {batchActual.parametrosDeterminados?.secadoConfigCirculacion || "1.1/12/0.9"}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400">T° máx Secado:</span>
+                          <span className="font-mono font-bold text-slate-900 dark:text-white">
+                            {batchActual.parametrosDeterminados?.secadoTempMaxC ?? 31}°C
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400">Enf. Descarga:</span>
+                          <span className="font-bold text-slate-900 dark:text-white">
+                            {batchActual.parametrosDeterminados?.secadoTiempoEnfriamientoDescargaMin ?? 40} min ({batchActual.parametrosDeterminados?.secadoTipoAireDescarga || "con aire frío"})
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
                   {batchActual.observacion && (
-                    <div className="mt-3 text-[11px] text-slate-600 dark:text-slate-300 font-medium">
-                      <span className="font-bold">Observación: </span> {batchActual.observacion}
+                    <div className="mt-2.5 pt-2 border-t border-amber-200 dark:border-amber-500/20 text-[11px] text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                      <span className="font-bold uppercase tracking-wider text-amber-900 dark:text-amber-400">Observación del Supervisor:</span>
+                      <span className="italic">{batchActual.observacion}</span>
                     </div>
                   )}
                 </div>
@@ -1040,12 +1223,27 @@ export const ExportarProgramacionModal: React.FC<ExportarProgramacionModalProps>
                     <span>Recepción de Orden de Proceso</span>
                   </div>
                 </div>
-              </div>
+                </div>
+              ) : (
+                <div className="py-12 text-center text-slate-400">
+                  <p className="font-bold text-sm text-slate-300">No hay ningún batch seleccionado o programado.</p>
+                  <p className="text-xs text-slate-500 mt-1">Crea o selecciona un batch en la programación para ver su resumen individual.</p>
+                </div>
+              )
             )}
 
             {/* MODO 2: SÁBANA COMPLETA DE PROGRAMACIÓN */}
             {modoExportacion === "sabana_completa" && (
               <div className="space-y-4">
+                <div className="flex items-center justify-between text-xs bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5 text-amber-800 dark:text-amber-300">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
+                    <span>
+                      <strong>Sábana General de Programación:</strong> Mostrando {listaBatchesDisponibles.length} batches programados. Haz clic en <strong>Ver Ficha</strong> o en el código del batch para abrir su resumen detallado con los parámetros del supervisor.
+                    </span>
+                  </div>
+                </div>
+
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-[10px] border-collapse">
                     <thead>
@@ -1071,10 +1269,18 @@ export const ExportarProgramacionModal: React.FC<ExportarProgramacionModalProps>
                         <th className="py-2 px-1 text-center">ESCLUSA</th>
                         <th className="py-2 px-1 text-center">REPOSO</th>
                         <th className="py-2 px-1 text-center">SECADO</th>
+                        <th className="py-2 px-1.5 text-center font-bold">ACCIÓN</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 dark:divide-slate-800 font-mono">
-                      {todasLasProgramaciones.map((prog, pIdx) => {
+                      {listaBatchesDisponibles.length === 0 ? (
+                        <tr>
+                          <td colSpan={20} className="py-8 text-center text-slate-400 font-sans font-medium">
+                            No hay batches programados disponibles para mostrar en la sábana.
+                          </td>
+                        </tr>
+                      ) : (
+                        listaBatchesDisponibles.map((prog, pIdx) => {
                         const filas = prog.filasLote && prog.filasLote.length > 0 ? prog.filasLote : [{
                           loteId: prog.batch,
                           cliente: prog.clientePrincipal,
@@ -1109,8 +1315,19 @@ export const ExportarProgramacionModal: React.FC<ExportarProgramacionModalProps>
                                     <td rowSpan={filas.length} className="py-1 px-1 text-center align-middle font-sans font-bold border-r border-slate-200 dark:border-slate-800">
                                       {prog.turno}
                                     </td>
-                                    <td rowSpan={filas.length} className="py-1 px-1.5 text-center align-middle font-black text-amber-600 dark:text-amber-400 border-r border-slate-200 dark:border-slate-800">
-                                      {prog.batch}
+                                    <td rowSpan={filas.length} className="py-1 px-1.5 text-center align-middle font-black border-r border-slate-200 dark:border-slate-800">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setSelectedBatchKey(prog.id || prog.batch);
+                                          setModoExportacion("batch_individual");
+                                        }}
+                                        className="font-black hover:underline cursor-pointer flex items-center justify-center gap-0.5 w-full text-amber-600 dark:text-amber-400"
+                                        title={`Ver resumen completo y parámetros del Batch ${prog.batch}`}
+                                      >
+                                        <span>{prog.batch}</span>
+                                        <span className="text-[9px] text-amber-500 font-normal">↗</span>
+                                      </button>
                                     </td>
                                   </>
                                 )}
@@ -1153,16 +1370,29 @@ export const ExportarProgramacionModal: React.FC<ExportarProgramacionModalProps>
                                       {prog.promedios?.condicion || "APTO"}
                                     </td>
                                     <td rowSpan={filas.length} className="py-1 px-1 text-center align-middle border-r border-slate-200 dark:border-slate-800">
-                                      {prog.parametrosDeterminados?.presionBar ?? 0.40} bar
+                                      {prog.parametrosDeterminados?.presionBar ?? 0.3} bar
                                     </td>
                                     <td rowSpan={filas.length} className="py-1 px-1 text-center align-middle border-r border-slate-200 dark:border-slate-800">
-                                      {prog.parametrosDeterminados?.velExclusa ?? 6}
+                                      {prog.parametrosDeterminados?.velExclusa ?? 6} RPM
                                     </td>
                                     <td rowSpan={filas.length} className="py-1 px-1 text-center align-middle border-r border-slate-200 dark:border-slate-800">
-                                      {prog.parametrosDeterminados?.tiempoReposoMin ?? 40}m
+                                      {prog.parametrosDeterminados?.tiempoReposoMin ?? 60}m
                                     </td>
-                                    <td rowSpan={filas.length} className="py-1 px-1 text-center align-middle">
-                                      {prog.parametrosDeterminados?.tempSecadoC ?? 80}°C
+                                    <td rowSpan={filas.length} className="py-1 px-1 text-center align-middle border-r border-slate-200 dark:border-slate-800 font-bold">
+                                      {prog.parametrosDeterminados?.secadoTempProgPerfil1C ?? prog.parametrosDeterminados?.tempSecadoC ?? 75}°C
+                                    </td>
+                                    <td rowSpan={filas.length} className="py-1 px-1.5 text-center align-middle">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setSelectedBatchKey(prog.id || prog.batch);
+                                          setModoExportacion("batch_individual");
+                                        }}
+                                        className="px-2 py-0.5 text-[10px] bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold rounded border border-amber-500/30 transition-colors cursor-pointer inline-flex items-center gap-1"
+                                        title={`Ver ficha técnica y parámetros del Batch ${prog.batch}`}
+                                      >
+                                        Ver Ficha ↗
+                                      </button>
                                     </td>
                                   </>
                                 )}
@@ -1170,18 +1400,19 @@ export const ExportarProgramacionModal: React.FC<ExportarProgramacionModalProps>
                             ))}
                           </React.Fragment>
                         );
-                      })}
-                    </tbody>
+                      })
+                    )}
+                  </tbody>
                   </table>
                 </div>
 
                 {/* Resumen al pie de la sábana */}
                 <div className="flex items-center justify-between pt-3 border-t text-xs border-slate-200 dark:border-slate-800">
                   <div className="font-bold text-slate-700 dark:text-slate-300">
-                    Total de Batches Programados: {todasLasProgramaciones.length}
+                    Total de Batches Programados: {listaBatchesDisponibles.length}
                   </div>
                   <div className="font-black text-amber-600 dark:text-amber-400">
-                    Total Sacos: {todasLasProgramaciones.reduce((sum, p) => sum + (p.totalSacosProg || 0), 0)} Sacos ({((todasLasProgramaciones.reduce((sum, p) => sum + (p.pesoTotalKg || 0), 0)) / 1000).toFixed(1)} TN)
+                    Total Sacos: {listaBatchesDisponibles.reduce((sum, p) => sum + (p.totalSacosProg || 0), 0).toLocaleString()} Sacos ({((listaBatchesDisponibles.reduce((sum, p) => sum + (p.pesoTotalKg || 0), 0)) / 1000).toFixed(1)} TN)
                   </div>
                 </div>
               </div>

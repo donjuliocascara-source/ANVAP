@@ -180,8 +180,8 @@ export interface LocalDatabaseSchema {
   resultadosCoccionExternos?: any[];
 }
 
-const STORAGE_KEY = "arroz_apit_local_db_v10_prod";
-const ZERO_STATE_RESET_FLAG = "apit_zero_state_reset_v11_clean_prod";
+const STORAGE_KEY = "arroz_apit_local_db_v12_prod";
+const ZERO_STATE_RESET_FLAG = "apit_zero_state_reset_v12_publicar_prod";
 
 const INITIAL_DATA: LocalDatabaseSchema = {
   lotes: [],
@@ -2357,9 +2357,9 @@ class LocalDBService {
       return this.cache!;
     }
 
-    // Reinicio total en cero por única vez (v10_prod) para publicar la aplicación 100% limpia sin datos subidos
+    // Reinicio total en cero (v12_publicar_prod) para publicar la aplicación 100% limpia sin datos subidos
     try {
-      const hasZeroResetV10 = window.localStorage.getItem(ZERO_STATE_RESET_FLAG) === "true";
+      const hasZeroResetV12 = window.localStorage.getItem(ZERO_STATE_RESET_FLAG) === "true";
       const staleKeys = [
         "arroz_apit_local_db_v1",
         "arroz_apit_local_db_v2",
@@ -2371,19 +2371,21 @@ class LocalDBService {
         "arroz_apit_local_db_v8",
         "arroz_apit_local_db_v8_clean",
         "arroz_apit_local_db_v9_clean",
+        "arroz_apit_local_db_v10_prod",
+        "arroz_apit_local_db_v11_clean_prod",
         "molino_programaciones_batch_oficiales_v1",
         "molino_programaciones_batch_oficiales_v2",
-        "molino_programaciones_batch_oficiales_v3"
+        "molino_programaciones_batch_oficiales_v3",
+        "molino_programaciones_batch_oficiales_v4",
+        "molino_programaciones_batch_oficiales_v5_prod"
       ];
 
-      if (!hasZeroResetV10) {
+      if (!hasZeroResetV12) {
         window.localStorage.setItem(ZERO_STATE_RESET_FLAG, "true");
         const keysToPurgeOnReset = [
           ...staleKeys,
           STORAGE_KEY,
           "programaciones_batch_oficial_v1",
-          "molino_programaciones_batch_oficiales_v3",
-          "molino_programaciones_batch_oficiales_v4",
           "resultados_coccion_externos_v1",
           "resultados_coccion_integrados_v1",
           "resultados_coccion_integrados_v2",
@@ -2391,27 +2393,38 @@ class LocalDBService {
           "sabana_batches_v1",
           "sabana_batches_trabajados_v1",
           "sabana_batches_trabajados_v2",
+          "sabana_batches_trabajados_v3",
           "historico_recetas_secado_v1",
           "APIT_HISTORICO_RECETAS_SECADO_V1",
           "arroz_apit_deleted_lotes_v2",
           "arroz_apit_unlinked_new_lotes_v5",
           "arroz_apit_deleted_programaciones_v1",
           "anvap_deleted_batches_v1",
-          "apit_offline_cloud_queue_v1"
+          "apit_offline_cloud_queue_v1",
+          "apit_offline_cloud_queue_v2_prod",
+          "apit_dias_espera_congelados_v1",
+          "molino_priorizacion_manual_overrides_v1",
+          "molino_priorizacion_history_v1"
         ];
         keysToPurgeOnReset.forEach((k) => window.localStorage.removeItem(k));
+        
+        // Limpiar cualquier borrador de hoja de vaporizado previo
+        for (let i = window.localStorage.length - 1; i >= 0; i--) {
+          const k = window.localStorage.key(i);
+          if (k && (k.startsWith("apit_draft_ctrl_") || k.startsWith("apit_draft_"))) {
+            window.localStorage.removeItem(k);
+          }
+        }
+        
         this.cleanupStaleLocalStorage();
         if (window.indexedDB && window.indexedDB.deleteDatabase) {
-          window.indexedDB.deleteDatabase("ArrozApitStorage_v1");
-          window.indexedDB.deleteDatabase("ArrozApitStorage_v2");
-          window.indexedDB.deleteDatabase("ArrozApitStorage_v3");
-          window.indexedDB.deleteDatabase("ArrozApitStorage_v4");
-          window.indexedDB.deleteDatabase("ArrozApitStorage_v5");
-          window.indexedDB.deleteDatabase("ArrozApitStorage_v6");
-          window.indexedDB.deleteDatabase("ArrozApitStorage_v7");
-          window.indexedDB.deleteDatabase("ArrozApitStorage_v8");
+          for (let i = 1; i <= 15; i++) {
+            window.indexedDB.deleteDatabase(`ArrozApitStorage_v${i}`);
+          }
           window.indexedDB.deleteDatabase("ArrozApitStorage_v8_clean");
           window.indexedDB.deleteDatabase("ArrozApitStorage_v9_clean");
+          window.indexedDB.deleteDatabase("ArrozApitStorage_v10_prod");
+          window.indexedDB.deleteDatabase("ArrozApitStorage_v11_clean_prod");
         }
       } else {
         for (const k of staleKeys) {
@@ -2919,6 +2932,8 @@ class LocalDBService {
           "molino_programaciones_batch_oficiales_v1",
           "molino_programaciones_batch_oficiales_v2",
           "molino_programaciones_batch_oficiales_v3",
+          "molino_programaciones_batch_oficiales_v4",
+          "molino_programaciones_batch_oficiales_v5_prod",
           "resultados_coccion_externos_v1",
           "resultados_coccion_integrados_v1",
           "resultados_coccion_integrados_v2",
@@ -2926,22 +2941,26 @@ class LocalDBService {
           "sabana_batches_v1",
           "sabana_batches_trabajados_v1",
           "sabana_batches_trabajados_v2",
+          "sabana_batches_trabajados_v3",
           "historico_recetas_secado_v1",
           "APIT_HISTORICO_RECETAS_SECADO_V1",
           "arroz_apit_deleted_lotes_v2",
           "arroz_apit_unlinked_new_lotes_v5",
-          "arroz_apit_local_db_v1",
-          "arroz_apit_local_db_v2",
-          "arroz_apit_local_db_v3",
-          "arroz_apit_local_db_v4",
-          "arroz_apit_local_db_v5",
-          "arroz_apit_local_db_v6",
-          "arroz_apit_local_db_v7",
-          "arroz_apit_local_db_v8",
-          "arroz_apit_local_db_v8_clean",
-          "molino_programaciones_batch_oficiales_v4",
-          "anvap_deleted_batches_v1"
+          "arroz_apit_deleted_programaciones_v1",
+          "anvap_deleted_batches_v1",
+          "apit_offline_cloud_queue_v1",
+          "apit_offline_cloud_queue_v2_prod",
+          "apit_dias_espera_congelados_v1",
+          "molino_priorizacion_manual_overrides_v1",
+          "molino_priorizacion_history_v1"
         ].forEach((k) => window.localStorage.removeItem(k));
+
+        for (let i = window.localStorage.length - 1; i >= 0; i--) {
+          const k = window.localStorage.key(i);
+          if (k && (k.startsWith("apit_draft_ctrl_") || k.startsWith("apit_draft_"))) {
+            window.localStorage.removeItem(k);
+          }
+        }
         this.cleanupStaleLocalStorage();
         fetch("/api/reset-data", { method: "POST" }).catch(() => {});
       } catch {}

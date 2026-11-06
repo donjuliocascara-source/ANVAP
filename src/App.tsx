@@ -1273,8 +1273,8 @@ export default function App() {
         lotesAptosCount={lotesAptosCount}
       />
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6">
+      {/* Main Content Area - 100% Full Width across the entire display */}
+      <main className="flex-1 w-full p-2 sm:p-4 lg:p-6">
         <ViewErrorBoundary viewName={activeTab}>
           <Suspense fallback={<ViewLoadingFallback />}>
             {activeTab === "dashboard" && (

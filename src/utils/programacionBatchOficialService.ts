@@ -765,7 +765,7 @@ export function generarSiguienteNombreBatch(
     }
 
     try {
-      const rawDb = localStorage.getItem("arroz_apit_local_db_v10_prod");
+      const rawDb = localStorage.getItem("arroz_apit_local_db_v12_prod");
       if (rawDb) {
         const parsedDb = JSON.parse(rawDb);
         if (Array.isArray(parsedDb?.batchesVaporizado)) {
@@ -858,7 +858,7 @@ export function cargarProgramacionesOficiales(): ProgramacionBatchOficial[] {
     const existingLoteCodes = new Set<string>();
     let hasLoadedDbLotes = false;
 
-    const rawDb = localStorage.getItem("arroz_apit_local_db_v10_prod");
+    const rawDb = localStorage.getItem("arroz_apit_local_db_v12_prod");
     if (rawDb) {
       try {
         const parsedDb = JSON.parse(rawDb);

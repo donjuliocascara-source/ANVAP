@@ -825,6 +825,7 @@ export function generateHojaControlVaporizadoPDF(params: {
   perfilesSecado?: any;
   recetaSecado?: any;
   etapaEnfriamientoFinal?: any;
+  etapaReposoFinal?: any;
   tieneParadasMecanicas?: boolean;
   paradasMecanicas?: any[];
   tiempoTotalPerdidoMecanicoMin?: number;
@@ -848,6 +849,7 @@ export function generateHojaControlVaporizadoPDF(params: {
     perfilesSecado,
     recetaSecado,
     etapaEnfriamientoFinal,
+    etapaReposoFinal,
     tieneParadasMecanicas,
     paradasMecanicas,
     tiempoTotalPerdidoMecanicoMin,
@@ -1179,24 +1181,45 @@ export function generateHojaControlVaporizadoPDF(params: {
     currentY = 10;
   }
 
-  // 4. ETAPAS DE ENFRIAMIENTO Y REPOSO + PERFILES DE SECADO (P0 A P12)
+  // 4. ETAPAS DE ENFRIAMIENTO Y REPOSO PREVIAS AL SECADO (1° Reposo, Enfriamiento y 2° Reposo)
   const stagesRows: any[] = [];
   (etapaReposo1 || []).forEach((r: any, i: number) => {
-    if (r.horaInicio || r.horaFin || r.tempGrano || r.humedad || i === 0) {
-      const dur = calcDur(r.horaInicio, r.horaFin) || r.duracion || (r.tiempoMin !== undefined ? `${r.tiempoMin} min` : "-");
-      stagesRows.push(["1° Reposo", r.fecha || fecha, `R1-${i + 1}`, r.horaInicio || "--:--", r.horaFin || "--:--", dur, r.tempGrano ?? "-", r.tempAmbiente ?? "-", r.humedadRelativa ?? "-", r.humedad ?? "-", r.tempProgramada ?? "-"]);
+    if (r.horaInicio || r.horaFin || r.tempGrano || r.humedad || i === 0 || i === 1) {
+      const isIni = i % 2 === 0;
+      const faseLabel = isIni ? "1° REP (HORA INICIAL)" : "1° REP (HORA FINAL)";
+      const hora = isIni ? (r.horaInicio || "--:--") : (r.horaFin || r.horaInicio || "--:--");
+      const nextR = etapaReposo1[i + 1];
+      const prevR = etapaReposo1[i - 1];
+      const dur = isIni 
+        ? (calcDur(r.horaInicio, nextR?.horaFin || nextR?.horaInicio) || r.duracion || "-")
+        : (calcDur(prevR?.horaInicio, r.horaFin || r.horaInicio) || r.duracion || "-");
+      stagesRows.push(["1° Reposo", r.fecha || fecha, faseLabel, hora, isIni ? (nextR?.horaFin || "-") : hora, dur, r.tempGrano ?? "-", r.tempAmbiente ?? "-", r.humedadRelativa ?? "-", r.humedad ?? "-", r.tempProgramada ?? "-"]);
     }
   });
   (etapaEnfriamiento || []).forEach((r: any, i: number) => {
-    if (r.horaInicio || r.horaFin || r.tempGrano || r.humedad || i === 0) {
-      const dur = calcDur(r.horaInicio, r.horaFin) || r.duracion || (r.tiempoMin !== undefined ? `${r.tiempoMin} min` : "-");
-      stagesRows.push(["Enfriamiento", r.fecha || fecha, `ENF-${i + 1}`, r.horaInicio || "--:--", r.horaFin || "--:--", dur, r.tempGrano ?? "-", r.tempAmbiente ?? "-", r.humedadRelativa ?? "-", r.humedad ?? "-", r.tempProgramada ?? "-"]);
+    if (r.horaInicio || r.horaFin || r.tempGrano || r.humedad || i === 0 || i === 1) {
+      const isIni = i % 2 === 0;
+      const faseLabel = isIni ? "ENF (HORA INICIAL)" : "ENF (HORA FINAL)";
+      const hora = isIni ? (r.horaInicio || "--:--") : (r.horaFin || r.horaInicio || "--:--");
+      const nextR = etapaEnfriamiento[i + 1];
+      const prevR = etapaEnfriamiento[i - 1];
+      const dur = isIni 
+        ? (calcDur(r.horaInicio, nextR?.horaFin || nextR?.horaInicio) || r.duracion || "-")
+        : (calcDur(prevR?.horaInicio, r.horaFin || r.horaInicio) || r.duracion || "-");
+      stagesRows.push(["Enfriamiento", r.fecha || fecha, faseLabel, hora, isIni ? (nextR?.horaFin || "-") : hora, dur, r.tempGrano ?? "-", r.tempAmbiente ?? "-", r.humedadRelativa ?? "-", r.humedad ?? "-", r.tempProgramada ?? "-"]);
     }
   });
   (etapaReposo2 || []).forEach((r: any, i: number) => {
-    if (r.horaInicio || r.horaFin || r.tempGrano || r.humedad || i === 0) {
-      const dur = calcDur(r.horaInicio, r.horaFin) || r.duracion || (r.tiempoMin !== undefined ? `${r.tiempoMin} min` : "-");
-      stagesRows.push(["2° Reposo", r.fecha || fecha, `R2-${i + 1}`, r.horaInicio || "--:--", r.horaFin || "--:--", dur, r.tempGrano ?? "-", r.tempAmbiente ?? "-", r.humedadRelativa ?? "-", r.humedad ?? "-", r.tempProgramada ?? "-"]);
+    if (r.horaInicio || r.horaFin || r.tempGrano || r.humedad || i === 0 || i === 1) {
+      const isIni = i % 2 === 0;
+      const faseLabel = isIni ? "2° REP (HORA INICIAL)" : "2° REP (HORA FINAL)";
+      const hora = isIni ? (r.horaInicio || "--:--") : (r.horaFin || r.horaInicio || "--:--");
+      const nextR = etapaReposo2[i + 1];
+      const prevR = etapaReposo2[i - 1];
+      const dur = isIni 
+        ? (calcDur(r.horaInicio, nextR?.horaFin || nextR?.horaInicio) || r.duracion || "-")
+        : (calcDur(prevR?.horaInicio, r.horaFin || r.horaInicio) || r.duracion || "-");
+      stagesRows.push(["2° Reposo", r.fecha || fecha, faseLabel, hora, isIni ? (nextR?.horaFin || "-") : hora, dur, r.tempGrano ?? "-", r.tempAmbiente ?? "-", r.humedadRelativa ?? "-", r.humedad ?? "-", r.tempProgramada ?? "-"]);
     }
   });
 
@@ -1288,12 +1311,33 @@ export function generateHojaControlVaporizadoPDF(params: {
 
   currentY = (doc as any).lastAutoTable.finalY + 4;
 
-  // 6. ETAPA FINAL DE ENFRIAMIENTO DEL GRANO (POST-SECADO)
+  // 6. ETAPA FINAL DE ENFRIAMIENTO Y REPOSO FINAL (POST-SECADO)
   const finalStagesRows: any[] = [];
   (etapaEnfriamientoFinal || []).forEach((r: any, i: number) => {
-    if (r.horaInicio || r.horaFin || r.tempGrano || r.humedad || i === 0) {
-      const dur = calcDur(r.horaInicio, r.horaFin) || r.duracion || (r.tiempoMin !== undefined ? `${r.tiempoMin} min` : "-");
-      finalStagesRows.push(["Enfriamiento Final", r.fecha || fecha, `ENF-FIN-${i + 1}`, r.horaInicio || "--:--", r.horaFin || "--:--", dur, r.tempGrano ?? "-", r.tempAmbiente ?? "-", r.humedadRelativa ?? "-", r.humedad ?? "-", r.tempProgramada ?? "-"]);
+    if (r.horaInicio || r.horaFin || r.tempGrano || r.humedad || i === 0 || i === 1) {
+      const isIni = i % 2 === 0;
+      const faseLabel = isIni ? "ENF. FIN (HORA INICIAL)" : "ENF. FIN (HORA FINAL)";
+      const hora = isIni ? (r.horaInicio || "--:--") : (r.horaFin || r.horaInicio || "--:--");
+      const nextR = etapaEnfriamientoFinal[i + 1];
+      const prevR = etapaEnfriamientoFinal[i - 1];
+      const dur = isIni 
+        ? (calcDur(r.horaInicio, nextR?.horaFin || nextR?.horaInicio) || r.duracion || "-")
+        : (calcDur(prevR?.horaInicio, r.horaFin || r.horaInicio) || r.duracion || "-");
+      finalStagesRows.push(["Enfriamiento Final", r.fecha || fecha, faseLabel, hora, isIni ? (nextR?.horaFin || "-") : hora, dur, r.tempGrano ?? "-", r.tempAmbiente ?? "-", r.humedadRelativa ?? "-", r.humedad ?? "-", r.tempProgramada ?? "-"]);
+    }
+  });
+
+  (etapaReposoFinal || []).forEach((r: any, i: number) => {
+    if (r.horaInicio || r.horaFin || r.tempGrano || r.humedad || i === 0 || i === 1) {
+      const isIni = i % 2 === 0;
+      const faseLabel = isIni ? "REP. FIN (HORA INICIAL)" : "REP. FIN (HORA FINAL)";
+      const hora = isIni ? (r.horaInicio || "--:--") : (r.horaFin || r.horaInicio || "--:--");
+      const nextR = etapaReposoFinal[i + 1];
+      const prevR = etapaReposoFinal[i - 1];
+      const dur = isIni 
+        ? (calcDur(r.horaInicio, nextR?.horaFin || nextR?.horaInicio) || r.duracion || "-")
+        : (calcDur(prevR?.horaInicio, r.horaFin || r.horaInicio) || r.duracion || "-");
+      finalStagesRows.push(["Reposo Final", r.fecha || fecha, faseLabel, hora, isIni ? (nextR?.horaFin || "-") : hora, dur, r.tempGrano ?? "-", r.tempAmbiente ?? "-", r.humedadRelativa ?? "-", r.humedad ?? "-", r.tempProgramada ?? "-"]);
     }
   });
 
@@ -1306,7 +1350,7 @@ export function generateHojaControlVaporizadoPDF(params: {
       startY: currentY,
       margin: { left: margin, right: margin },
       head: [
-        [{ content: "7. ETAPA FINAL DE ENFRIAMIENTO DEL GRANO (POST-SECADO / ACONDICIONAMIENTO)", colSpan: 11, styles: { fillColor: [15, 118, 110], textColor: [255, 255, 255], fontStyle: "bold" } }],
+        [{ content: "7. ETAPAS POST-SECADO: ENFRIAMIENTO FINAL Y REPOSO FINAL (ACONDICIONAMIENTO)", colSpan: 11, styles: { fillColor: [15, 118, 110], textColor: [255, 255, 255], fontStyle: "bold" } }],
         ["ETAPA", "FECHA", "FASE", "H. INICIO", "H. FINAL", "DURACIÓN", "T° GRANO", "T° AMB.", "H.R (%)", "HUMEDAD", "T° PROG."]
       ],
       body: finalStagesRows,

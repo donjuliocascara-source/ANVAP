@@ -224,7 +224,7 @@ export const Navigation: React.FC<NavigationProps> = ({
 
   return (
     <nav aria-label="Menú principal de planta ANVAP" className="bg-slate-900 border-b border-slate-800 shadow-lg sticky top-14 z-30">
-      <div className="max-w-7xl mx-auto px-2 sm:px-4">
+      <div className="w-full px-2 sm:px-4 lg:px-6">
         <div className="flex items-center justify-between py-1.5 gap-2">
           
           {/* LADO IZQUIERDO / PRINCIPAL: DASHBOARD + VISTAS DEL 1 AL 6 + AUDITORÍA */}

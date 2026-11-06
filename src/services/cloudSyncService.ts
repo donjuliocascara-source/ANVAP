@@ -337,6 +337,19 @@ class CloudSyncService {
     this.notifyStatus();
 
     try {
+      // 0.0 Purgar datos de prueba para lanzamiento limpio en producción si aún no se ha hecho
+      if (typeof window !== "undefined" && window.localStorage) {
+        const hasPurgedCloud = window.localStorage.getItem("apit_cloud_purged_for_publish_v12") === "true";
+        if (!hasPurgedCloud) {
+          try {
+            await this.clearAllCloudData();
+            window.localStorage.setItem("apit_cloud_purged_for_publish_v12", "true");
+          } catch (e) {
+            console.warn("[CloudSync] Aviso en purga de lanzamiento limpio:", e);
+          }
+        }
+      }
+
       // 0. Purgar de Firestore únicamente lotes explícitamente marcados para eliminación por el usuario (tombstones)
       const tombstones = getDeletedLotesTombstones();
       if (tombstones.size > 0) {
@@ -871,7 +884,11 @@ class CloudSyncService {
           "controlesVaporizado",
           "analisisVaporizados",
           "programaciones",
-          "cocciones"
+          "cocciones",
+          "sacas_descarga",
+          "historico_secado",
+          "sabana_batches",
+          "evaluacion_lotes"
         ];
 
         for (const colName of collectionsToClear) {
@@ -1435,7 +1452,11 @@ class CloudSyncService {
         "analisisVaporizados",
         "presecados",
         "programaciones",
-        "cocciones"
+        "cocciones",
+        "sacas_descarga",
+        "historico_secado",
+        "sabana_batches",
+        "evaluacion_lotes"
       ];
 
       try {

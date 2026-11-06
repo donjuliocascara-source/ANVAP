@@ -210,7 +210,7 @@ export function createEmptyEtapaReposo1(fechaStr?: string): PerfilSecadoPlant[] 
   });
   return [
     {
-      perfilIndex: "1° REPOSO (1)",
+      perfilIndex: "HORA INICIAL",
       etapa: "REPOSO_1",
       fecha: currentDate,
       horaInicio: "",
@@ -229,7 +229,7 @@ export function createEmptyEtapaReposo1(fechaStr?: string): PerfilSecadoPlant[] 
       modificaciones: { mod1: "", mod2: "", mod3: "" }
     },
     {
-      perfilIndex: "1° REPOSO (2)",
+      perfilIndex: "HORA FINAL",
       etapa: "REPOSO_1",
       fecha: currentDate,
       horaInicio: "",
@@ -258,7 +258,7 @@ export function createEmptyEtapaEnfriamiento(fechaStr?: string): PerfilSecadoPla
   });
   return [
     {
-      perfilIndex: "ENFRIAMIENTO (1)",
+      perfilIndex: "HORA INICIAL",
       etapa: "ENFRIAMIENTO",
       fecha: currentDate,
       horaInicio: "",
@@ -277,7 +277,7 @@ export function createEmptyEtapaEnfriamiento(fechaStr?: string): PerfilSecadoPla
       modificaciones: { mod1: "", mod2: "", mod3: "" }
     },
     {
-      perfilIndex: "ENFRIAMIENTO (2)",
+      perfilIndex: "HORA FINAL",
       etapa: "ENFRIAMIENTO",
       fecha: currentDate,
       horaInicio: "",
@@ -306,7 +306,7 @@ export function createEmptyEtapaReposo2(fechaStr?: string): PerfilSecadoPlant[] 
   });
   return [
     {
-      perfilIndex: "2° REPOSO (1)",
+      perfilIndex: "HORA INICIAL",
       etapa: "REPOSO_2",
       fecha: currentDate,
       horaInicio: "",
@@ -325,7 +325,7 @@ export function createEmptyEtapaReposo2(fechaStr?: string): PerfilSecadoPlant[] 
       modificaciones: { mod1: "", mod2: "", mod3: "" }
     },
     {
-      perfilIndex: "2° REPOSO (2)",
+      perfilIndex: "HORA FINAL",
       etapa: "REPOSO_2",
       fecha: currentDate,
       horaInicio: "",
@@ -407,7 +407,7 @@ export function createEmptyEtapaEnfriamientoFinal(fechaStr?: string): PerfilSeca
   });
   return [
     {
-      perfilIndex: "ENFRIAMIENTO FINAL (1)",
+      perfilIndex: "HORA INICIAL",
       etapa: "ENFRIAMIENTO_FINAL",
       fecha: currentDate,
       horaInicio: "",
@@ -426,7 +426,7 @@ export function createEmptyEtapaEnfriamientoFinal(fechaStr?: string): PerfilSeca
       modificaciones: { mod1: "", mod2: "", mod3: "" }
     },
     {
-      perfilIndex: "ENFRIAMIENTO FINAL (2)",
+      perfilIndex: "HORA FINAL",
       etapa: "ENFRIAMIENTO_FINAL",
       fecha: currentDate,
       horaInicio: "",
@@ -448,6 +448,59 @@ export function createEmptyEtapaEnfriamientoFinal(fechaStr?: string): PerfilSeca
 }
 
 export const DEFAULT_ETAPA_ENFRIAMIENTO_FINAL: PerfilSecadoPlant[] = createEmptyEtapaEnfriamientoFinal();
+
+/**
+ * Casillas para la Etapa de Reposo Final del Grano (Post-Enfriamiento).
+ */
+export function createEmptyEtapaReposoFinal(fechaStr?: string): PerfilSecadoPlant[] {
+  const currentDate = fechaStr || new Date().toLocaleDateString("es-PE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric"
+  });
+  return [
+    {
+      perfilIndex: "HORA INICIAL",
+      etapa: "REPOSO_FINAL",
+      fecha: currentDate,
+      horaInicio: "",
+      horaFin: "",
+      duracion: "",
+      tempGrano: undefined as any,
+      tempAmbiente: undefined as any,
+      humedadRelativa: undefined as any,
+      humedad: "",
+      tempReal: undefined as any,
+      tiempoMin: "",
+      tempProgramada: undefined as any,
+      a1: undefined as any,
+      a2: undefined as any,
+      materiaPrima: createEmptyMateriaPrima(),
+      modificaciones: { mod1: "", mod2: "", mod3: "" }
+    },
+    {
+      perfilIndex: "HORA FINAL",
+      etapa: "REPOSO_FINAL",
+      fecha: currentDate,
+      horaInicio: "",
+      horaFin: "",
+      duracion: "",
+      tempGrano: undefined as any,
+      tempAmbiente: undefined as any,
+      humedadRelativa: undefined as any,
+      humedad: "",
+      tempReal: undefined as any,
+      tiempoMin: "",
+      tempProgramada: undefined as any,
+      a1: undefined as any,
+      a2: undefined as any,
+      materiaPrima: createEmptyMateriaPrima(),
+      modificaciones: { mod1: "", mod2: "", mod3: "" }
+    }
+  ];
+}
+
+export const DEFAULT_ETAPA_REPOSO_FINAL: PerfilSecadoPlant[] = createEmptyEtapaReposoFinal();
 
 /**
  * Devuelve un registro LIMPIO para un batch que inicia o está en proceso:
@@ -611,12 +664,14 @@ export function getBlankPlantControlRecord(
     etapaReposo2: createEmptyEtapaReposo2(currentDate),
     perfilesSecado: createEmptyPerfilesSecado(currentDate),
     etapaEnfriamientoFinal: createEmptyEtapaEnfriamientoFinal(currentDate),
+    etapaReposoFinal: createEmptyEtapaReposoFinal(currentDate),
     resumenEtapas: {
       tiempoReposo1: "",
       tiempoEnfriamiento: "",
       tiempoReposo2: "",
       tiempoSecadoTotal: "",
-      tiempoEnfriamientoFinal: ""
+      tiempoEnfriamientoFinal: "",
+      tiempoReposoFinal: ""
     },
     recetaSecado: DEFAULT_RECETA_SECADO,
     carga: {

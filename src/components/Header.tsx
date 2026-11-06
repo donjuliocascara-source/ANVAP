@@ -196,7 +196,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       )}
 
-      <div className="max-w-[1600px] mx-auto px-3 sm:px-6 py-2 sm:py-2.5 flex items-center justify-between gap-2.5 sm:gap-4 flex-wrap lg:flex-nowrap">
+      <div className="w-full px-3 sm:px-6 py-2 sm:py-2.5 flex items-center justify-between gap-2.5 sm:gap-4 flex-wrap lg:flex-nowrap">
         {/* Brand & Industrial Title (Top Left) */}
         <div className="flex items-center gap-2.5 sm:gap-3 shrink-0 order-1">
           <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center shadow-inner text-white font-black text-base sm:text-lg shrink-0">

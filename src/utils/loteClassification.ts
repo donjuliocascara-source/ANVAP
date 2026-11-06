@@ -351,7 +351,7 @@ export function verificarBloqueoEliminacionLote(
   let bLotes = contexto?.batchLotes || [];
   if (bLotes.length === 0 && typeof window !== "undefined" && window.localStorage) {
     try {
-      const savedDb = localStorage.getItem("arroz_apit_local_db_v9_clean");
+      const savedDb = localStorage.getItem("arroz_apit_local_db_v12_prod");
       if (savedDb) {
         const parsed = JSON.parse(savedDb);
         if (Array.isArray(parsed?.batchLotes)) {

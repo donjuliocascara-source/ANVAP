@@ -63,6 +63,7 @@ import {
   DEFAULT_PERFILES_SECADO, 
   DEFAULT_RECETA_SECADO,
   DEFAULT_ETAPA_ENFRIAMIENTO_FINAL,
+  DEFAULT_ETAPA_REPOSO_FINAL,
   createEmptyParametrosPaddy,
   createEmptyMateriaPrima
 } from "../utils/plantSheetDefaults";
@@ -182,6 +183,7 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
   const [isReposo1Desglosado, setIsReposo1Desglosado] = useState(true);
   const [isReposo2Desglosado, setIsReposo2Desglosado] = useState(false);
   const [isEnfriamientoFinalDesglosado, setIsEnfriamientoFinalDesglosado] = useState(true);
+  const [isReposoFinalDesglosado, setIsReposoFinalDesglosado] = useState(true);
   // Estado para desglosar/plegar la ficha de paradas por fallas mecánicas durante el vaporizado
   const [isParadasMecanicasDesglosado, setIsParadasMecanicasDesglosado] = useState<boolean>(() => {
     return Boolean(formData.tieneParadasMecanicas || (formData.paradasMecanicas && formData.paradasMecanicas.length > 0));
@@ -271,6 +273,19 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
   const tempSecadoRecomendadaProg = parametrosSupervisor?.tempSecadoC 
     ?? parametrosRecomendadosIA?.tempSecadoC 
     ?? 75;
+
+  const modoVaporizadoProg = parametrosSupervisor?.modoVaporizado || "automático";
+  const enfriamientoTipoAireProg = parametrosSupervisor?.enfriamientoTipoAire || "Con aire caliente";
+  const enfriamientoTempAireProg = parametrosSupervisor?.enfriamientoTempAireC ?? 75;
+  const enfriamientoTieneReposoProg = parametrosSupervisor?.enfriamientoTieneReposo ?? false;
+  const enfriamientoTiempoReposoProgMin = parametrosSupervisor?.enfriamientoTiempoReposoMin ?? 0;
+
+  const secadoTempProgPerfil1Prog = parametrosSupervisor?.secadoTempProgPerfil1C ?? 75;
+  const secadoConfigCirculacionProg = parametrosSupervisor?.secadoConfigCirculacion || "1.1/12/0.9";
+  const secadoTempMaxProg = parametrosSupervisor?.secadoTempMaxC ?? 31;
+  const secadoTiempoEnfriamientoDescargaProgMin = parametrosSupervisor?.secadoTiempoEnfriamientoDescargaMin ?? 40;
+  const secadoTipoAireDescargaProg = parametrosSupervisor?.secadoTipoAireDescarga || "con aire frío";
+  const secadoHumedadDescargaProg = parametrosSupervisor?.secadoHumedadDescargaPct ?? 12.5;
 
   const observacionProg = programacionOficialBatch?.observacion 
     ?? formData.DESVIACION 
@@ -506,10 +521,14 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
     ? formData.etapaReposo1
     : (formData.etapaReposo1 && formData.etapaReposo1.length === 1 && formData.etapaReposo1[0]
         ? [
-            formData.etapaReposo1[0],
+            {
+              ...formData.etapaReposo1[0],
+              perfilIndex: formData.etapaReposo1[0].perfilIndex || "HORA INICIAL",
+              etapa: "REPOSO_1"
+            },
             {
               ...(DEFAULT_ETAPA_REPOSO_1?.[1] || DEFAULT_ETAPA_REPOSO_1?.[0] || formData.etapaReposo1[0]),
-              perfilIndex: "1° REPOSO (2)",
+              perfilIndex: "HORA FINAL",
               etapa: "REPOSO_1",
               fecha: formData.etapaReposo1[0]?.fecha || DEFAULT_ETAPA_REPOSO_1?.[1]?.fecha || fallbackFecha
             }
@@ -520,10 +539,14 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
     ? formData.etapaEnfriamiento
     : (formData.etapaEnfriamiento && formData.etapaEnfriamiento.length === 1 && formData.etapaEnfriamiento[0]
         ? [
-            formData.etapaEnfriamiento[0],
+            {
+              ...formData.etapaEnfriamiento[0],
+              perfilIndex: formData.etapaEnfriamiento[0].perfilIndex || "HORA INICIAL",
+              etapa: "ENFRIAMIENTO"
+            },
             {
               ...(DEFAULT_ETAPA_ENFRIAMIENTO?.[1] || DEFAULT_ETAPA_ENFRIAMIENTO?.[0] || formData.etapaEnfriamiento[0]),
-              perfilIndex: "ENFRIAMIENTO (2)",
+              perfilIndex: "HORA FINAL",
               etapa: "ENFRIAMIENTO",
               fecha: formData.etapaEnfriamiento[0]?.fecha || DEFAULT_ETAPA_ENFRIAMIENTO?.[1]?.fecha || fallbackFecha
             }
@@ -534,10 +557,14 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
     ? formData.etapaReposo2
     : (formData.etapaReposo2 && formData.etapaReposo2.length === 1 && formData.etapaReposo2[0]
         ? [
-            formData.etapaReposo2[0],
+            {
+              ...formData.etapaReposo2[0],
+              perfilIndex: formData.etapaReposo2[0].perfilIndex || "HORA INICIAL",
+              etapa: "REPOSO_2"
+            },
             {
               ...(DEFAULT_ETAPA_REPOSO_2?.[1] || DEFAULT_ETAPA_REPOSO_2?.[0] || formData.etapaReposo2[0]),
-              perfilIndex: "2° REPOSO (2)",
+              perfilIndex: "HORA FINAL",
               etapa: "REPOSO_2",
               fecha: formData.etapaReposo2[0]?.fecha || DEFAULT_ETAPA_REPOSO_2?.[1]?.fecha || fallbackFecha
             }
@@ -548,30 +575,56 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
     ? formData.etapaEnfriamientoFinal
     : (formData.etapaEnfriamientoFinal && formData.etapaEnfriamientoFinal.length === 1 && formData.etapaEnfriamientoFinal[0]
         ? [
-            formData.etapaEnfriamientoFinal[0],
+            {
+              ...formData.etapaEnfriamientoFinal[0],
+              perfilIndex: formData.etapaEnfriamientoFinal[0].perfilIndex || "HORA INICIAL",
+              etapa: "ENFRIAMIENTO_FINAL"
+            },
             {
               ...(DEFAULT_ETAPA_ENFRIAMIENTO_FINAL?.[1] || DEFAULT_ETAPA_ENFRIAMIENTO_FINAL?.[0] || formData.etapaEnfriamientoFinal[0]),
-              perfilIndex: "ENFRIAMIENTO FINAL (2)",
+              perfilIndex: "HORA FINAL",
               etapa: "ENFRIAMIENTO_FINAL",
               fecha: formData.etapaEnfriamientoFinal[0]?.fecha || DEFAULT_ETAPA_ENFRIAMIENTO_FINAL?.[1]?.fecha || fallbackFecha
             }
           ]
         : (DEFAULT_ETAPA_ENFRIAMIENTO_FINAL && DEFAULT_ETAPA_ENFRIAMIENTO_FINAL.length > 0 ? DEFAULT_ETAPA_ENFRIAMIENTO_FINAL : []));
 
-  // Detección de datos registrados en 1°, 2° Reposo y Enfriamiento Final (para saber si desglosar automáticamente o mostrar advertencia)
+  const etapaReposoFinal = formData.etapaReposoFinal && formData.etapaReposoFinal.length >= 2
+    ? formData.etapaReposoFinal
+    : (formData.etapaReposoFinal && formData.etapaReposoFinal.length === 1 && formData.etapaReposoFinal[0]
+        ? [
+            {
+              ...formData.etapaReposoFinal[0],
+              perfilIndex: formData.etapaReposoFinal[0].perfilIndex || "HORA INICIAL",
+              etapa: "REPOSO_FINAL"
+            },
+            {
+              ...(DEFAULT_ETAPA_REPOSO_FINAL?.[1] || DEFAULT_ETAPA_REPOSO_FINAL?.[0] || formData.etapaReposoFinal[0]),
+              perfilIndex: "HORA FINAL",
+              etapa: "REPOSO_FINAL",
+              fecha: formData.etapaReposoFinal[0]?.fecha || DEFAULT_ETAPA_REPOSO_FINAL?.[1]?.fecha || fallbackFecha
+            }
+          ]
+        : (DEFAULT_ETAPA_REPOSO_FINAL && DEFAULT_ETAPA_REPOSO_FINAL.length > 0 ? DEFAULT_ETAPA_REPOSO_FINAL : []));
+
+  // Detección de datos registrados en 1°, 2° Reposo, Enfriamiento Final y Reposo Final (para saber si desglosar automáticamente o mostrar advertencia)
   const hasReposo1Data = useMemo(() => {
-    return etapaReposo1.some(r => !!r.horaInicio || (r.tempGrano !== undefined && r.tempGrano > 0) || !!r.humedad);
+    return etapaReposo1.some(r => !!r.horaInicio || !!r.horaFin || (r.tempGrano !== undefined && r.tempGrano > 0) || !!r.humedad);
   }, [etapaReposo1]);
 
   const hasReposo2Data = useMemo(() => {
-    return etapaReposo2.some(r => !!r.horaInicio || (r.tempGrano !== undefined && r.tempGrano > 0) || !!r.humedad);
+    return etapaReposo2.some(r => !!r.horaInicio || !!r.horaFin || (r.tempGrano !== undefined && r.tempGrano > 0) || !!r.humedad);
   }, [etapaReposo2]);
 
   const hasEnfriamientoFinalData = useMemo(() => {
     return etapaEnfriamientoFinal.some(r => !!r.horaInicio || !!r.horaFin || (r.tempGrano !== undefined && r.tempGrano > 0) || !!r.humedad);
   }, [etapaEnfriamientoFinal]);
 
-  // Si el lote cargado ya contenía datos en Reposo 1, 2 o Enfriamiento Final, mantenerlos desglosados
+  const hasReposoFinalData = useMemo(() => {
+    return etapaReposoFinal.some(r => !!r.horaInicio || !!r.horaFin || (r.tempGrano !== undefined && r.tempGrano > 0) || !!r.humedad);
+  }, [etapaReposoFinal]);
+
+  // Si el lote cargado ya contenía datos en Reposo 1, 2, Enfriamiento Final o Reposo Final, mantenerlos desglosados
   useEffect(() => {
     if (hasReposo1Data) {
       setIsReposo1Desglosado(true);
@@ -587,6 +640,12 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
   useEffect(() => {
     if (hasEnfriamientoFinalData) {
       setIsEnfriamientoFinalDesglosado(true);
+    }
+  }, [batchCorrelativo, batchId]);
+
+  useEffect(() => {
+    if (hasReposoFinalData) {
+      setIsReposoFinalDesglosado(true);
     }
   }, [batchCorrelativo, batchId]);
 
@@ -662,20 +721,28 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
     etapaReposo1[0]?.horaInicio
   );
 
-  const duracionReposo1Calc = calculateDuration(etapaReposo1[0]?.horaInicio, etapaReposo1[0]?.horaFin) ||
+  const duracionReposo1Calc = calculateDuration(etapaReposo1[0]?.horaInicio, etapaReposo1[1]?.horaFin || etapaReposo1[1]?.horaInicio || etapaReposo1[0]?.horaFin) ||
+    calculateDuration(etapaReposo1[0]?.horaInicio, etapaReposo1[0]?.horaFin) ||
     calculateDuration(etapaReposo1[0]?.horaInicio, etapaEnfriamiento[0]?.horaInicio) || 
     (etapaReposo1[0]?.duracion ? `${etapaReposo1[0].duracion}` : (etapaReposo1[0]?.tiempoMin ? `${etapaReposo1[0].tiempoMin}` : ""));
 
-  const duracionEnfriamientoCalc = calculateDuration(etapaEnfriamiento[0]?.horaInicio, etapaEnfriamiento[0]?.horaFin) ||
+  const duracionEnfriamientoCalc = calculateDuration(etapaEnfriamiento[0]?.horaInicio, etapaEnfriamiento[1]?.horaFin || etapaEnfriamiento[1]?.horaInicio || etapaEnfriamiento[0]?.horaFin) ||
+    calculateDuration(etapaEnfriamiento[0]?.horaInicio, etapaEnfriamiento[0]?.horaFin) ||
     calculateDuration(etapaEnfriamiento[0]?.horaInicio, etapaReposo2[0]?.horaInicio) || 
     (etapaEnfriamiento[0]?.duracion ? `${etapaEnfriamiento[0].duracion}` : (etapaEnfriamiento[0]?.tiempoMin ? `${etapaEnfriamiento[0].tiempoMin}` : ""));
 
-  const duracionReposo2Calc = calculateDuration(etapaReposo2[0]?.horaInicio, etapaReposo2[0]?.horaFin) ||
+  const duracionReposo2Calc = calculateDuration(etapaReposo2[0]?.horaInicio, etapaReposo2[1]?.horaFin || etapaReposo2[1]?.horaInicio || etapaReposo2[0]?.horaFin) ||
+    calculateDuration(etapaReposo2[0]?.horaInicio, etapaReposo2[0]?.horaFin) ||
     calculateDuration(etapaReposo2[0]?.horaInicio, perfilesSecado[0]?.horaInicio) || 
     (etapaReposo2[0]?.duracion ? `${etapaReposo2[0].duracion}` : (etapaReposo2[0]?.tiempoMin ? `${etapaReposo2[0].tiempoMin}` : ""));
 
-  const duracionEnfriamientoFinalCalc = calculateDuration(etapaEnfriamientoFinal[0]?.horaInicio, etapaEnfriamientoFinal[0]?.horaFin) ||
+  const duracionEnfriamientoFinalCalc = calculateDuration(etapaEnfriamientoFinal[0]?.horaInicio, etapaEnfriamientoFinal[1]?.horaFin || etapaEnfriamientoFinal[1]?.horaInicio || etapaEnfriamientoFinal[0]?.horaFin) ||
+    calculateDuration(etapaEnfriamientoFinal[0]?.horaInicio, etapaEnfriamientoFinal[0]?.horaFin) ||
     (etapaEnfriamientoFinal[0]?.duracion ? `${etapaEnfriamientoFinal[0].duracion}` : (etapaEnfriamientoFinal[0]?.tiempoMin ? `${etapaEnfriamientoFinal[0].tiempoMin}` : ""));
+
+  const duracionReposoFinalCalc = calculateDuration(etapaReposoFinal[0]?.horaInicio, etapaReposoFinal[1]?.horaFin || etapaReposoFinal[1]?.horaInicio || etapaReposoFinal[0]?.horaFin) ||
+    calculateDuration(etapaReposoFinal[0]?.horaInicio, etapaReposoFinal[0]?.horaFin) ||
+    (etapaReposoFinal[0]?.duracion ? `${etapaReposoFinal[0].duracion}` : (etapaReposoFinal[0]?.tiempoMin ? `${etapaReposoFinal[0].tiempoMin}` : ""));
 
   // Suma total de minutos de secado
   const secadoTotalMins = perfilesSecado.reduce((acc, p) => {
@@ -1146,7 +1213,7 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
 
   // Handlers for deep updates
   const handleStageRowChange = (
-    stageKey: "etapaReposo1" | "etapaEnfriamiento" | "etapaReposo2" | "etapaEnfriamientoFinal",
+    stageKey: "etapaReposo1" | "etapaEnfriamiento" | "etapaReposo2" | "etapaEnfriamientoFinal" | "etapaReposoFinal",
     rowIdx: number,
     field: string,
     val: any
@@ -1154,20 +1221,46 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
     const baseList = stageKey === "etapaReposo1" ? etapaReposo1 :
                      stageKey === "etapaEnfriamiento" ? etapaEnfriamiento :
                      stageKey === "etapaReposo2" ? etapaReposo2 :
-                     etapaEnfriamientoFinal;
+                     stageKey === "etapaEnfriamientoFinal" ? etapaEnfriamientoFinal :
+                     etapaReposoFinal;
     const list = [...baseList];
     if (!list[rowIdx]) return;
     const updatedRow: PerfilSecadoPlant = {
       ...list[rowIdx],
       [field]: val
     };
-    if (field === "horaInicio" || field === "horaFin") {
-      const ini = field === "horaInicio" ? val : updatedRow.horaInicio;
-      const fin = field === "horaFin" ? val : updatedRow.horaFin;
-      const dur = calculateDuration(ini, fin);
-      if (dur) {
-        updatedRow.duracion = dur;
-        updatedRow.tiempoMin = dur;
+    if (field === "horaInicio" || field === "horaFin" || field === "hora") {
+      if (rowIdx % 2 === 0) {
+        // Fila HORA INICIAL
+        updatedRow.horaInicio = val;
+        const nextRow = list[rowIdx + 1];
+        const fin = nextRow?.horaFin || nextRow?.horaInicio;
+        if (val && fin) {
+          const dur = calculateDuration(val, fin);
+          if (dur) {
+            updatedRow.duracion = dur;
+            updatedRow.tiempoMin = dur;
+            if (nextRow) {
+              list[rowIdx + 1] = { ...nextRow, duracion: dur, tiempoMin: dur };
+            }
+          }
+        }
+      } else {
+        // Fila HORA FINAL
+        updatedRow.horaFin = val;
+        updatedRow.horaInicio = val;
+        const prevRow = list[rowIdx - 1];
+        const ini = prevRow?.horaInicio;
+        if (ini && val) {
+          const dur = calculateDuration(ini, val);
+          if (dur) {
+            updatedRow.duracion = dur;
+            updatedRow.tiempoMin = dur;
+            if (prevRow) {
+              list[rowIdx - 1] = { ...prevRow, horaFin: val, duracion: dur, tiempoMin: dur };
+            }
+          }
+        }
       }
     }
     list[rowIdx] = updatedRow;
@@ -1190,7 +1283,7 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
   };
 
   const handleStageMateriaPrimaChange = (
-    stageKey: "etapaReposo1" | "etapaEnfriamiento" | "etapaReposo2" | "etapaEnfriamientoFinal",
+    stageKey: "etapaReposo1" | "etapaEnfriamiento" | "etapaReposo2" | "etapaEnfriamientoFinal" | "etapaReposoFinal",
     rowIdx: number,
     field: "qPct" | "trizPct" | "blGrad" | "ri" | "rb" | "bli" | "blp" | "qiPct" | "qbPct",
     val: any
@@ -1198,7 +1291,8 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
     const baseList = stageKey === "etapaReposo1" ? etapaReposo1 :
                      stageKey === "etapaEnfriamiento" ? etapaEnfriamiento :
                      stageKey === "etapaReposo2" ? etapaReposo2 :
-                     etapaEnfriamientoFinal;
+                     stageKey === "etapaEnfriamientoFinal" ? etapaEnfriamientoFinal :
+                     etapaReposoFinal;
     const list = [...baseList];
     const prevMp = list[rowIdx]?.materiaPrima || {};
     list[rowIdx] = {
@@ -1216,7 +1310,7 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
   };
 
   const handleStageModificacionesChange = (
-    stageKey: "etapaReposo1" | "etapaEnfriamiento" | "etapaReposo2" | "etapaEnfriamientoFinal",
+    stageKey: "etapaReposo1" | "etapaEnfriamiento" | "etapaReposo2" | "etapaEnfriamientoFinal" | "etapaReposoFinal",
     rowIdx: number,
     field: "mod1" | "mod2" | "mod3",
     val: string
@@ -1224,7 +1318,8 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
     const baseList = stageKey === "etapaReposo1" ? etapaReposo1 :
                      stageKey === "etapaEnfriamiento" ? etapaEnfriamiento :
                      stageKey === "etapaReposo2" ? etapaReposo2 :
-                     etapaEnfriamientoFinal;
+                     stageKey === "etapaEnfriamientoFinal" ? etapaEnfriamientoFinal :
+                     etapaReposoFinal;
     const list = [...baseList];
     const prevMods = list[rowIdx]?.modificaciones || { mod1: "", mod2: "", mod3: "" };
     list[rowIdx] = {
@@ -1242,13 +1337,14 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
   };
 
   const handleRemoveStageRow = (
-    stageKey: "etapaReposo1" | "etapaEnfriamiento" | "etapaReposo2" | "etapaEnfriamientoFinal",
+    stageKey: "etapaReposo1" | "etapaEnfriamiento" | "etapaReposo2" | "etapaEnfriamientoFinal" | "etapaReposoFinal",
     rowIdx: number
   ) => {
     const baseList = stageKey === "etapaReposo1" ? etapaReposo1 :
                      stageKey === "etapaEnfriamiento" ? etapaEnfriamiento :
                      stageKey === "etapaReposo2" ? etapaReposo2 :
-                     etapaEnfriamientoFinal;
+                     stageKey === "etapaEnfriamientoFinal" ? etapaEnfriamientoFinal :
+                     etapaReposoFinal;
     if (baseList.length <= 1) return;
     const list = baseList.filter((_, idx) => idx !== rowIdx);
     setFormData((prev) => ({
@@ -2068,6 +2164,7 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
         perfilesSecado,
         recetaSecado,
         etapaEnfriamientoFinal,
+        etapaReposoFinal,
         tieneParadasMecanicas: tieneParadasMecanicasActivas,
         paradasMecanicas: paradasMecanicasList,
         tiempoTotalPerdidoMecanicoMin,
@@ -2183,11 +2280,11 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
         </div>
       )}
 
-      {/* PLANTILLA OFICIAL ESTILO EXCEL DE PLANTA (A4 Printable Layout) */}
+      {/* PLANTILLA OFICIAL ESTILO EXCEL DE PLANTA (100% Full Width across monitor) */}
       <div 
         id="plant-control-official-sheet" 
-        className="bg-white text-slate-900 border-2 border-slate-400 rounded-xl p-4 sm:p-6 shadow-2xl overflow-x-auto print:border-none print:shadow-none print:p-0 font-sans"
-        style={{ minWidth: "1150px" }}
+        className="w-full bg-white text-slate-900 border-2 border-slate-400 rounded-xl p-3 sm:p-5 shadow-2xl overflow-x-auto print:border-none print:shadow-none print:p-0 font-sans"
+        style={{ minWidth: "100%" }}
       >
         {/* 1. HEADER BANNER */}
         <div className="text-center py-2 px-4 rounded bg-[#366427] text-white font-black text-sm tracking-wider uppercase shadow-sm border border-emerald-900 flex items-center justify-between">
@@ -2287,62 +2384,117 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
         </div>
 
         {/* BANNER OFICIAL: PARÁMETROS OPERATIVOS DE PLANTA ESTABLECIDOS EN LA PROGRAMACIÓN */}
-        <div id="banner-parametros-operativos-planta" className="mt-3 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-2 border-amber-400 rounded-xl p-2.5 shadow-md text-white">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-400/30 pb-1.5 mb-2">
+        <div id="banner-parametros-operativos-planta" className="mt-3 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-xl p-3 shadow-xl text-white">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-400/30 pb-2 mb-2.5">
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-black text-[10px] uppercase tracking-wider shadow-xs">
-                PARÁMETROS OPERATIVOS DE PLANTA ESTABLECIDOS
+              <span className="px-2.5 py-0.5 rounded bg-amber-400 text-slate-950 font-black text-[10px] uppercase tracking-wider shadow-xs">
+                PARÁMETROS DE OPERACIÓN
               </span>
-              <span className="font-mono text-amber-300 font-bold text-xs bg-slate-950/80 px-2 py-0.5 rounded border border-amber-400/40">
+              <span className="font-mono text-amber-300 font-bold text-xs bg-slate-900 px-2.5 py-0.5 rounded border border-amber-400/40">
                 BATCH {currentBatchCode || programacionOficialBatch?.batch || ""}
               </span>
               {parametrosSupervisor ? (
-                <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold text-[10px] border border-emerald-500/40 tracking-wide uppercase">
+                <span className="px-2.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold text-[10px] border border-emerald-500/40 tracking-wide uppercase">
                   DETERMINADOS POR EL SUPERVISOR
                 </span>
               ) : (
-                <span className="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 font-bold text-[10px] border border-sky-500/40 tracking-wide uppercase">
+                <span className="px-2.5 py-0.5 rounded bg-sky-500/20 text-sky-300 font-bold text-[10px] border border-sky-500/40 tracking-wide uppercase">
                   PROGRAMACIÓN OFICIAL
                 </span>
               )}
             </div>
-            <span className="text-[10px] text-slate-300 font-semibold flex items-center gap-1.5">
+            <div className="text-[10px] text-slate-300 font-semibold flex items-center gap-1.5">
               <span className="text-amber-400 font-bold">{programacionOficialBatch?.caso || "OPERATIVO ESTÁNDAR"}</span>
               <span>•</span>
               <span>{currentBatchCliente || "CLIENTE GENERAL"}</span>
               <span>•</span>
               <span className="text-emerald-300 font-bold">{currentBatchVariedad || "TINAJONES"}</span>
-            </span>
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
-            <div className="bg-slate-950/90 border border-amber-400/30 rounded-lg p-1.5 shadow-inner">
-              <span className="block text-[9.5px] font-bold text-amber-400 uppercase tracking-wider">DE. (BAR)</span>
-              <span className="text-base font-black text-white font-mono tracking-tight">{presionRecomendadaProg}</span>
-              <span className="block text-[8px] text-slate-400 mt-0.5">Presión Vapor</span>
+          {/* 3 ETAPAS DE OPERACIÓN (VAPORIZADO, ENFRIAMIENTO, SECADO) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+            {/* ETAPA DE VAPORIZADO */}
+            <div className="bg-slate-900/90 border border-amber-500/40 rounded-lg p-2.5 shadow-inner">
+              <div className="flex items-center justify-between border-b border-amber-500/20 pb-1 mb-2">
+                <span className="text-[10px] font-black text-amber-400 uppercase tracking-wider flex items-center gap-1">
+                  <Flame className="w-3.5 h-3.5 text-amber-400" /> ETAPA DE VAPORIZADO
+                </span>
+                <span className="text-[9px] font-bold text-amber-300 bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-500/30 uppercase">
+                  Modo: {modoVaporizadoProg}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5 text-center">
+                <div className="bg-slate-950/80 rounded p-1 border border-slate-800">
+                  <span className="block text-[8px] font-bold text-slate-400 uppercase">P (Presión)</span>
+                  <span className="text-xs font-black text-white font-mono">{presionRecomendadaProg} bar</span>
+                </div>
+                <div className="bg-slate-950/80 rounded p-1 border border-slate-800">
+                  <span className="block text-[8px] font-bold text-slate-400 uppercase">Esc (Esclusa)</span>
+                  <span className="text-xs font-black text-white font-mono">{velExclusaRecomendadaProg} RPM</span>
+                </div>
+                <div className="bg-slate-950/80 rounded p-1 border border-slate-800">
+                  <span className="block text-[8px] font-bold text-slate-400 uppercase">Reposo</span>
+                  <span className="text-xs font-black text-white font-mono">{tiempoReposoRecomendadoProgMin} min</span>
+                </div>
+              </div>
             </div>
-            <div className="bg-slate-950/90 border border-amber-400/30 rounded-lg p-1.5 shadow-inner">
-              <span className="block text-[9.5px] font-bold text-amber-400 uppercase tracking-wider">V. EXCL.</span>
-              <span className="text-base font-black text-white font-mono tracking-tight">{velExclusaRecomendadaProg}</span>
-              <span className="block text-[8px] text-slate-400 mt-0.5">Velocidad Esclusa</span>
+
+            {/* ETAPA DE ENFRIAMIENTO */}
+            <div className="bg-slate-900/90 border border-cyan-500/40 rounded-lg p-2.5 shadow-inner">
+              <div className="flex items-center justify-between border-b border-cyan-500/20 pb-1 mb-2">
+                <span className="text-[10px] font-black text-cyan-400 uppercase tracking-wider flex items-center gap-1">
+                  <Wind className="w-3.5 h-3.5 text-cyan-400" /> ETAPA DE ENFRIAMIENTO
+                </span>
+                <span className="text-[9px] font-bold text-cyan-300 bg-cyan-950/80 px-1.5 py-0.5 rounded border border-cyan-500/30 uppercase">
+                  {enfriamientoTieneReposoProg ? `CON reposo (${enfriamientoTiempoReposoProgMin}m)` : "SIN reposo"}
+                </span>
+              </div>
+              <div className="space-y-1 text-xs">
+                <div className="flex items-center justify-between bg-slate-950/80 rounded px-2 py-1 border border-slate-800">
+                  <span className="text-[9px] text-slate-400 font-medium">Flujo:</span>
+                  <span className="text-[11px] font-bold text-cyan-300">{enfriamientoTipoAireProg}</span>
+                </div>
+                <div className="flex items-center justify-between bg-slate-950/80 rounded px-2 py-1 border border-slate-800">
+                  <span className="text-[9px] text-slate-400 font-medium">Temperatura:</span>
+                  <span className="text-[11px] font-black text-white font-mono">{enfriamientoTempAireProg}°C</span>
+                </div>
+              </div>
             </div>
-            <div className="bg-slate-950/90 border border-amber-400/30 rounded-lg p-1.5 shadow-inner">
-              <span className="block text-[9.5px] font-bold text-amber-400 uppercase tracking-wider">T. REPOSO</span>
-              <span className="text-base font-black text-white font-mono tracking-tight">{tiempoReposoRecomendadoProgMin} MIN</span>
-              <span className="block text-[8px] text-slate-400 mt-0.5">Reposo Vaporizado</span>
-            </div>
-            <div className="bg-slate-950/90 border border-amber-400/30 rounded-lg p-1.5 shadow-inner">
-              <span className="block text-[9.5px] font-bold text-amber-400 uppercase tracking-wider">TEMP. SEC</span>
-              <span className="text-base font-black text-white font-mono tracking-tight">{tempSecadoRecomendadaProg}°</span>
-              <span className="block text-[8px] text-slate-400 mt-0.5">Secado Columna</span>
-            </div>
-            <div className="col-span-2 sm:col-span-1 bg-slate-950/90 border border-amber-400/30 rounded-lg p-1.5 shadow-inner flex flex-col justify-center">
-              <span className="block text-[9.5px] font-bold text-amber-400 uppercase tracking-wider">OBSERVACIÓN</span>
-              <span className="text-[11px] font-black text-emerald-400 tracking-wide uppercase line-clamp-2 mt-0.5">
-                {observacionProg}
-              </span>
+
+            {/* ETAPA DE SECADO */}
+            <div className="bg-slate-900/90 border border-orange-500/40 rounded-lg p-2.5 shadow-inner">
+              <div className="flex items-center justify-between border-b border-orange-500/20 pb-1 mb-2">
+                <span className="text-[10px] font-black text-orange-400 uppercase tracking-wider flex items-center gap-1">
+                  <Sun className="w-3.5 h-3.5 text-orange-400" /> ETAPA DE SECADO
+                </span>
+                <span className="text-[9px] font-bold text-emerald-300 bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-500/30 uppercase">
+                  Descarga: {secadoHumedadDescargaProg}%
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5 text-center mb-1.5">
+                <div className="bg-slate-950/80 rounded p-1 border border-slate-800">
+                  <span className="block text-[8px] font-bold text-slate-400 uppercase">T° PROG (Perfil 1)</span>
+                  <span className="text-xs font-black text-white font-mono">{secadoTempProgPerfil1Prog}°C</span>
+                </div>
+                <div className="bg-slate-950/80 rounded p-1 border border-slate-800">
+                  <span className="block text-[8px] font-bold text-slate-400 uppercase">Circulación</span>
+                  <span className="text-xs font-black text-orange-300 font-mono">{secadoConfigCirculacionProg}</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-[9px] bg-slate-950/80 rounded px-2 py-0.5 border border-slate-800">
+                <span className="text-slate-400">T° máx: <strong className="text-white">{secadoTempMaxProg}°C</strong></span>
+                <span className="text-slate-400">Enf. Descarga: <strong className="text-orange-300">{secadoTiempoEnfriamientoDescargaProgMin} min ({secadoTipoAireDescargaProg})</strong></span>
+              </div>
             </div>
           </div>
+
+          {observacionProg && (
+            <div className="mt-2 pt-1.5 border-t border-slate-800 flex items-center justify-between text-[10px]">
+              <span className="text-slate-400 font-bold uppercase tracking-wider">OBSERVACIONES / CONDICIONES:</span>
+              <span className="text-amber-300 font-semibold">{observacionProg}</span>
+            </div>
+          )}
         </div>
 
         {/* 3. MIDDLE DUAL SECTION: [DATOS DE INGRESO & PARAMETROS DEL PADDY] vs [DATOS DE VAPORIZADO & SILOS] */}
@@ -4320,10 +4472,19 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                 <span className="font-black text-white">{duracionEnfriamientoFinalCalc || "--"}</span>
                 <span className="text-[8px] text-slate-300">Ini: {etapaEnfriamientoFinal[0]?.horaInicio || "--:--"}</span>
               </div>
+
+              <span className="text-slate-500 font-bold">➔</span>
+
+              {/* Etapa 9: Reposo Final */}
+              <div className="bg-amber-900/60 text-amber-100 border border-amber-600/50 px-2 py-1 rounded flex flex-col items-center">
+                <span className="font-bold text-[9px] uppercase text-amber-300">Reposo Final</span>
+                <span className="font-black text-white">{duracionReposoFinalCalc || "--"}</span>
+                <span className="text-[8px] text-slate-300">Ini: {etapaReposoFinal[0]?.horaInicio || "--:--"}</span>
+              </div>
             </div>
 
-            {/* TABLA DE METAS Y DURACIONES POR ETAPA (8 ETAPAS TOTALES DE LA CADENA) */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 text-center text-[11px]">
+            {/* TABLA DE METAS Y DURACIONES POR ETAPA (9 ETAPAS TOTALES DE LA CADENA) */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-9 gap-2 text-center text-[11px]">
               {/* 1. Llenado Tolva Pulmón */}
               <div className="bg-slate-950/60 rounded border border-amber-500/40 p-1.5 flex flex-col justify-between">
                 <div>
@@ -4415,6 +4576,17 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                   {etapaEnfriamientoFinal[0]?.horaInicio ? `Ini: ${etapaEnfriamientoFinal[0].horaInicio}` : "Post-Sec."}
                 </span>
               </div>
+
+              {/* 9. Reposo Final */}
+              <div className="bg-slate-950/60 rounded border border-amber-500/30 p-1.5 flex flex-col justify-between">
+                <div>
+                  <span className="text-[10px] text-amber-300 block font-bold uppercase tracking-tight">9. REPOSO FINAL</span>
+                  <span className="text-xs font-black text-white">{duracionReposoFinalCalc || "0 min"}</span>
+                </div>
+                <span className="text-[9px] text-slate-400 block mt-0.5 truncate">
+                  {etapaReposoFinal[0]?.horaInicio ? `Ini: ${etapaReposoFinal[0].horaInicio}` : "Final"}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -4486,21 +4658,38 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                   <button
                     type="button"
                     onClick={() => {
-                      const list = [...etapaReposo1, {
-                        ...etapaReposo1[0],
-                        perfilIndex: `1° REPOSO (${etapaReposo1.length + 1})`,
-                        horaInicio: "",
-                        horaFin: "",
-                        duracion: "",
-                        tiempoMin: "",
-                        materiaPrima: { qPct: undefined, trizPct: undefined, blGrad: undefined },
-                        modificaciones: { mod1: "", mod2: "", mod3: "" }
-                      }];
+                      const currentDate = etapaReposo1[0]?.fecha || new Date().toLocaleDateString("es-PE");
+                      const list = [
+                        ...etapaReposo1,
+                        {
+                          ...etapaReposo1[0],
+                          perfilIndex: "HORA INICIAL",
+                          fecha: currentDate,
+                          horaInicio: "",
+                          horaFin: "",
+                          duracion: "",
+                          tiempoMin: "",
+                          materiaPrima: { qPct: undefined, trizPct: undefined, blGrad: undefined },
+                          modificaciones: { mod1: "", mod2: "", mod3: "" }
+                        },
+                        {
+                          ...etapaReposo1[1] || etapaReposo1[0],
+                          perfilIndex: "HORA FINAL",
+                          fecha: currentDate,
+                          horaInicio: "",
+                          horaFin: "",
+                          duracion: "",
+                          tiempoMin: "",
+                          materiaPrima: { qPct: undefined, trizPct: undefined, blGrad: undefined },
+                          modificaciones: { mod1: "", mod2: "", mod3: "" }
+                        }
+                      ];
                       setFormData(prev => ({ ...prev, etapaReposo1: list }));
                     }}
                     className="px-2 py-0.5 bg-amber-200 hover:bg-white text-amber-950 rounded text-[10px] font-bold transition-all cursor-pointer print:hidden"
+                    title="Añadir un ciclo adicional de 1° Reposo (Fila Inicial y Fila Final)"
                   >
-                    + Añadir Casilla Reposo 1
+                    + Añadir Ciclo 1° Reposo (2 Filas)
                   </button>
                 )}
               </div>
@@ -4527,7 +4716,7 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                   className="px-2.5 py-1 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold rounded text-[10px] cursor-pointer shadow-xs transition-colors flex items-center gap-1"
                 >
                   <ChevronDown className="w-3.5 h-3.5" />
-                  Desglosar 1° Reposo ({etapaReposo1.length} Casillas)
+                  Desglosar 1° Reposo ({etapaReposo1.length} Filas)
                 </button>
               </div>
             )}
@@ -4537,23 +4726,22 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                 <thead>
                   <tr className="bg-amber-100/70 border-b border-amber-300 font-bold text-slate-800 text-center">
                     <th className="border-r border-amber-200 py-1 px-1 w-20">FECHA</th>
-                    <th className="border-r border-amber-200 py-1 px-1 w-24">PERFIL / CASILLA</th>
-                    <th className="border-r border-amber-200 py-1 px-1 w-16">H INICIO</th>
-                    <th className="border-r border-amber-200 py-1 px-1 w-16">H FINAL</th>
-                    <th className="border-r border-amber-200 py-1 px-1 w-16 bg-yellow-100 font-black text-amber-950">DURACIÓN</th>
+                    <th className="border-r border-amber-200 py-1 px-1 w-28">ETAPA / CONDICIÓN</th>
+                    <th className="border-r border-amber-200 py-1 px-1 w-20">HORA</th>
+                    <th className="border-r border-amber-200 py-1 px-1 w-18 bg-yellow-100 font-black text-amber-950">DURACIÓN</th>
                     <th className="border-r border-amber-200 py-1 px-1 w-14">T° GRANO</th>
                     <th className="border-r border-amber-200 py-1 px-1 w-16">T° AMBIENTE</th>
                     <th className="border-r border-amber-200 py-1 px-1 w-11">H.R%</th>
                     <th className="border-r border-amber-200 py-1 px-1 w-16 bg-amber-200 font-black">HUMEDAD</th>
-                    <th className="border-r border-amber-200 py-1 px-1 w-14">GRAD.</th>
+                    <th className="border-r border-amber-200 py-1 px-1 w-14">T° REAL</th>
                     <th className="border-r border-amber-200 py-1 px-1 w-12">Tº PROG.</th>
-                    <th className="border-r border-amber-200 py-1 px-1 w-14">A1</th>
-                    <th className="border-r border-amber-200 py-1 px-1 w-14">A2</th>
+                    <th className="border-r border-amber-200 py-1 px-1 w-12">A1</th>
+                    <th className="border-r border-amber-200 py-1 px-1 w-12">A2</th>
                     <th className="border-r border-amber-200 py-0.5 px-1" colSpan={7}>CONTROL DE M.PRIMA</th>
                     <th className="w-6 print:hidden"></th>
                   </tr>
                   <tr className="bg-amber-50 border-b border-amber-300 font-semibold text-slate-700 text-center text-[9px]">
-                    <th colSpan={13} className="border-r border-amber-200"></th>
+                    <th colSpan={12} className="border-r border-amber-200"></th>
                     <th className="border-r border-amber-200 py-0.5 px-0.5 w-10">RI</th>
                     <th className="border-r border-amber-200 py-0.5 px-0.5 w-10">RB</th>
                     <th className="border-r border-amber-200 py-0.5 px-0.5 w-10">BLI</th>
@@ -4565,277 +4753,340 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-amber-200 text-center">
-                  {etapaReposo1.map((row, idx) => (
-                    <tr key={idx} className="hover:bg-amber-50/50 bg-white">
-                      <td className="border-r border-amber-200 py-0.5 px-1 font-mono text-slate-700">
-                        <input
-                          type="text"
-                          value={row.fecha || ""}
-                          onChange={(e) => handleStageRowChange("etapaReposo1", idx, "fecha", e.target.value)}
-                          className="w-full text-center outline-none bg-transparent"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-1 font-black text-amber-950 bg-amber-50/60">
-                        {row.perfilIndex || (idx === 0 ? "1° REPOSO (1)" : idx === 1 ? "1° REPOSO (2)" : `1° REPOSO (${idx + 1})`)}
-                      </td>
-                      {/* H INICIO */}
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 font-bold text-slate-900">
-                        <div className="flex items-center justify-center gap-0.5">
+                  {etapaReposo1.map((row, idx) => {
+                    const isInicial = idx % 2 === 0;
+                    const nextRow = etapaReposo1[idx + 1];
+                    const duracionCiclo = isInicial 
+                      ? (calculateDuration(row.horaInicio, nextRow?.horaFin || nextRow?.horaInicio) || row.duracion || (idx === 0 ? duracionReposo1Calc : "--") || "--")
+                      : "";
+
+                    return (
+                      <tr key={idx} className={`hover:bg-amber-50/50 ${isInicial ? "bg-white" : "bg-amber-50/20"}`}>
+                        <td className="border-r border-amber-200 py-0.5 px-1 font-mono text-slate-700">
                           <input
                             type="text"
-                            value={row.horaInicio ?? ""}
-                            placeholder="--:--"
-                            onChange={(e) => handleStageRowChange("etapaReposo1", idx, "horaInicio", e.target.value)}
-                            className="w-11 text-center font-bold outline-none bg-transparent"
+                            value={row.fecha || ""}
+                            onChange={(e) => handleStageRowChange("etapaReposo1", idx, "fecha", e.target.value)}
+                            className="w-full text-center outline-none bg-transparent"
                           />
-                          <button
-                            type="button"
-                            onClick={() => handleStageRowChange("etapaReposo1", idx, "horaInicio", getHoraActual())}
-                            className="p-0.5 text-slate-400 hover:text-amber-700 hover:bg-amber-100 rounded transition-colors cursor-pointer print:hidden"
-                            title="Insertar hora actual (Inicio)"
+                        </td>
+                        <td className={`border-r border-amber-200 py-0.5 px-1 font-black ${isInicial ? "bg-emerald-50/60 text-emerald-950" : "bg-amber-50/60 text-amber-950"}`}>
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded font-black text-[9px] ${
+                            isInicial 
+                              ? "bg-emerald-100 text-emerald-800 border border-emerald-300" 
+                              : "bg-amber-100 text-amber-800 border border-amber-300"
+                          }`}>
+                            {isInicial ? "🟢 HORA INICIAL" : "🏁 HORA FINAL"}
+                          </span>
+                        </td>
+                        {/* HORA */}
+                        <td className={`border-r border-amber-200 py-0.5 px-0.5 font-bold text-slate-900 ${isInicial ? "bg-emerald-50/30" : "bg-amber-50/30"}`}>
+                          <div className="flex items-center justify-center gap-0.5">
+                            <input
+                              type="text"
+                              value={isInicial ? (row.horaInicio ?? "") : (row.horaFin || row.horaInicio || "")}
+                              placeholder="--:--"
+                              onChange={(e) => {
+                                if (isInicial) {
+                                  handleStageRowChange("etapaReposo1", idx, "horaInicio", e.target.value);
+                                } else {
+                                  handleStageRowChange("etapaReposo1", idx, "horaFin", e.target.value);
+                                  handleStageRowChange("etapaReposo1", idx, "horaInicio", e.target.value);
+                                }
+                              }}
+                              className="w-11 text-center font-bold outline-none bg-transparent"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const h = getHoraActual();
+                                if (isInicial) {
+                                  handleStageRowChange("etapaReposo1", idx, "horaInicio", h);
+                                } else {
+                                  handleStageRowChange("etapaReposo1", idx, "horaFin", h);
+                                  handleStageRowChange("etapaReposo1", idx, "horaInicio", h);
+                                }
+                              }}
+                              className={`p-0.5 rounded transition-colors cursor-pointer print:hidden ${
+                                isInicial 
+                                  ? "text-slate-400 hover:text-emerald-700 hover:bg-emerald-100" 
+                                  : "text-slate-400 hover:text-amber-700 hover:bg-amber-100"
+                              }`}
+                              title={isInicial ? "Insertar hora actual (Inicio)" : "Insertar hora actual (Fin)"}
+                            >
+                              <Clock className="w-2.5 h-2.5" />
+                            </button>
+                          </div>
+                        </td>
+
+                        {/* DURACIÓN TOTAL CON rowSpan={2} */}
+                        {isInicial && (
+                          <td 
+                            rowSpan={2} 
+                            className="border-r border-amber-200 py-1 px-1 bg-yellow-50 font-black text-amber-950 text-center align-middle"
+                            title="Duración total calculada entre Hora Inicial y Hora Final"
                           >
-                            <Clock className="w-2.5 h-2.5" />
-                          </button>
-                        </div>
-                      </td>
-                      {/* H FINAL */}
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 font-bold text-slate-900">
-                        <div className="flex items-center justify-center gap-0.5">
-                          <input
-                            type="text"
-                            value={row.horaFin ?? ""}
-                            placeholder="--:--"
-                            onChange={(e) => handleStageRowChange("etapaReposo1", idx, "horaFin", e.target.value)}
-                            className="w-11 text-center font-bold outline-none bg-transparent"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleStageRowChange("etapaReposo1", idx, "horaFin", getHoraActual())}
-                            className="p-0.5 text-slate-400 hover:text-amber-700 hover:bg-amber-100 rounded transition-colors cursor-pointer print:hidden"
-                            title="Insertar hora actual (Fin)"
-                          >
-                            <Clock className="w-2.5 h-2.5" />
-                          </button>
-                        </div>
-                      </td>
-                      {/* DURACIÓN */}
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-yellow-50 font-bold text-amber-950">
-                        <input
-                          type="text"
-                          value={calculateDuration(row.horaInicio, row.horaFin) || row.duracion || (row.tiempoMin !== undefined ? String(row.tiempoMin) : "")}
-                          placeholder={calculateDuration(row.horaInicio, row.horaFin) || "--"}
-                          onChange={(e) => {
-                            handleStageRowChange("etapaReposo1", idx, "duracion", e.target.value);
-                            handleStageRowChange("etapaReposo1", idx, "tiempoMin", e.target.value);
-                          }}
-                          className="w-full text-center font-black text-amber-950 outline-none bg-transparent"
-                          title={calculateDuration(row.horaInicio, row.horaFin) ? `Duración calculada: ${calculateDuration(row.horaInicio, row.horaFin)}` : "Duración"}
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5">
-                        <input
-                          type="number"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.tempGrano !== undefined ? row.tempGrano : ""}
-                          placeholder="--"
-                          onChange={(e) => handleStageRowChange("etapaReposo1", idx, "tempGrano", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center font-semibold outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.tempAmbiente !== undefined ? row.tempAmbiente : ""}
-                          placeholder="--"
-                          onChange={(e) => handleStageRowChange("etapaReposo1", idx, "tempAmbiente", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5">
-                        <input
-                          type="number"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.humedadRelativa !== undefined ? row.humedadRelativa : ""}
-                          placeholder="--"
-                          onChange={(e) => handleStageRowChange("etapaReposo1", idx, "humedadRelativa", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 font-black text-amber-950 bg-amber-100">
-                        <input
-                          type="text"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.humedad ?? ""}
-                          placeholder="%"
-                          onChange={(e) => handleStageRowChange("etapaReposo1", idx, "humedad", e.target.value)}
-                          className="w-full text-center font-black text-amber-950 outline-none bg-transparent"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.tempReal !== undefined ? row.tempReal : ""}
-                          placeholder="--"
-                          onChange={(e) => handleStageRowChange("etapaReposo1", idx, "tempReal", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5">
-                        <input
-                          type="number"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.tempProgramada !== undefined ? row.tempProgramada : ""}
-                          placeholder="--"
-                          onChange={(e) => handleStageRowChange("etapaReposo1", idx, "tempProgramada", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5">
-                        <input
-                          type="number"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.a1 !== undefined ? row.a1 : ""}
-                          placeholder="-"
-                          onChange={(e) => handleStageRowChange("etapaReposo1", idx, "a1", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5">
-                        <input
-                          type="number"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.a2 !== undefined ? row.a2 : ""}
-                          placeholder="-"
-                          onChange={(e) => handleStageRowChange("etapaReposo1", idx, "a2", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      {/* Materia Prima */}
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.materiaPrima?.ri !== undefined ? row.materiaPrima.ri : ""}
-                          placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaReposo1", idx, "ri", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.materiaPrima?.rb !== undefined ? row.materiaPrima.rb : ""}
-                          placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaReposo1", idx, "rb", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.materiaPrima?.bli !== undefined ? row.materiaPrima.bli : ""}
-                          placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaReposo1", idx, "bli", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.materiaPrima?.blp !== undefined ? row.materiaPrima.blp : (row.materiaPrima?.blGrad !== undefined ? row.materiaPrima.blGrad : "")}
-                          placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaReposo1", idx, "blp", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.materiaPrima?.qiPct !== undefined ? row.materiaPrima.qiPct : ""}
-                          placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaReposo1", idx, "qiPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.materiaPrima?.qbPct !== undefined ? row.materiaPrima.qbPct : (row.materiaPrima?.qPct !== undefined ? row.materiaPrima.qPct : "")}
-                          placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaReposo1", idx, "qbPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.materiaPrima?.trizPct !== undefined ? row.materiaPrima.trizPct : ""}
-                          placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaReposo1", idx, "trizPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="py-0.5 px-0.5 text-center print:hidden">
-                        {etapaReposo1.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveStageRow("etapaReposo1", idx)}
-                            className="text-red-400 hover:text-red-700 font-bold text-xs cursor-pointer px-1"
-                            title="Eliminar esta casilla"
-                          >
-                            ✕
-                          </button>
+                            <div className="text-[11px] font-black text-amber-950">
+                              {duracionCiclo}
+                            </div>
+                            <div className="text-[7.5px] text-amber-700 font-sans uppercase font-bold tracking-tight">
+                              1° Reposo
+                            </div>
+                          </td>
                         )}
-                      </td>
-                    </tr>
-                  ))}
+
+                        {/* T° GRANO */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.tempGrano !== undefined ? row.tempGrano : ""}
+                            placeholder="--"
+                            onChange={(e) => handleStageRowChange("etapaReposo1", idx, "tempGrano", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center font-semibold outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "T° de Grano al inicio del 1° reposo" : "T° de Grano al finalizar el 1° reposo"}
+                          />
+                        </td>
+
+                        {/* T° AMBIENTE */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.tempAmbiente !== undefined ? row.tempAmbiente : ""}
+                            placeholder="--"
+                            onChange={(e) => handleStageRowChange("etapaReposo1", idx, "tempAmbiente", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "T° Ambiente inicial" : "T° Ambiente final"}
+                          />
+                        </td>
+
+                        {/* H.R% */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.humedadRelativa !== undefined ? row.humedadRelativa : ""}
+                            placeholder="--"
+                            onChange={(e) => handleStageRowChange("etapaReposo1", idx, "humedadRelativa", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "Humedad Relativa % inicial" : "Humedad Relativa % final"}
+                          />
+                        </td>
+
+                        {/* HUMEDAD */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5 font-black text-amber-950 bg-amber-100">
+                          <input
+                            type="text"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.humedad ?? ""}
+                            placeholder="%"
+                            onChange={(e) => handleStageRowChange("etapaReposo1", idx, "humedad", e.target.value)}
+                            className="w-full text-center font-black text-amber-950 outline-none bg-transparent"
+                            title={isInicial ? "Humedad % al inicio del 1° reposo" : "Humedad % al finalizar el 1° reposo"}
+                          />
+                        </td>
+
+                        {/* T° REAL */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.tempReal !== undefined ? row.tempReal : ""}
+                            placeholder="--"
+                            onChange={(e) => handleStageRowChange("etapaReposo1", idx, "tempReal", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "T° Real inicial" : "T° Real final"}
+                          />
+                        </td>
+
+                        {/* Tº PROG. */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.tempProgramada !== undefined ? row.tempProgramada : ""}
+                            placeholder="--"
+                            onChange={(e) => handleStageRowChange("etapaReposo1", idx, "tempProgramada", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "T° Programada inicial" : "T° Programada final"}
+                          />
+                        </td>
+
+                        {/* A1 */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.a1 !== undefined ? row.a1 : ""}
+                            placeholder="-"
+                            onChange={(e) => handleStageRowChange("etapaReposo1", idx, "a1", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "A1 inicial" : "A1 final"}
+                          />
+                        </td>
+
+                        {/* A2 */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.a2 !== undefined ? row.a2 : ""}
+                            placeholder="-"
+                            onChange={(e) => handleStageRowChange("etapaReposo1", idx, "a2", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "A2 inicial" : "A2 final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: RI */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.ri !== undefined ? row.materiaPrima.ri : ""}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaReposo1", idx, "ri", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "RI inicial" : "RI final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: RB */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.rb !== undefined ? row.materiaPrima.rb : ""}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaReposo1", idx, "rb", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "RB inicial" : "RB final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: BLI */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.bli !== undefined ? row.materiaPrima.bli : ""}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaReposo1", idx, "bli", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "BLI inicial" : "BLI final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: BLP */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.blp !== undefined ? row.materiaPrima.blp : (row.materiaPrima?.blGrad !== undefined ? row.materiaPrima.blGrad : "")}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaReposo1", idx, "blp", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "BLP inicial" : "BLP final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: QI% */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.qiPct !== undefined ? row.materiaPrima.qiPct : ""}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaReposo1", idx, "qiPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "QI% inicial" : "QI% final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: QB% */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.qbPct !== undefined ? row.materiaPrima.qbPct : (row.materiaPrima?.qPct !== undefined ? row.materiaPrima.qPct : "")}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaReposo1", idx, "qbPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "QB% inicial" : "QB% final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: %TRIZ */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.trizPct !== undefined ? row.materiaPrima.trizPct : ""}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaReposo1", idx, "trizPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "%TRIZ inicial" : "%TRIZ final"}
+                          />
+                        </td>
+
+                        <td className="py-0.5 px-0.5 text-center print:hidden">
+                          {etapaReposo1.length > 2 && isInicial && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const list = etapaReposo1.filter((_, i) => i !== idx && i !== idx + 1);
+                                setFormData(prev => ({ ...prev, etapaReposo1: list }));
+                              }}
+                              className="text-red-400 hover:text-red-700 font-bold text-xs cursor-pointer px-1"
+                              title="Eliminar este ciclo de 1° reposo (2 filas)"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -4846,9 +5097,9 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
             <div className="bg-[#0369a1] text-white font-bold py-1 px-3 text-xs tracking-wide uppercase flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-2">
                 <span>
-                  2. ETAPA DE ENFRIAMIENTO DEL GRANO {datosVaporizado.modalidadPases === "2_PASES" ? "(SHOCK TÉRMICO CONTROLADO)" : "(PASE ÚNICO)"} — {etapaEnfriamiento.length} CASILLAS
+                  2. ETAPA DE ENFRIAMIENTO DEL GRANO {datosVaporizado.modalidadPases === "2_PASES" ? "(SHOCK TÉRMICO CONTROLADO)" : "(PASE ÚNICO)"} — 2 FILAS (HORA INICIAL / HORA FINAL)
                 </span>
-                <span className="px-2 py-0.2 bg-sky-950/80 text-sky-200 rounded text-[10px] font-mono border border-sky-400/40" title="Tiempo de enfriamiento calculado hasta inicio de 2° reposo o secado">
+                <span className="px-2 py-0.2 bg-sky-950/80 text-sky-200 rounded text-[10px] font-mono border border-sky-400/40" title="Tiempo de enfriamiento calculado entre hora inicial y final">
                   ⏱️ T. Enfriamiento: {duracionEnfriamientoCalc || "--"}
                 </span>
                 <span className="px-1.5 py-0.2 bg-sky-700/80 text-sky-100 rounded text-[9.5px] font-bold">
@@ -4858,21 +5109,38 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
               <button
                 type="button"
                 onClick={() => {
-                  const list = [...etapaEnfriamiento, {
-                    ...etapaEnfriamiento[0],
-                    perfilIndex: `ENFRIAM. (${etapaEnfriamiento.length + 1})`,
-                    horaInicio: "",
-                    horaFin: "",
-                    duracion: "",
-                    tiempoMin: "",
-                    materiaPrima: { qPct: undefined, trizPct: undefined, blGrad: undefined },
-                    modificaciones: { mod1: "", mod2: "", mod3: "" }
-                  }];
+                  const currentDate = etapaEnfriamiento[0]?.fecha || new Date().toLocaleDateString("es-PE");
+                  const list = [
+                    ...etapaEnfriamiento,
+                    {
+                      ...etapaEnfriamiento[0],
+                      perfilIndex: "HORA INICIAL",
+                      fecha: currentDate,
+                      horaInicio: "",
+                      horaFin: "",
+                      duracion: "",
+                      tiempoMin: "",
+                      materiaPrima: { qPct: undefined, trizPct: undefined, blGrad: undefined },
+                      modificaciones: { mod1: "", mod2: "", mod3: "" }
+                    },
+                    {
+                      ...etapaEnfriamiento[1] || etapaEnfriamiento[0],
+                      perfilIndex: "HORA FINAL",
+                      fecha: currentDate,
+                      horaInicio: "",
+                      horaFin: "",
+                      duracion: "",
+                      tiempoMin: "",
+                      materiaPrima: { qPct: undefined, trizPct: undefined, blGrad: undefined },
+                      modificaciones: { mod1: "", mod2: "", mod3: "" }
+                    }
+                  ];
                   setFormData(prev => ({ ...prev, etapaEnfriamiento: list }));
                 }}
                 className="px-2 py-0.5 bg-sky-200 hover:bg-white text-sky-950 rounded text-[10px] font-bold transition-all cursor-pointer print:hidden"
+                title="Añadir un ciclo adicional de enfriamiento (Fila Inicial y Fila Final)"
               >
-                + Añadir Casilla Enfriamiento
+                + Añadir Ciclo Enfriamiento (2 Filas)
               </button>
             </div>
             <div className="overflow-x-auto">
@@ -4880,23 +5148,22 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                 <thead>
                   <tr className="bg-sky-100/70 border-b border-sky-300 font-bold text-slate-800 text-center">
                     <th className="border-r border-sky-200 py-1 px-1 w-20">FECHA</th>
-                    <th className="border-r border-sky-200 py-1 px-1 w-24">PERFIL / CASILLA</th>
-                    <th className="border-r border-sky-200 py-1 px-1 w-16">H INICIO</th>
-                    <th className="border-r border-sky-200 py-1 px-1 w-16">H FINAL</th>
-                    <th className="border-r border-sky-200 py-1 px-1 w-16 bg-cyan-100 font-black text-sky-950">DURACIÓN</th>
+                    <th className="border-r border-sky-200 py-1 px-1 w-28">ETAPA / CONDICIÓN</th>
+                    <th className="border-r border-sky-200 py-1 px-1 w-20">HORA</th>
+                    <th className="border-r border-sky-200 py-1 px-1 w-18 bg-cyan-100 font-black text-sky-950">DURACIÓN</th>
                     <th className="border-r border-sky-200 py-1 px-1 w-14">T° GRANO</th>
                     <th className="border-r border-sky-200 py-1 px-1 w-16">T° AMBIENTE</th>
                     <th className="border-r border-sky-200 py-1 px-1 w-11">H.R%</th>
                     <th className="border-r border-sky-200 py-1 px-1 w-16 bg-sky-200 font-black">HUMEDAD</th>
-                    <th className="border-r border-sky-200 py-1 px-1 w-14">GRAD.</th>
+                    <th className="border-r border-sky-200 py-1 px-1 w-14">T° REAL</th>
                     <th className="border-r border-sky-200 py-1 px-1 w-12">Tº PROG.</th>
-                    <th className="border-r border-sky-200 py-1 px-1 w-14">A1</th>
-                    <th className="border-r border-sky-200 py-1 px-1 w-14">A2</th>
+                    <th className="border-r border-sky-200 py-1 px-1 w-12">A1</th>
+                    <th className="border-r border-sky-200 py-1 px-1 w-12">A2</th>
                     <th className="border-r border-sky-200 py-0.5 px-1" colSpan={7}>CONTROL DE M.PRIMA</th>
                     <th className="w-6 print:hidden"></th>
                   </tr>
                   <tr className="bg-sky-50 border-b border-sky-300 font-semibold text-slate-700 text-center text-[9px]">
-                    <th colSpan={13} className="border-r border-sky-200"></th>
+                    <th colSpan={12} className="border-r border-sky-200"></th>
                     <th className="border-r border-sky-200 py-0.5 px-0.5 w-10">RI</th>
                     <th className="border-r border-sky-200 py-0.5 px-0.5 w-10">RB</th>
                     <th className="border-r border-sky-200 py-0.5 px-0.5 w-10">BLI</th>
@@ -4908,289 +5175,341 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-sky-200 text-center">
-                  {etapaEnfriamiento.map((row, idx) => (
-                    <tr key={idx} className="hover:bg-sky-50/50 bg-white">
-                      <td className="border-r border-sky-200 py-0.5 px-1 font-mono text-slate-700">
-                        <input
-                          type="text"
-                          value={row.fecha || ""}
-                          onChange={(e) => handleStageRowChange("etapaEnfriamiento", idx, "fecha", e.target.value)}
-                          className="w-full text-center outline-none bg-transparent"
-                        />
-                      </td>
-                      <td className="border-r border-sky-200 py-0.5 px-1 font-black text-sky-950 bg-sky-50/60">
-                        {row.perfilIndex || (idx === 0 ? "ENFRIAMIENTO (1)" : idx === 1 ? "ENFRIAMIENTO (2)" : `ENFRIAM. (${idx + 1})`)}
-                      </td>
-                      {/* H INICIO */}
-                      <td className="border-r border-sky-200 py-0.5 px-0.5 font-bold text-slate-900">
-                        <div className="flex items-center justify-center gap-0.5">
+                  {etapaEnfriamiento.map((row, idx) => {
+                    const isInicial = idx % 2 === 0;
+                    const nextRow = etapaEnfriamiento[idx + 1];
+                    const duracionCiclo = isInicial 
+                      ? (calculateDuration(row.horaInicio, nextRow?.horaFin || nextRow?.horaInicio) || row.duracion || (idx === 0 ? duracionEnfriamientoCalc : "--") || "--")
+                      : "";
+
+                    return (
+                      <tr key={idx} className={`hover:bg-sky-50/50 ${isInicial ? "bg-white" : "bg-sky-50/20"}`}>
+                        <td className="border-r border-sky-200 py-0.5 px-1 font-mono text-slate-700">
                           <input
                             type="text"
-                            value={row.horaInicio ?? ""}
-                            placeholder="--:--"
-                            onChange={(e) => handleStageRowChange("etapaEnfriamiento", idx, "horaInicio", e.target.value)}
-                            className="w-11 text-center font-bold outline-none bg-transparent"
+                            value={row.fecha || ""}
+                            onChange={(e) => handleStageRowChange("etapaEnfriamiento", idx, "fecha", e.target.value)}
+                            className="w-full text-center outline-none bg-transparent"
                           />
-                          <button
-                            type="button"
-                            onClick={() => handleStageRowChange("etapaEnfriamiento", idx, "horaInicio", getHoraActual())}
-                            className="p-0.5 text-slate-400 hover:text-sky-700 hover:bg-sky-100 rounded transition-colors cursor-pointer print:hidden"
-                            title="Insertar hora actual (Inicio)"
+                        </td>
+                        <td className={`border-r border-sky-200 py-0.5 px-1 font-black ${isInicial ? "bg-emerald-50/60 text-emerald-950" : "bg-indigo-50/60 text-indigo-950"}`}>
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded font-black text-[9px] ${
+                            isInicial 
+                              ? "bg-emerald-100 text-emerald-800 border border-emerald-300" 
+                              : "bg-indigo-100 text-indigo-800 border border-indigo-300"
+                          }`}>
+                            {isInicial ? "🟢 HORA INICIAL" : "🏁 HORA FINAL"}
+                          </span>
+                        </td>
+                        {/* HORA */}
+                        <td className={`border-r border-sky-200 py-0.5 px-0.5 font-bold text-slate-900 ${isInicial ? "bg-emerald-50/30" : "bg-indigo-50/30"}`}>
+                          <div className="flex items-center justify-center gap-0.5">
+                            <input
+                              type="text"
+                              value={isInicial ? (row.horaInicio ?? "") : (row.horaFin || row.horaInicio || "")}
+                              placeholder="--:--"
+                              onChange={(e) => {
+                                if (isInicial) {
+                                  handleStageRowChange("etapaEnfriamiento", idx, "horaInicio", e.target.value);
+                                } else {
+                                  handleStageRowChange("etapaEnfriamiento", idx, "horaFin", e.target.value);
+                                  handleStageRowChange("etapaEnfriamiento", idx, "horaInicio", e.target.value);
+                                }
+                              }}
+                              className="w-11 text-center font-bold outline-none bg-transparent"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const h = getHoraActual();
+                                if (isInicial) {
+                                  handleStageRowChange("etapaEnfriamiento", idx, "horaInicio", h);
+                                } else {
+                                  handleStageRowChange("etapaEnfriamiento", idx, "horaFin", h);
+                                  handleStageRowChange("etapaEnfriamiento", idx, "horaInicio", h);
+                                }
+                              }}
+                              className={`p-0.5 rounded transition-colors cursor-pointer print:hidden ${
+                                isInicial 
+                                  ? "text-slate-400 hover:text-emerald-700 hover:bg-emerald-100" 
+                                  : "text-slate-400 hover:text-indigo-700 hover:bg-indigo-100"
+                              }`}
+                              title={isInicial ? "Insertar hora actual (Inicio)" : "Insertar hora actual (Fin)"}
+                            >
+                              <Clock className="w-2.5 h-2.5" />
+                            </button>
+                          </div>
+                        </td>
+
+                        {/* DURACIÓN TOTAL CON rowSpan={2} */}
+                        {isInicial && (
+                          <td 
+                            rowSpan={2} 
+                            className="border-r border-sky-200 py-1 px-1 bg-cyan-50 font-black text-sky-950 text-center align-middle"
+                            title="Duración total calculada entre Hora Inicial y Hora Final"
                           >
-                            <Clock className="w-2.5 h-2.5" />
-                          </button>
-                        </div>
-                      </td>
-                      {/* H FINAL */}
-                      <td className="border-r border-sky-200 py-0.5 px-0.5 font-bold text-slate-900">
-                        <div className="flex items-center justify-center gap-0.5">
-                          <input
-                            type="text"
-                            value={row.horaFin ?? ""}
-                            placeholder="--:--"
-                            onChange={(e) => handleStageRowChange("etapaEnfriamiento", idx, "horaFin", e.target.value)}
-                            className="w-11 text-center font-bold outline-none bg-transparent"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleStageRowChange("etapaEnfriamiento", idx, "horaFin", getHoraActual())}
-                            className="p-0.5 text-slate-400 hover:text-sky-700 hover:bg-sky-100 rounded transition-colors cursor-pointer print:hidden"
-                            title="Insertar hora actual (Fin)"
-                          >
-                            <Clock className="w-2.5 h-2.5" />
-                          </button>
-                        </div>
-                      </td>
-                      {/* DURACIÓN */}
-                      <td className="border-r border-sky-200 py-0.5 px-0.5 bg-cyan-50 font-bold text-sky-950">
-                        <input
-                          type="text"
-                          value={calculateDuration(row.horaInicio, row.horaFin) || row.duracion || (row.tiempoMin !== undefined ? String(row.tiempoMin) : "")}
-                          placeholder={calculateDuration(row.horaInicio, row.horaFin) || "--"}
-                          onChange={(e) => {
-                            handleStageRowChange("etapaEnfriamiento", idx, "duracion", e.target.value);
-                            handleStageRowChange("etapaEnfriamiento", idx, "tiempoMin", e.target.value);
-                          }}
-                          className="w-full text-center font-black text-sky-950 outline-none bg-transparent"
-                          title={calculateDuration(row.horaInicio, row.horaFin) ? `Duración calculada: ${calculateDuration(row.horaInicio, row.horaFin)}` : "Duración"}
-                        />
-                      </td>
-                      <td className="border-r border-sky-200 py-0.5 px-0.5">
-                        <input
-                          type="number"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.tempGrano !== undefined ? row.tempGrano : ""}
-                          placeholder="--"
-                          onChange={(e) => handleStageRowChange("etapaEnfriamiento", idx, "tempGrano", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center font-semibold outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-sky-200 py-0.5 px-0.5">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.tempAmbiente !== undefined ? row.tempAmbiente : ""}
-                          placeholder="--"
-                          onChange={(e) => handleStageRowChange("etapaEnfriamiento", idx, "tempAmbiente", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-sky-200 py-0.5 px-0.5">
-                        <input
-                          type="number"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.humedadRelativa !== undefined ? row.humedadRelativa : ""}
-                          placeholder="--"
-                          onChange={(e) => handleStageRowChange("etapaEnfriamiento", idx, "humedadRelativa", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-sky-200 py-0.5 px-0.5 font-black text-sky-950 bg-sky-100">
-                        <input
-                          type="text"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.humedad ?? ""}
-                          placeholder="%"
-                          onChange={(e) => handleStageRowChange("etapaEnfriamiento", idx, "humedad", e.target.value)}
-                          className="w-full text-center font-black text-sky-950 outline-none bg-transparent"
-                        />
-                      </td>
-                      <td className="border-r border-sky-200 py-0.5 px-0.5">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.tempReal !== undefined ? row.tempReal : ""}
-                          placeholder="--"
-                          onChange={(e) => handleStageRowChange("etapaEnfriamiento", idx, "tempReal", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-sky-200 py-0.5 px-0.5 bg-cyan-50 font-bold text-sky-900">
-                        <input
-                          type="text"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.tiempoMin !== undefined ? row.tiempoMin : ""}
-                          placeholder={duracionEnfriamientoCalc || "--"}
-                          onChange={(e) => handleStageRowChange("etapaEnfriamiento", idx, "tiempoMin", e.target.value)}
-                          className="w-full text-center font-bold text-sky-900 outline-none bg-transparent"
-                        />
-                      </td>
-                      <td className="border-r border-sky-200 py-0.5 px-0.5">
-                        <input
-                          type="number"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.tempProgramada !== undefined ? row.tempProgramada : ""}
-                          placeholder="--"
-                          onChange={(e) => handleStageRowChange("etapaEnfriamiento", idx, "tempProgramada", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-sky-200 py-0.5 px-0.5">
-                        <input
-                          type="number"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.a1 !== undefined ? row.a1 : ""}
-                          placeholder="-"
-                          onChange={(e) => handleStageRowChange("etapaEnfriamiento", idx, "a1", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-sky-200 py-0.5 px-0.5">
-                        <input
-                          type="number"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.a2 !== undefined ? row.a2 : ""}
-                          placeholder="-"
-                          onChange={(e) => handleStageRowChange("etapaEnfriamiento", idx, "a2", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      {/* Materia Prima */}
-                      <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40" data-materia-prima="true">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.materiaPrima?.ri !== undefined ? row.materiaPrima.ri : ""}
-                          placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamiento", idx, "ri", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40" data-materia-prima="true">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.materiaPrima?.rb !== undefined ? row.materiaPrima.rb : ""}
-                          placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamiento", idx, "rb", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40" data-materia-prima="true">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.materiaPrima?.bli !== undefined ? row.materiaPrima.bli : ""}
-                          placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamiento", idx, "bli", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40" data-materia-prima="true">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.materiaPrima?.blp !== undefined ? row.materiaPrima.blp : (row.materiaPrima?.blGrad !== undefined ? row.materiaPrima.blGrad : "")}
-                          placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamiento", idx, "blp", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40" data-materia-prima="true">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.materiaPrima?.qiPct !== undefined ? row.materiaPrima.qiPct : ""}
-                          placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamiento", idx, "qiPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40" data-materia-prima="true">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.materiaPrima?.qbPct !== undefined ? row.materiaPrima.qbPct : (row.materiaPrima?.qPct !== undefined ? row.materiaPrima.qPct : "")}
-                          placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamiento", idx, "qbPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40" data-materia-prima="true">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.materiaPrima?.trizPct !== undefined ? row.materiaPrima.trizPct : ""}
-                          placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamiento", idx, "trizPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="py-0.5 px-0.5 text-center print:hidden">
-                        {etapaEnfriamiento.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveStageRow("etapaEnfriamiento", idx)}
-                            className="text-red-400 hover:text-red-700 font-bold text-xs cursor-pointer px-1"
-                            title="Eliminar esta casilla"
-                          >
-                            ✕
-                          </button>
+                            <div className="text-[11px] font-black text-sky-950">
+                              {duracionCiclo}
+                            </div>
+                            <div className="text-[7.5px] text-sky-700 font-sans uppercase font-bold tracking-tight">
+                              Enfriamiento
+                            </div>
+                          </td>
                         )}
-                      </td>
-                    </tr>
-                  ))}
+
+                        {/* T° GRANO */}
+                        <td className="border-r border-sky-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.tempGrano !== undefined ? row.tempGrano : ""}
+                            placeholder="--"
+                            onChange={(e) => handleStageRowChange("etapaEnfriamiento", idx, "tempGrano", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center font-semibold outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "T° de Grano al inicio del enfriamiento" : "T° de Grano al finalizar el enfriamiento"}
+                          />
+                        </td>
+
+                        {/* T° AMBIENTE */}
+                        <td className="border-r border-sky-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.tempAmbiente !== undefined ? row.tempAmbiente : ""}
+                            placeholder="--"
+                            onChange={(e) => handleStageRowChange("etapaEnfriamiento", idx, "tempAmbiente", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "T° Ambiente inicial" : "T° Ambiente final"}
+                          />
+                        </td>
+
+                        {/* H.R% */}
+                        <td className="border-r border-sky-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.humedadRelativa !== undefined ? row.humedadRelativa : ""}
+                            placeholder="--"
+                            onChange={(e) => handleStageRowChange("etapaEnfriamiento", idx, "humedadRelativa", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "Humedad Relativa % inicial" : "Humedad Relativa % final"}
+                          />
+                        </td>
+
+                        {/* HUMEDAD */}
+                        <td className="border-r border-sky-200 py-0.5 px-0.5 font-black text-sky-950 bg-sky-100">
+                          <input
+                            type="text"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.humedad ?? ""}
+                            placeholder="%"
+                            onChange={(e) => handleStageRowChange("etapaEnfriamiento", idx, "humedad", e.target.value)}
+                            className="w-full text-center font-black text-sky-950 outline-none bg-transparent"
+                            title={isInicial ? "Humedad % al inicio del enfriamiento" : "Humedad % al finalizar el enfriamiento"}
+                          />
+                        </td>
+
+                        {/* T° REAL */}
+                        <td className="border-r border-sky-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.tempReal !== undefined ? row.tempReal : ""}
+                            placeholder="--"
+                            onChange={(e) => handleStageRowChange("etapaEnfriamiento", idx, "tempReal", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "T° Real inicial" : "T° Real final"}
+                          />
+                        </td>
+
+                        {/* Tº PROG. */}
+                        <td className="border-r border-sky-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.tempProgramada !== undefined ? row.tempProgramada : ""}
+                            placeholder="--"
+                            onChange={(e) => handleStageRowChange("etapaEnfriamiento", idx, "tempProgramada", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "T° Programada inicial" : "T° Programada final"}
+                          />
+                        </td>
+
+                        {/* A1 */}
+                        <td className="border-r border-sky-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.a1 !== undefined ? row.a1 : ""}
+                            placeholder="-"
+                            onChange={(e) => handleStageRowChange("etapaEnfriamiento", idx, "a1", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "A1 inicial" : "A1 final"}
+                          />
+                        </td>
+
+                        {/* A2 */}
+                        <td className="border-r border-sky-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.a2 !== undefined ? row.a2 : ""}
+                            placeholder="-"
+                            onChange={(e) => handleStageRowChange("etapaEnfriamiento", idx, "a2", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "A2 inicial" : "A2 final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: RI */}
+                        <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.ri !== undefined ? row.materiaPrima.ri : ""}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamiento", idx, "ri", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "RI inicial" : "RI final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: RB */}
+                        <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.rb !== undefined ? row.materiaPrima.rb : ""}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamiento", idx, "rb", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "RB inicial" : "RB final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: BLI */}
+                        <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.bli !== undefined ? row.materiaPrima.bli : ""}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamiento", idx, "bli", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "BLI inicial" : "BLI final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: BLP */}
+                        <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.blp !== undefined ? row.materiaPrima.blp : (row.materiaPrima?.blGrad !== undefined ? row.materiaPrima.blGrad : "")}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamiento", idx, "blp", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "BLP inicial" : "BLP final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: QI% */}
+                        <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.qiPct !== undefined ? row.materiaPrima.qiPct : ""}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamiento", idx, "qiPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "QI% inicial" : "QI% final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: QB% */}
+                        <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.qbPct !== undefined ? row.materiaPrima.qbPct : (row.materiaPrima?.qPct !== undefined ? row.materiaPrima.qPct : "")}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamiento", idx, "qbPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "QB% inicial" : "QB% final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: %TRIZ */}
+                        <td className="border-r border-sky-200 py-0.5 px-0.5 bg-sky-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.trizPct !== undefined ? row.materiaPrima.trizPct : ""}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamiento", idx, "trizPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "%TRIZ inicial" : "%TRIZ final"}
+                          />
+                        </td>
+
+                        <td className="py-0.5 px-0.5 text-center print:hidden">
+                          {etapaEnfriamiento.length > 2 && isInicial && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                // Eliminar el par de filas (inicial y final)
+                                const list = etapaEnfriamiento.filter((_, i) => i !== idx && i !== idx + 1);
+                                setFormData(prev => ({ ...prev, etapaEnfriamiento: list }));
+                              }}
+                              className="text-red-400 hover:text-red-700 font-bold text-xs cursor-pointer px-1"
+                              title="Eliminar este ciclo de enfriamiento (2 filas)"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -5259,21 +5578,38 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                   <button
                     type="button"
                     onClick={() => {
-                      const list = [...etapaReposo2, {
-                        ...etapaReposo2[0],
-                        perfilIndex: `2° REPOSO (${etapaReposo2.length + 1})`,
-                        horaInicio: "",
-                        horaFin: "",
-                        duracion: "",
-                        tiempoMin: "",
-                        materiaPrima: { qPct: undefined, trizPct: undefined, blGrad: undefined },
-                        modificaciones: { mod1: "", mod2: "", mod3: "" }
-                      }];
+                      const currentDate = etapaReposo2[0]?.fecha || new Date().toLocaleDateString("es-PE");
+                      const list = [
+                        ...etapaReposo2,
+                        {
+                          ...etapaReposo2[0],
+                          perfilIndex: "HORA INICIAL",
+                          fecha: currentDate,
+                          horaInicio: "",
+                          horaFin: "",
+                          duracion: "",
+                          tiempoMin: "",
+                          materiaPrima: { qPct: undefined, trizPct: undefined, blGrad: undefined },
+                          modificaciones: { mod1: "", mod2: "", mod3: "" }
+                        },
+                        {
+                          ...etapaReposo2[1] || etapaReposo2[0],
+                          perfilIndex: "HORA FINAL",
+                          fecha: currentDate,
+                          horaInicio: "",
+                          horaFin: "",
+                          duracion: "",
+                          tiempoMin: "",
+                          materiaPrima: { qPct: undefined, trizPct: undefined, blGrad: undefined },
+                          modificaciones: { mod1: "", mod2: "", mod3: "" }
+                        }
+                      ];
                       setFormData(prev => ({ ...prev, etapaReposo2: list }));
                     }}
                     className="px-2 py-0.5 bg-amber-200 hover:bg-white text-amber-950 rounded text-[10px] font-bold transition-all cursor-pointer print:hidden"
+                    title="Añadir un ciclo adicional de 2° Reposo (Fila Inicial y Fila Final)"
                   >
-                    + Añadir Casilla 2° Reposo
+                    + Añadir Ciclo 2° Reposo (2 Filas)
                   </button>
                 )}
               </div>
@@ -5300,7 +5636,7 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                   className="px-2.5 py-1 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold rounded text-[10px] cursor-pointer shadow-xs transition-colors flex items-center gap-1"
                 >
                   <ChevronDown className="w-3.5 h-3.5" />
-                  Desglosar 2° Reposo ({etapaReposo2.length} Casillas)
+                  Desglosar 2° Reposo ({etapaReposo2.length} Filas)
                 </button>
               </div>
             )}
@@ -5310,23 +5646,22 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                 <thead>
                   <tr className="bg-amber-100/70 border-b border-amber-300 font-bold text-slate-800 text-center">
                     <th className="border-r border-amber-200 py-1 px-1 w-20">FECHA</th>
-                    <th className="border-r border-amber-200 py-1 px-1 w-24">PERFIL / CASILLA</th>
-                    <th className="border-r border-amber-200 py-1 px-1 w-16">H INICIO</th>
-                    <th className="border-r border-amber-200 py-1 px-1 w-16">H FINAL</th>
-                    <th className="border-r border-amber-200 py-1 px-1 w-16 bg-yellow-100 font-black text-amber-950">DURACIÓN</th>
+                    <th className="border-r border-amber-200 py-1 px-1 w-28">ETAPA / CONDICIÓN</th>
+                    <th className="border-r border-amber-200 py-1 px-1 w-20">HORA</th>
+                    <th className="border-r border-amber-200 py-1 px-1 w-18 bg-yellow-100 font-black text-amber-950">DURACIÓN</th>
                     <th className="border-r border-amber-200 py-1 px-1 w-14">T° GRANO</th>
                     <th className="border-r border-amber-200 py-1 px-1 w-16">T° AMBIENTE</th>
                     <th className="border-r border-amber-200 py-1 px-1 w-11">H.R%</th>
                     <th className="border-r border-amber-200 py-1 px-1 w-16 bg-amber-200 font-black">HUMEDAD</th>
-                    <th className="border-r border-amber-200 py-1 px-1 w-14">GRAD.</th>
+                    <th className="border-r border-amber-200 py-1 px-1 w-14">T° REAL</th>
                     <th className="border-r border-amber-200 py-1 px-1 w-12">Tº PROG.</th>
-                    <th className="border-r border-amber-200 py-1 px-1 w-14">A1</th>
-                    <th className="border-r border-amber-200 py-1 px-1 w-14">A2</th>
+                    <th className="border-r border-amber-200 py-1 px-1 w-12">A1</th>
+                    <th className="border-r border-amber-200 py-1 px-1 w-12">A2</th>
                     <th className="border-r border-amber-200 py-0.5 px-1" colSpan={7}>CONTROL DE M.PRIMA</th>
                     <th className="w-6 print:hidden"></th>
                   </tr>
                   <tr className="bg-amber-50 border-b border-amber-300 font-semibold text-slate-700 text-center text-[9px]">
-                    <th colSpan={13} className="border-r border-amber-200"></th>
+                    <th colSpan={12} className="border-r border-amber-200"></th>
                     <th className="border-r border-amber-200 py-0.5 px-0.5 w-10">RI</th>
                     <th className="border-r border-amber-200 py-0.5 px-0.5 w-10">RB</th>
                     <th className="border-r border-amber-200 py-0.5 px-0.5 w-10">BLI</th>
@@ -5338,289 +5673,340 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-amber-200 text-center">
-                  {etapaReposo2.map((row, idx) => (
-                    <tr key={idx} className="hover:bg-amber-50/50 bg-white">
-                      <td className="border-r border-amber-200 py-0.5 px-1 font-mono text-slate-700">
-                        <input
-                          type="text"
-                          value={row.fecha || ""}
-                          onChange={(e) => handleStageRowChange("etapaReposo2", idx, "fecha", e.target.value)}
-                          className="w-full text-center outline-none bg-transparent"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-1 font-black text-amber-950 bg-amber-50/60">
-                        {row.perfilIndex || (idx === 0 ? "2° REPOSO (1)" : idx === 1 ? "2° REPOSO (2)" : `2° REPOSO (${idx + 1})`)}
-                      </td>
-                      {/* H INICIO */}
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 font-bold text-slate-900">
-                        <div className="flex items-center justify-center gap-0.5">
+                  {etapaReposo2.map((row, idx) => {
+                    const isInicial = idx % 2 === 0;
+                    const nextRow = etapaReposo2[idx + 1];
+                    const duracionCiclo = isInicial 
+                      ? (calculateDuration(row.horaInicio, nextRow?.horaFin || nextRow?.horaInicio) || row.duracion || (idx === 0 ? duracionReposo2Calc : "--") || "--")
+                      : "";
+
+                    return (
+                      <tr key={idx} className={`hover:bg-amber-50/50 ${isInicial ? "bg-white" : "bg-amber-50/20"}`}>
+                        <td className="border-r border-amber-200 py-0.5 px-1 font-mono text-slate-700">
                           <input
                             type="text"
-                            value={row.horaInicio ?? ""}
-                            placeholder="--:--"
-                            onChange={(e) => handleStageRowChange("etapaReposo2", idx, "horaInicio", e.target.value)}
-                            className="w-11 text-center font-bold outline-none bg-transparent"
+                            value={row.fecha || ""}
+                            onChange={(e) => handleStageRowChange("etapaReposo2", idx, "fecha", e.target.value)}
+                            className="w-full text-center outline-none bg-transparent"
                           />
-                          <button
-                            type="button"
-                            onClick={() => handleStageRowChange("etapaReposo2", idx, "horaInicio", getHoraActual())}
-                            className="p-0.5 text-slate-400 hover:text-amber-700 hover:bg-amber-100 rounded transition-colors cursor-pointer print:hidden"
-                            title="Insertar hora actual (Inicio)"
+                        </td>
+                        <td className={`border-r border-amber-200 py-0.5 px-1 font-black ${isInicial ? "bg-emerald-50/60 text-emerald-950" : "bg-amber-50/60 text-amber-950"}`}>
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded font-black text-[9px] ${
+                            isInicial 
+                              ? "bg-emerald-100 text-emerald-800 border border-emerald-300" 
+                              : "bg-amber-100 text-amber-800 border border-amber-300"
+                          }`}>
+                            {isInicial ? "🟢 HORA INICIAL" : "🏁 HORA FINAL"}
+                          </span>
+                        </td>
+                        {/* HORA */}
+                        <td className={`border-r border-amber-200 py-0.5 px-0.5 font-bold text-slate-900 ${isInicial ? "bg-emerald-50/30" : "bg-amber-50/30"}`}>
+                          <div className="flex items-center justify-center gap-0.5">
+                            <input
+                              type="text"
+                              value={isInicial ? (row.horaInicio ?? "") : (row.horaFin || row.horaInicio || "")}
+                              placeholder="--:--"
+                              onChange={(e) => {
+                                if (isInicial) {
+                                  handleStageRowChange("etapaReposo2", idx, "horaInicio", e.target.value);
+                                } else {
+                                  handleStageRowChange("etapaReposo2", idx, "horaFin", e.target.value);
+                                  handleStageRowChange("etapaReposo2", idx, "horaInicio", e.target.value);
+                                }
+                              }}
+                              className="w-11 text-center font-bold outline-none bg-transparent"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const h = getHoraActual();
+                                if (isInicial) {
+                                  handleStageRowChange("etapaReposo2", idx, "horaInicio", h);
+                                } else {
+                                  handleStageRowChange("etapaReposo2", idx, "horaFin", h);
+                                  handleStageRowChange("etapaReposo2", idx, "horaInicio", h);
+                                }
+                              }}
+                              className={`p-0.5 rounded transition-colors cursor-pointer print:hidden ${
+                                isInicial 
+                                  ? "text-slate-400 hover:text-emerald-700 hover:bg-emerald-100" 
+                                  : "text-slate-400 hover:text-amber-700 hover:bg-amber-100"
+                              }`}
+                              title={isInicial ? "Insertar hora actual (Inicio)" : "Insertar hora actual (Fin)"}
+                            >
+                              <Clock className="w-2.5 h-2.5" />
+                            </button>
+                          </div>
+                        </td>
+
+                        {/* DURACIÓN TOTAL CON rowSpan={2} */}
+                        {isInicial && (
+                          <td 
+                            rowSpan={2} 
+                            className="border-r border-amber-200 py-1 px-1 bg-yellow-50 font-black text-amber-950 text-center align-middle"
+                            title="Duración total calculada entre Hora Inicial y Hora Final"
                           >
-                            <Clock className="w-2.5 h-2.5" />
-                          </button>
-                        </div>
-                      </td>
-                      {/* H FINAL */}
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 font-bold text-slate-900">
-                        <div className="flex items-center justify-center gap-0.5">
-                          <input
-                            type="text"
-                            value={row.horaFin ?? ""}
-                            placeholder="--:--"
-                            onChange={(e) => handleStageRowChange("etapaReposo2", idx, "horaFin", e.target.value)}
-                            className="w-11 text-center font-bold outline-none bg-transparent"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleStageRowChange("etapaReposo2", idx, "horaFin", getHoraActual())}
-                            className="p-0.5 text-slate-400 hover:text-amber-700 hover:bg-amber-100 rounded transition-colors cursor-pointer print:hidden"
-                            title="Insertar hora actual (Fin)"
-                          >
-                            <Clock className="w-2.5 h-2.5" />
-                          </button>
-                        </div>
-                      </td>
-                      {/* DURACIÓN */}
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-yellow-50 font-bold text-amber-950">
-                        <input
-                          type="text"
-                          value={calculateDuration(row.horaInicio, row.horaFin) || row.duracion || (row.tiempoMin !== undefined ? String(row.tiempoMin) : "")}
-                          placeholder={calculateDuration(row.horaInicio, row.horaFin) || "--"}
-                          onChange={(e) => {
-                            handleStageRowChange("etapaReposo2", idx, "duracion", e.target.value);
-                            handleStageRowChange("etapaReposo2", idx, "tiempoMin", e.target.value);
-                          }}
-                          className="w-full text-center font-black text-amber-950 outline-none bg-transparent"
-                          title={calculateDuration(row.horaInicio, row.horaFin) ? `Duración calculada: ${calculateDuration(row.horaInicio, row.horaFin)}` : "Duración"}
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5">
-                        <input
-                          type="number"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.tempGrano !== undefined ? row.tempGrano : ""}
-                          placeholder="--"
-                          onChange={(e) => handleStageRowChange("etapaReposo2", idx, "tempGrano", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center font-semibold outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.tempAmbiente !== undefined ? row.tempAmbiente : ""}
-                          placeholder="--"
-                          onChange={(e) => handleStageRowChange("etapaReposo2", idx, "tempAmbiente", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5">
-                        <input
-                          type="number"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.humedadRelativa !== undefined ? row.humedadRelativa : ""}
-                          placeholder="--"
-                          onChange={(e) => handleStageRowChange("etapaReposo2", idx, "humedadRelativa", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 font-black text-amber-950 bg-amber-100">
-                        <input
-                          type="text"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.humedad ?? ""}
-                          placeholder="%"
-                          onChange={(e) => handleStageRowChange("etapaReposo2", idx, "humedad", e.target.value)}
-                          className="w-full text-center font-black text-amber-950 outline-none bg-transparent"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.tempReal !== undefined ? row.tempReal : ""}
-                          placeholder="--"
-                          onChange={(e) => handleStageRowChange("etapaReposo2", idx, "tempReal", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-yellow-50 font-bold text-amber-900">
-                        <input
-                          type="text"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.tiempoMin !== undefined ? row.tiempoMin : ""}
-                          placeholder={duracionReposo2Calc || "--"}
-                          onChange={(e) => handleStageRowChange("etapaReposo2", idx, "tiempoMin", e.target.value)}
-                          className="w-full text-center font-bold text-amber-900 outline-none bg-transparent"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5">
-                        <input
-                          type="number"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.tempProgramada !== undefined ? row.tempProgramada : ""}
-                          placeholder="--"
-                          onChange={(e) => handleStageRowChange("etapaReposo2", idx, "tempProgramada", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5">
-                        <input
-                          type="number"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.a1 !== undefined ? row.a1 : ""}
-                          placeholder="-"
-                          onChange={(e) => handleStageRowChange("etapaReposo2", idx, "a1", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5">
-                        <input
-                          type="number"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.a2 !== undefined ? row.a2 : ""}
-                          placeholder="-"
-                          onChange={(e) => handleStageRowChange("etapaReposo2", idx, "a2", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      {/* Materia Prima */}
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.materiaPrima?.ri !== undefined ? row.materiaPrima.ri : ""}
-                          placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaReposo2", idx, "ri", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.materiaPrima?.rb !== undefined ? row.materiaPrima.rb : ""}
-                          placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaReposo2", idx, "rb", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.materiaPrima?.bli !== undefined ? row.materiaPrima.bli : ""}
-                          placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaReposo2", idx, "bli", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.materiaPrima?.blp !== undefined ? row.materiaPrima.blp : (row.materiaPrima?.blGrad !== undefined ? row.materiaPrima.blGrad : "")}
-                          placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaReposo2", idx, "blp", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.materiaPrima?.qiPct !== undefined ? row.materiaPrima.qiPct : ""}
-                          placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaReposo2", idx, "qiPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.materiaPrima?.qbPct !== undefined ? row.materiaPrima.qbPct : (row.materiaPrima?.qPct !== undefined ? row.materiaPrima.qPct : "")}
-                          placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaReposo2", idx, "qbPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.materiaPrima?.trizPct !== undefined ? row.materiaPrima.trizPct : ""}
-                          placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaReposo2", idx, "trizPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="py-0.5 px-0.5 text-center print:hidden">
-                        {etapaReposo2.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveStageRow("etapaReposo2", idx)}
-                            className="text-red-400 hover:text-red-700 font-bold text-xs cursor-pointer px-1"
-                            title="Eliminar esta casilla"
-                          >
-                            ✕
-                          </button>
+                            <div className="text-[11px] font-black text-amber-950">
+                              {duracionCiclo}
+                            </div>
+                            <div className="text-[7.5px] text-amber-700 font-sans uppercase font-bold tracking-tight">
+                              2° Reposo
+                            </div>
+                          </td>
                         )}
-                      </td>
-                    </tr>
-                  ))}
+
+                        {/* T° GRANO */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.tempGrano !== undefined ? row.tempGrano : ""}
+                            placeholder="--"
+                            onChange={(e) => handleStageRowChange("etapaReposo2", idx, "tempGrano", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center font-semibold outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "T° de Grano al inicio del 2° reposo" : "T° de Grano al finalizar el 2° reposo"}
+                          />
+                        </td>
+
+                        {/* T° AMBIENTE */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.tempAmbiente !== undefined ? row.tempAmbiente : ""}
+                            placeholder="--"
+                            onChange={(e) => handleStageRowChange("etapaReposo2", idx, "tempAmbiente", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "T° Ambiente inicial" : "T° Ambiente final"}
+                          />
+                        </td>
+
+                        {/* H.R% */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.humedadRelativa !== undefined ? row.humedadRelativa : ""}
+                            placeholder="--"
+                            onChange={(e) => handleStageRowChange("etapaReposo2", idx, "humedadRelativa", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "Humedad Relativa % inicial" : "Humedad Relativa % final"}
+                          />
+                        </td>
+
+                        {/* HUMEDAD */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5 font-black text-amber-950 bg-amber-100">
+                          <input
+                            type="text"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.humedad ?? ""}
+                            placeholder="%"
+                            onChange={(e) => handleStageRowChange("etapaReposo2", idx, "humedad", e.target.value)}
+                            className="w-full text-center font-black text-amber-950 outline-none bg-transparent"
+                            title={isInicial ? "Humedad % al inicio del 2° reposo" : "Humedad % al finalizar el 2° reposo"}
+                          />
+                        </td>
+
+                        {/* T° REAL */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.tempReal !== undefined ? row.tempReal : ""}
+                            placeholder="--"
+                            onChange={(e) => handleStageRowChange("etapaReposo2", idx, "tempReal", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "T° Real inicial" : "T° Real final"}
+                          />
+                        </td>
+
+                        {/* Tº PROG. */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.tempProgramada !== undefined ? row.tempProgramada : ""}
+                            placeholder="--"
+                            onChange={(e) => handleStageRowChange("etapaReposo2", idx, "tempProgramada", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "T° Programada inicial" : "T° Programada final"}
+                          />
+                        </td>
+
+                        {/* A1 */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.a1 !== undefined ? row.a1 : ""}
+                            placeholder="-"
+                            onChange={(e) => handleStageRowChange("etapaReposo2", idx, "a1", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "A1 inicial" : "A1 final"}
+                          />
+                        </td>
+
+                        {/* A2 */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.a2 !== undefined ? row.a2 : ""}
+                            placeholder="-"
+                            onChange={(e) => handleStageRowChange("etapaReposo2", idx, "a2", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "A2 inicial" : "A2 final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: RI */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.ri !== undefined ? row.materiaPrima.ri : ""}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaReposo2", idx, "ri", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "RI inicial" : "RI final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: RB */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.rb !== undefined ? row.materiaPrima.rb : ""}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaReposo2", idx, "rb", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "RB inicial" : "RB final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: BLI */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.bli !== undefined ? row.materiaPrima.bli : ""}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaReposo2", idx, "bli", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "BLI inicial" : "BLI final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: BLP */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.blp !== undefined ? row.materiaPrima.blp : (row.materiaPrima?.blGrad !== undefined ? row.materiaPrima.blGrad : "")}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaReposo2", idx, "blp", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "BLP inicial" : "BLP final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: QI% */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.qiPct !== undefined ? row.materiaPrima.qiPct : ""}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaReposo2", idx, "qiPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "QI% inicial" : "QI% final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: QB% */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.qbPct !== undefined ? row.materiaPrima.qbPct : (row.materiaPrima?.qPct !== undefined ? row.materiaPrima.qPct : "")}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaReposo2", idx, "qbPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "QB% inicial" : "QB% final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: %TRIZ */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.trizPct !== undefined ? row.materiaPrima.trizPct : ""}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaReposo2", idx, "trizPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "%TRIZ inicial" : "%TRIZ final"}
+                          />
+                        </td>
+
+                        <td className="py-0.5 px-0.5 text-center print:hidden">
+                          {etapaReposo2.length > 2 && isInicial && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const list = etapaReposo2.filter((_, i) => i !== idx && i !== idx + 1);
+                                setFormData(prev => ({ ...prev, etapaReposo2: list }));
+                              }}
+                              className="text-red-400 hover:text-red-700 font-bold text-xs cursor-pointer px-1"
+                              title="Eliminar este ciclo de 2° reposo (2 filas)"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -6895,22 +7281,38 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                   <button
                     type="button"
                     onClick={() => {
-                      const list = [...etapaEnfriamientoFinal, {
-                        ...etapaEnfriamientoFinal[0],
-                        perfilIndex: `ENFRIAMIENTO FINAL (${etapaEnfriamientoFinal.length + 1})`,
-                        etapa: "ENFRIAMIENTO_FINAL",
-                        horaInicio: "",
-                        horaFin: "",
-                        duracion: "",
-                        tiempoMin: "",
-                        materiaPrima: { qPct: undefined, trizPct: undefined, blGrad: undefined },
-                        modificaciones: { mod1: "", mod2: "", mod3: "" }
-                      }];
+                      const currentDate = etapaEnfriamientoFinal[0]?.fecha || new Date().toLocaleDateString("es-PE");
+                      const list = [
+                        ...etapaEnfriamientoFinal,
+                        {
+                          ...etapaEnfriamientoFinal[0],
+                          perfilIndex: "HORA INICIAL",
+                          fecha: currentDate,
+                          horaInicio: "",
+                          horaFin: "",
+                          duracion: "",
+                          tiempoMin: "",
+                          materiaPrima: { qPct: undefined, trizPct: undefined, blGrad: undefined },
+                          modificaciones: { mod1: "", mod2: "", mod3: "" }
+                        },
+                        {
+                          ...etapaEnfriamientoFinal[1] || etapaEnfriamientoFinal[0],
+                          perfilIndex: "HORA FINAL",
+                          fecha: currentDate,
+                          horaInicio: "",
+                          horaFin: "",
+                          duracion: "",
+                          tiempoMin: "",
+                          materiaPrima: { qPct: undefined, trizPct: undefined, blGrad: undefined },
+                          modificaciones: { mod1: "", mod2: "", mod3: "" }
+                        }
+                      ];
                       setFormData(prev => ({ ...prev, etapaEnfriamientoFinal: list }));
                     }}
                     className="px-2 py-0.5 bg-teal-200 hover:bg-white text-teal-950 rounded text-[10px] font-bold transition-all cursor-pointer print:hidden"
+                    title="Añadir un ciclo adicional de enfriamiento final (Fila Inicial y Fila Final)"
                   >
-                    + Añadir Casilla Enfriamiento Final
+                    + Añadir Ciclo Enfriamiento Final (2 Filas)
                   </button>
                 )}
               </div>
@@ -6921,23 +7323,22 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                 <thead>
                   <tr className="bg-teal-100/70 border-b border-teal-300 font-bold text-slate-800 text-center">
                     <th className="border-r border-teal-200 py-1 px-1 w-20">FECHA</th>
-                    <th className="border-r border-teal-200 py-1 px-1 w-28">PERFIL / CASILLA</th>
-                    <th className="border-r border-teal-200 py-1 px-1 w-16">H INICIO</th>
-                    <th className="border-r border-teal-200 py-1 px-1 w-16">H FINAL</th>
-                    <th className="border-r border-teal-200 py-1 px-1 w-16 bg-teal-200/80 font-black text-teal-950">DURACIÓN</th>
+                    <th className="border-r border-teal-200 py-1 px-1 w-28">ETAPA / CONDICIÓN</th>
+                    <th className="border-r border-teal-200 py-1 px-1 w-20">HORA</th>
+                    <th className="border-r border-teal-200 py-1 px-1 w-18 bg-teal-200/80 font-black text-teal-950">DURACIÓN</th>
                     <th className="border-r border-teal-200 py-1 px-1 w-14">T° GRANO</th>
                     <th className="border-r border-teal-200 py-1 px-1 w-16">T° AMBIENTE</th>
                     <th className="border-r border-teal-200 py-1 px-1 w-11">H.R%</th>
                     <th className="border-r border-teal-200 py-1 px-1 w-16 bg-amber-200 font-black">HUMEDAD</th>
-                    <th className="border-r border-teal-200 py-1 px-1 w-14">GRAD.</th>
+                    <th className="border-r border-teal-200 py-1 px-1 w-14">T° REAL</th>
                     <th className="border-r border-teal-200 py-1 px-1 w-12">Tº PROG.</th>
-                    <th className="border-r border-teal-200 py-1 px-1 w-14">A1</th>
-                    <th className="border-r border-teal-200 py-1 px-1 w-14">A2</th>
+                    <th className="border-r border-teal-200 py-1 px-1 w-12">A1</th>
+                    <th className="border-r border-teal-200 py-1 px-1 w-12">A2</th>
                     <th className="border-r border-teal-200 py-0.5 px-1" colSpan={7}>CONTROL DE M.PRIMA</th>
                     <th className="w-6 print:hidden"></th>
                   </tr>
                   <tr className="bg-teal-50 border-b border-teal-300 font-semibold text-slate-700 text-center text-[9px]">
-                    <th colSpan={13} className="border-r border-teal-200"></th>
+                    <th colSpan={12} className="border-r border-teal-200"></th>
                     <th className="border-r border-teal-200 py-0.5 px-0.5 w-10">RI</th>
                     <th className="border-r border-teal-200 py-0.5 px-0.5 w-10">RB</th>
                     <th className="border-r border-teal-200 py-0.5 px-0.5 w-10">BLI</th>
@@ -6949,277 +7350,827 @@ export const HojaControlVaporizadoOficial: React.FC<HojaControlVaporizadoOficial
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-teal-200 text-center">
-                  {etapaEnfriamientoFinal.map((row, idx) => (
-                    <tr key={idx} className="hover:bg-teal-50/50 bg-white">
-                      <td className="border-r border-teal-200 py-0.5 px-1 font-mono text-slate-700">
-                        <input
-                          type="text"
-                          value={row.fecha || ""}
-                          onChange={(e) => handleStageRowChange("etapaEnfriamientoFinal", idx, "fecha", e.target.value)}
-                          className="w-full text-center outline-none bg-transparent"
-                        />
-                      </td>
-                      <td className="border-r border-teal-200 py-0.5 px-1 font-black text-teal-950 bg-teal-50/60">
-                        {row.perfilIndex || (idx === 0 ? "ENFRIAMIENTO FINAL (1)" : idx === 1 ? "ENFRIAMIENTO FINAL (2)" : `ENFRIAMIENTO FINAL (${idx + 1})`)}
-                      </td>
-                      {/* H INICIO */}
-                      <td className="border-r border-teal-200 py-0.5 px-0.5 font-bold text-slate-900">
-                        <div className="flex items-center justify-center gap-0.5">
+                  {etapaEnfriamientoFinal.map((row, idx) => {
+                    const isInicial = idx % 2 === 0;
+                    const nextRow = etapaEnfriamientoFinal[idx + 1];
+                    const duracionCiclo = isInicial 
+                      ? (calculateDuration(row.horaInicio, nextRow?.horaFin || nextRow?.horaInicio) || row.duracion || (idx === 0 ? duracionEnfriamientoFinalCalc : "--") || "--")
+                      : "";
+
+                    return (
+                      <tr key={idx} className={`hover:bg-teal-50/50 ${isInicial ? "bg-white" : "bg-teal-50/20"}`}>
+                        <td className="border-r border-teal-200 py-0.5 px-1 font-mono text-slate-700">
                           <input
                             type="text"
-                            value={row.horaInicio ?? ""}
-                            placeholder="--:--"
-                            onChange={(e) => handleStageRowChange("etapaEnfriamientoFinal", idx, "horaInicio", e.target.value)}
-                            className="w-11 text-center font-bold outline-none bg-transparent"
+                            value={row.fecha || ""}
+                            onChange={(e) => handleStageRowChange("etapaEnfriamientoFinal", idx, "fecha", e.target.value)}
+                            className="w-full text-center outline-none bg-transparent"
                           />
-                          <button
-                            type="button"
-                            onClick={() => handleStageRowChange("etapaEnfriamientoFinal", idx, "horaInicio", getHoraActual())}
-                            className="p-0.5 text-slate-400 hover:text-teal-700 hover:bg-teal-100 rounded transition-colors cursor-pointer print:hidden"
-                            title="Insertar hora actual (Inicio)"
+                        </td>
+                        <td className={`border-r border-teal-200 py-0.5 px-1 font-black ${isInicial ? "bg-emerald-50/60 text-emerald-950" : "bg-teal-50/60 text-teal-950"}`}>
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded font-black text-[9px] ${
+                            isInicial 
+                              ? "bg-emerald-100 text-emerald-800 border border-emerald-300" 
+                              : "bg-teal-100 text-teal-800 border border-teal-300"
+                          }`}>
+                            {isInicial ? "🟢 HORA INICIAL" : "🏁 HORA FINAL"}
+                          </span>
+                        </td>
+                        {/* HORA */}
+                        <td className={`border-r border-teal-200 py-0.5 px-0.5 font-bold text-slate-900 ${isInicial ? "bg-emerald-50/30" : "bg-teal-50/30"}`}>
+                          <div className="flex items-center justify-center gap-0.5">
+                            <input
+                              type="text"
+                              value={isInicial ? (row.horaInicio ?? "") : (row.horaFin || row.horaInicio || "")}
+                              placeholder="--:--"
+                              onChange={(e) => {
+                                if (isInicial) {
+                                  handleStageRowChange("etapaEnfriamientoFinal", idx, "horaInicio", e.target.value);
+                                } else {
+                                  handleStageRowChange("etapaEnfriamientoFinal", idx, "horaFin", e.target.value);
+                                  handleStageRowChange("etapaEnfriamientoFinal", idx, "horaInicio", e.target.value);
+                                }
+                              }}
+                              className="w-11 text-center font-bold outline-none bg-transparent"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const h = getHoraActual();
+                                if (isInicial) {
+                                  handleStageRowChange("etapaEnfriamientoFinal", idx, "horaInicio", h);
+                                } else {
+                                  handleStageRowChange("etapaEnfriamientoFinal", idx, "horaFin", h);
+                                  handleStageRowChange("etapaEnfriamientoFinal", idx, "horaInicio", h);
+                                }
+                              }}
+                              className={`p-0.5 rounded transition-colors cursor-pointer print:hidden ${
+                                isInicial 
+                                  ? "text-slate-400 hover:text-emerald-700 hover:bg-emerald-100" 
+                                  : "text-slate-400 hover:text-teal-700 hover:bg-teal-100"
+                              }`}
+                              title={isInicial ? "Insertar hora actual (Inicio)" : "Insertar hora actual (Fin)"}
+                            >
+                              <Clock className="w-2.5 h-2.5" />
+                            </button>
+                          </div>
+                        </td>
+
+                        {/* DURACIÓN TOTAL CON rowSpan={2} */}
+                        {isInicial && (
+                          <td 
+                            rowSpan={2} 
+                            className="border-r border-teal-200 py-1 px-1 bg-teal-50 font-black text-teal-950 text-center align-middle"
+                            title="Duración total calculada entre Hora Inicial y Hora Final"
                           >
-                            <Clock className="w-2.5 h-2.5" />
-                          </button>
-                        </div>
-                      </td>
-                      {/* H FINAL */}
-                      <td className="border-r border-teal-200 py-0.5 px-0.5 font-bold text-slate-900">
-                        <div className="flex items-center justify-center gap-0.5">
-                          <input
-                            type="text"
-                            value={row.horaFin ?? ""}
-                            placeholder="--:--"
-                            onChange={(e) => handleStageRowChange("etapaEnfriamientoFinal", idx, "horaFin", e.target.value)}
-                            className="w-11 text-center font-bold outline-none bg-transparent"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleStageRowChange("etapaEnfriamientoFinal", idx, "horaFin", getHoraActual())}
-                            className="p-0.5 text-slate-400 hover:text-teal-700 hover:bg-teal-100 rounded transition-colors cursor-pointer print:hidden"
-                            title="Insertar hora actual (Fin)"
-                          >
-                            <Clock className="w-2.5 h-2.5" />
-                          </button>
-                        </div>
-                      </td>
-                      {/* DURACIÓN */}
-                      <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50 font-bold text-teal-950">
-                        <input
-                          type="text"
-                          value={calculateDuration(row.horaInicio, row.horaFin) || row.duracion || (row.tiempoMin !== undefined ? String(row.tiempoMin) : "")}
-                          placeholder={calculateDuration(row.horaInicio, row.horaFin) || "--"}
-                          onChange={(e) => {
-                            handleStageRowChange("etapaEnfriamientoFinal", idx, "duracion", e.target.value);
-                            handleStageRowChange("etapaEnfriamientoFinal", idx, "tiempoMin", e.target.value);
-                          }}
-                          className="w-full text-center font-black text-teal-950 outline-none bg-transparent"
-                          title={calculateDuration(row.horaInicio, row.horaFin) ? `Duración calculada: ${calculateDuration(row.horaInicio, row.horaFin)}` : "Duración"}
-                        />
-                      </td>
-                      <td className="border-r border-teal-200 py-0.5 px-0.5">
-                        <input
-                          type="number"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.tempGrano !== undefined ? row.tempGrano : ""}
-                          placeholder="--"
-                          onChange={(e) => handleStageRowChange("etapaEnfriamientoFinal", idx, "tempGrano", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center font-semibold outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-teal-200 py-0.5 px-0.5">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.tempAmbiente !== undefined ? row.tempAmbiente : ""}
-                          placeholder="--"
-                          onChange={(e) => handleStageRowChange("etapaEnfriamientoFinal", idx, "tempAmbiente", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-teal-200 py-0.5 px-0.5">
-                        <input
-                          type="number"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.humedadRelativa !== undefined ? row.humedadRelativa : ""}
-                          placeholder="--"
-                          onChange={(e) => handleStageRowChange("etapaEnfriamientoFinal", idx, "humedadRelativa", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-teal-200 py-0.5 px-0.5 font-black text-teal-950 bg-teal-100">
-                        <input
-                          type="text"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.humedad ?? ""}
-                          placeholder="%"
-                          onChange={(e) => handleStageRowChange("etapaEnfriamientoFinal", idx, "humedad", e.target.value)}
-                          className="w-full text-center font-black text-teal-950 outline-none bg-transparent"
-                        />
-                      </td>
-                      <td className="border-r border-teal-200 py-0.5 px-0.5">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.tempReal !== undefined ? row.tempReal : ""}
-                          placeholder="--"
-                          onChange={(e) => handleStageRowChange("etapaEnfriamientoFinal", idx, "tempReal", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-teal-200 py-0.5 px-0.5">
-                        <input
-                          type="number"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.tempProgramada !== undefined ? row.tempProgramada : ""}
-                          placeholder="--"
-                          onChange={(e) => handleStageRowChange("etapaEnfriamientoFinal", idx, "tempProgramada", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-teal-200 py-0.5 px-0.5">
-                        <input
-                          type="number"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.a1 !== undefined ? row.a1 : ""}
-                          placeholder="-"
-                          onChange={(e) => handleStageRowChange("etapaEnfriamientoFinal", idx, "a1", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-teal-200 py-0.5 px-0.5">
-                        <input
-                          type="number"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.a2 !== undefined ? row.a2 : ""}
-                          placeholder="-"
-                          onChange={(e) => handleStageRowChange("etapaEnfriamientoFinal", idx, "a2", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      {/* Materia Prima */}
-                      <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40" data-materia-prima="true">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.materiaPrima?.ri !== undefined ? row.materiaPrima.ri : ""}
-                          placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamientoFinal", idx, "ri", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40" data-materia-prima="true">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.materiaPrima?.rb !== undefined ? row.materiaPrima.rb : ""}
-                          placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamientoFinal", idx, "rb", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40" data-materia-prima="true">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.materiaPrima?.bli !== undefined ? row.materiaPrima.bli : ""}
-                          placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamientoFinal", idx, "bli", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40" data-materia-prima="true">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.materiaPrima?.blp !== undefined ? row.materiaPrima.blp : (row.materiaPrima?.blGrad !== undefined ? row.materiaPrima.blGrad : "")}
-                          placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamientoFinal", idx, "blp", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40" data-materia-prima="true">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.materiaPrima?.qiPct !== undefined ? row.materiaPrima.qiPct : ""}
-                          placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamientoFinal", idx, "qiPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40" data-materia-prima="true">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.materiaPrima?.qbPct !== undefined ? row.materiaPrima.qbPct : (row.materiaPrima?.qPct !== undefined ? row.materiaPrima.qPct : "")}
-                          placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamientoFinal", idx, "qbPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40" data-materia-prima="true">
-                        <input
-                          type="number"
-                          step="0.1"
-                          data-no-spin="true"
-                          onWheel={handlePreventNumberSpinWheel}
-                          onKeyDown={handlePreventNumberSpinKey}
-                          value={row.materiaPrima?.trizPct !== undefined ? row.materiaPrima.trizPct : ""}
-                          placeholder=""
-                          onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamientoFinal", idx, "trizPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
-                          className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
-                        />
-                      </td>
-                      <td className="py-0.5 px-0.5 text-center print:hidden">
-                        {etapaEnfriamientoFinal.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveStageRow("etapaEnfriamientoFinal", idx)}
-                            className="text-red-400 hover:text-red-700 font-bold text-xs cursor-pointer px-1"
-                            title="Eliminar esta casilla"
-                          >
-                            ✕
-                          </button>
+                            <div className="text-[11px] font-black text-teal-950">
+                              {duracionCiclo}
+                            </div>
+                            <div className="text-[7.5px] text-teal-700 font-sans uppercase font-bold tracking-tight">
+                              Enfriamiento
+                            </div>
+                          </td>
                         )}
-                      </td>
-                    </tr>
-                  ))}
+
+                        {/* T° GRANO */}
+                        <td className="border-r border-teal-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.tempGrano !== undefined ? row.tempGrano : ""}
+                            placeholder="--"
+                            onChange={(e) => handleStageRowChange("etapaEnfriamientoFinal", idx, "tempGrano", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center font-semibold outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "T° de Grano al inicio del enfriamiento final" : "T° de Grano al finalizar el enfriamiento"}
+                          />
+                        </td>
+
+                        {/* T° AMBIENTE */}
+                        <td className="border-r border-teal-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.tempAmbiente !== undefined ? row.tempAmbiente : ""}
+                            placeholder="--"
+                            onChange={(e) => handleStageRowChange("etapaEnfriamientoFinal", idx, "tempAmbiente", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "T° Ambiente inicial" : "T° Ambiente final"}
+                          />
+                        </td>
+
+                        {/* H.R% */}
+                        <td className="border-r border-teal-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.humedadRelativa !== undefined ? row.humedadRelativa : ""}
+                            placeholder="--"
+                            onChange={(e) => handleStageRowChange("etapaEnfriamientoFinal", idx, "humedadRelativa", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "Humedad Relativa % inicial" : "Humedad Relativa % final"}
+                          />
+                        </td>
+
+                        {/* HUMEDAD */}
+                        <td className="border-r border-teal-200 py-0.5 px-0.5 font-black text-teal-950 bg-amber-100">
+                          <input
+                            type="text"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.humedad ?? ""}
+                            placeholder="%"
+                            onChange={(e) => handleStageRowChange("etapaEnfriamientoFinal", idx, "humedad", e.target.value)}
+                            className="w-full text-center font-black text-teal-950 outline-none bg-transparent"
+                            title={isInicial ? "Humedad % al inicio del enfriamiento final" : "Humedad % al finalizar el enfriamiento final"}
+                          />
+                        </td>
+
+                        {/* T° REAL */}
+                        <td className="border-r border-teal-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.tempReal !== undefined ? row.tempReal : ""}
+                            placeholder="--"
+                            onChange={(e) => handleStageRowChange("etapaEnfriamientoFinal", idx, "tempReal", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "T° Real inicial" : "T° Real final"}
+                          />
+                        </td>
+
+                        {/* Tº PROG. */}
+                        <td className="border-r border-teal-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.tempProgramada !== undefined ? row.tempProgramada : ""}
+                            placeholder="--"
+                            onChange={(e) => handleStageRowChange("etapaEnfriamientoFinal", idx, "tempProgramada", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "T° Programada inicial" : "T° Programada final"}
+                          />
+                        </td>
+
+                        {/* A1 */}
+                        <td className="border-r border-teal-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.a1 !== undefined ? row.a1 : ""}
+                            placeholder="-"
+                            onChange={(e) => handleStageRowChange("etapaEnfriamientoFinal", idx, "a1", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "A1 inicial" : "A1 final"}
+                          />
+                        </td>
+
+                        {/* A2 */}
+                        <td className="border-r border-teal-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.a2 !== undefined ? row.a2 : ""}
+                            placeholder="-"
+                            onChange={(e) => handleStageRowChange("etapaEnfriamientoFinal", idx, "a2", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "A2 inicial" : "A2 final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: RI */}
+                        <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.ri !== undefined ? row.materiaPrima.ri : ""}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamientoFinal", idx, "ri", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "RI inicial" : "RI final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: RB */}
+                        <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.rb !== undefined ? row.materiaPrima.rb : ""}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamientoFinal", idx, "rb", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "RB inicial" : "RB final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: BLI */}
+                        <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.bli !== undefined ? row.materiaPrima.bli : ""}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamientoFinal", idx, "bli", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "BLI inicial" : "BLI final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: BLP */}
+                        <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.blp !== undefined ? row.materiaPrima.blp : (row.materiaPrima?.blGrad !== undefined ? row.materiaPrima.blGrad : "")}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamientoFinal", idx, "blp", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "BLP inicial" : "BLP final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: QI% */}
+                        <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.qiPct !== undefined ? row.materiaPrima.qiPct : ""}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamientoFinal", idx, "qiPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "QI% inicial" : "QI% final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: QB% */}
+                        <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.qbPct !== undefined ? row.materiaPrima.qbPct : (row.materiaPrima?.qPct !== undefined ? row.materiaPrima.qPct : "")}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamientoFinal", idx, "qbPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "QB% inicial" : "QB% final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: %TRIZ */}
+                        <td className="border-r border-teal-200 py-0.5 px-0.5 bg-teal-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.trizPct !== undefined ? row.materiaPrima.trizPct : ""}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaEnfriamientoFinal", idx, "trizPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "%TRIZ inicial" : "%TRIZ final"}
+                          />
+                        </td>
+
+                        <td className="py-0.5 px-0.5 text-center print:hidden">
+                          {etapaEnfriamientoFinal.length > 2 && isInicial && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const list = etapaEnfriamientoFinal.filter((_, i) => i !== idx && i !== idx + 1);
+                                setFormData(prev => ({ ...prev, etapaEnfriamientoFinal: list }));
+                              }}
+                              className="text-red-400 hover:text-red-700 font-bold text-xs cursor-pointer px-1"
+                              title="Eliminar este ciclo de enfriamiento final (2 filas)"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* TABLA 6: 6. ETAPA DE REPOSO FINAL DEL GRANO (POST-ENFRIAMIENTO) — 2 FILAS (HORA INICIAL / HORA FINAL) */}
+          <div className="border border-amber-600/60 rounded overflow-hidden shadow-xs">
+            <div 
+              onClick={() => setIsReposoFinalDesglosado(!isReposoFinalDesglosado)}
+              className="bg-[#92400e] hover:bg-[#78350f] text-white font-bold py-1.5 px-3 text-xs tracking-wide uppercase flex flex-wrap items-center justify-between gap-2 cursor-pointer transition-colors select-none"
+              title="Haga clic para desglosar o plegar las casillas de Reposo Final"
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="p-0.5 rounded bg-amber-950/60 text-amber-200">
+                  {isReposoFinalDesglosado ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span>6. ETAPA DE REPOSO FINAL DEL GRANO (POST-ENFRIAMIENTO) — {etapaReposoFinal.length} FILAS</span>
+                </span>
+                <span className="px-2 py-0.2 bg-amber-950/80 text-amber-200 rounded text-[10px] font-mono border border-amber-400/40" title="Tiempo total de reposo final post-enfriamiento">
+                  ⏱️ T. Reposo Final: {duracionReposoFinalCalc || "--"}
+                </span>
+                {hasReposoFinalData && !isReposoFinalDesglosado && (
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/30 text-emerald-200 border border-emerald-400/50 flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-300" />
+                    Con datos registrados
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                <button
+                  type="button"
+                  onClick={() => setIsReposoFinalDesglosado(!isReposoFinalDesglosado)}
+                  className={`px-2.5 py-0.5 rounded text-[10px] font-black transition-all cursor-pointer flex items-center gap-1 print:hidden ${
+                    isReposoFinalDesglosado
+                      ? "bg-amber-950 text-amber-200 hover:bg-slate-900 border border-amber-400/40"
+                      : "bg-amber-300 hover:bg-white text-amber-950 font-black shadow-xs ring-1 ring-amber-400"
+                  }`}
+                  title={isReposoFinalDesglosado ? "Plegar casillas de Reposo Final" : "Desglosar casillas de Reposo Final"}
+                >
+                  {isReposoFinalDesglosado ? (
+                    <>
+                      <ChevronUp className="w-3.5 h-3.5" />
+                      <span>Plegar Casillas</span>
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="w-3.5 h-3.5" />
+                      <span>Desglosar ({etapaReposoFinal.length} Filas)</span>
+                    </>
+                  )}
+                </button>
+
+                {isReposoFinalDesglosado && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const currentDate = etapaReposoFinal[0]?.fecha || new Date().toLocaleDateString("es-PE");
+                      const list = [
+                        ...etapaReposoFinal,
+                        {
+                          ...etapaReposoFinal[0],
+                          perfilIndex: "HORA INICIAL",
+                          fecha: currentDate,
+                          horaInicio: "",
+                          horaFin: "",
+                          duracion: "",
+                          tiempoMin: "",
+                          materiaPrima: { qPct: undefined, trizPct: undefined, blGrad: undefined },
+                          modificaciones: { mod1: "", mod2: "", mod3: "" }
+                        },
+                        {
+                          ...etapaReposoFinal[1] || etapaReposoFinal[0],
+                          perfilIndex: "HORA FINAL",
+                          fecha: currentDate,
+                          horaInicio: "",
+                          horaFin: "",
+                          duracion: "",
+                          tiempoMin: "",
+                          materiaPrima: { qPct: undefined, trizPct: undefined, blGrad: undefined },
+                          modificaciones: { mod1: "", mod2: "", mod3: "" }
+                        }
+                      ];
+                      setFormData(prev => ({ ...prev, etapaReposoFinal: list }));
+                    }}
+                    className="px-2 py-0.5 bg-amber-200 hover:bg-white text-amber-950 rounded text-[10px] font-bold transition-all cursor-pointer print:hidden"
+                    title="Añadir un ciclo adicional de reposo final (Fila Inicial y Fila Final)"
+                  >
+                    + Añadir Ciclo Reposo Final (2 Filas)
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Banner cuando está plegado */}
+            {!isReposoFinalDesglosado && (
+              <div 
+                onClick={() => setIsReposoFinalDesglosado(true)}
+                className="bg-amber-950/20 hover:bg-amber-950/30 border-t border-amber-800/40 px-3 py-2 text-[11px] text-amber-200/90 flex flex-wrap items-center justify-between gap-2 cursor-pointer transition-colors print:hidden"
+              >
+                <div className="flex items-center gap-2">
+                  <Info className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>
+                    Etapa de Reposo Final plegada (estabilización post-enfriamiento antes del ensaque o almacenamiento). Haga clic en <strong>Desglosar</strong> para registrar datos.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsReposoFinalDesglosado(true);
+                  }}
+                  className="px-2.5 py-1 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold rounded text-[10px] cursor-pointer shadow-xs transition-colors flex items-center gap-1"
+                >
+                  <ChevronDown className="w-3.5 h-3.5" />
+                  Desglosar Reposo Final ({etapaReposoFinal.length} Filas)
+                </button>
+              </div>
+            )}
+
+            <div className={`${isReposoFinalDesglosado ? "block" : "hidden print:block"} overflow-x-auto`}>
+              <table className="w-full text-[10px] border-collapse">
+                <thead>
+                  <tr className="bg-amber-100/70 border-b border-amber-300 font-bold text-slate-800 text-center">
+                    <th className="border-r border-amber-200 py-1 px-1 w-20">FECHA</th>
+                    <th className="border-r border-amber-200 py-1 px-1 w-28">ETAPA / CONDICIÓN</th>
+                    <th className="border-r border-amber-200 py-1 px-1 w-20">HORA</th>
+                    <th className="border-r border-amber-200 py-1 px-1 w-18 bg-yellow-100 font-black text-amber-950">DURACIÓN</th>
+                    <th className="border-r border-amber-200 py-1 px-1 w-14">T° GRANO</th>
+                    <th className="border-r border-amber-200 py-1 px-1 w-16">T° AMBIENTE</th>
+                    <th className="border-r border-amber-200 py-1 px-1 w-11">H.R%</th>
+                    <th className="border-r border-amber-200 py-1 px-1 w-16 bg-amber-200 font-black">HUMEDAD</th>
+                    <th className="border-r border-amber-200 py-1 px-1 w-14">T° REAL</th>
+                    <th className="border-r border-amber-200 py-1 px-1 w-12">Tº PROG.</th>
+                    <th className="border-r border-amber-200 py-1 px-1 w-12">A1</th>
+                    <th className="border-r border-amber-200 py-1 px-1 w-12">A2</th>
+                    <th className="border-r border-amber-200 py-0.5 px-1" colSpan={7}>CONTROL DE M.PRIMA</th>
+                    <th className="w-6 print:hidden"></th>
+                  </tr>
+                  <tr className="bg-amber-50 border-b border-amber-300 font-semibold text-slate-700 text-center text-[9px]">
+                    <th colSpan={12} className="border-r border-amber-200"></th>
+                    <th className="border-r border-amber-200 py-0.5 px-0.5 w-10">RI</th>
+                    <th className="border-r border-amber-200 py-0.5 px-0.5 w-10">RB</th>
+                    <th className="border-r border-amber-200 py-0.5 px-0.5 w-10">BLI</th>
+                    <th className="border-r border-amber-200 py-0.5 px-0.5 w-10">BLP</th>
+                    <th className="border-r border-amber-200 py-0.5 px-0.5 w-10">QI%</th>
+                    <th className="border-r border-amber-200 py-0.5 px-0.5 w-10">QB%</th>
+                    <th className="border-r border-amber-200 py-0.5 px-0.5 w-10">%TRIZ</th>
+                    <th className="print:hidden"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-amber-200 text-center">
+                  {etapaReposoFinal.map((row, idx) => {
+                    const isInicial = idx % 2 === 0;
+                    const nextRow = etapaReposoFinal[idx + 1];
+                    const duracionCiclo = isInicial 
+                      ? (calculateDuration(row.horaInicio, nextRow?.horaFin || nextRow?.horaInicio) || row.duracion || (idx === 0 ? duracionReposoFinalCalc : "--") || "--")
+                      : "";
+
+                    return (
+                      <tr key={idx} className={`hover:bg-amber-50/50 ${isInicial ? "bg-white" : "bg-amber-50/20"}`}>
+                        <td className="border-r border-amber-200 py-0.5 px-1 font-mono text-slate-700">
+                          <input
+                            type="text"
+                            value={row.fecha || ""}
+                            onChange={(e) => handleStageRowChange("etapaReposoFinal", idx, "fecha", e.target.value)}
+                            className="w-full text-center outline-none bg-transparent"
+                          />
+                        </td>
+                        <td className={`border-r border-amber-200 py-0.5 px-1 font-black ${isInicial ? "bg-emerald-50/60 text-emerald-950" : "bg-amber-50/60 text-amber-950"}`}>
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded font-black text-[9px] ${
+                            isInicial 
+                              ? "bg-emerald-100 text-emerald-800 border border-emerald-300" 
+                              : "bg-amber-100 text-amber-800 border border-amber-300"
+                          }`}>
+                            {isInicial ? "🟢 HORA INICIAL" : "🏁 HORA FINAL"}
+                          </span>
+                        </td>
+                        {/* HORA */}
+                        <td className={`border-r border-amber-200 py-0.5 px-0.5 font-bold text-slate-900 ${isInicial ? "bg-emerald-50/30" : "bg-amber-50/30"}`}>
+                          <div className="flex items-center justify-center gap-0.5">
+                            <input
+                              type="text"
+                              value={isInicial ? (row.horaInicio ?? "") : (row.horaFin || row.horaInicio || "")}
+                              placeholder="--:--"
+                              onChange={(e) => {
+                                if (isInicial) {
+                                  handleStageRowChange("etapaReposoFinal", idx, "horaInicio", e.target.value);
+                                } else {
+                                  handleStageRowChange("etapaReposoFinal", idx, "horaFin", e.target.value);
+                                  handleStageRowChange("etapaReposoFinal", idx, "horaInicio", e.target.value);
+                                }
+                              }}
+                              className="w-11 text-center font-bold outline-none bg-transparent"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const h = getHoraActual();
+                                if (isInicial) {
+                                  handleStageRowChange("etapaReposoFinal", idx, "horaInicio", h);
+                                } else {
+                                  handleStageRowChange("etapaReposoFinal", idx, "horaFin", h);
+                                  handleStageRowChange("etapaReposoFinal", idx, "horaInicio", h);
+                                }
+                              }}
+                              className={`p-0.5 rounded transition-colors cursor-pointer print:hidden ${
+                                isInicial 
+                                  ? "text-slate-400 hover:text-emerald-700 hover:bg-emerald-100" 
+                                  : "text-slate-400 hover:text-amber-700 hover:bg-amber-100"
+                              }`}
+                              title={isInicial ? "Insertar hora actual (Inicio)" : "Insertar hora actual (Fin)"}
+                            >
+                              <Clock className="w-2.5 h-2.5" />
+                            </button>
+                          </div>
+                        </td>
+
+                        {/* DURACIÓN TOTAL CON rowSpan={2} */}
+                        {isInicial && (
+                          <td 
+                            rowSpan={2} 
+                            className="border-r border-amber-200 py-1 px-1 bg-yellow-50 font-black text-amber-950 text-center align-middle"
+                            title="Duración total calculada entre Hora Inicial y Hora Final"
+                          >
+                            <div className="text-[11px] font-black text-amber-950">
+                              {duracionCiclo}
+                            </div>
+                            <div className="text-[7.5px] text-amber-700 font-sans uppercase font-bold tracking-tight">
+                              Reposo Final
+                            </div>
+                          </td>
+                        )}
+
+                        {/* T° GRANO */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.tempGrano !== undefined ? row.tempGrano : ""}
+                            placeholder="--"
+                            onChange={(e) => handleStageRowChange("etapaReposoFinal", idx, "tempGrano", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center font-semibold outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "T° de Grano al inicio del reposo final" : "T° de Grano al finalizar el reposo final"}
+                          />
+                        </td>
+
+                        {/* T° AMBIENTE */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.tempAmbiente !== undefined ? row.tempAmbiente : ""}
+                            placeholder="--"
+                            onChange={(e) => handleStageRowChange("etapaReposoFinal", idx, "tempAmbiente", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "T° Ambiente inicial" : "T° Ambiente final"}
+                          />
+                        </td>
+
+                        {/* H.R% */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.humedadRelativa !== undefined ? row.humedadRelativa : ""}
+                            placeholder="--"
+                            onChange={(e) => handleStageRowChange("etapaReposoFinal", idx, "humedadRelativa", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "Humedad Relativa % inicial" : "Humedad Relativa % final"}
+                          />
+                        </td>
+
+                        {/* HUMEDAD */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5 font-black text-amber-950 bg-amber-100">
+                          <input
+                            type="text"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.humedad ?? ""}
+                            placeholder="%"
+                            onChange={(e) => handleStageRowChange("etapaReposoFinal", idx, "humedad", e.target.value)}
+                            className="w-full text-center font-black text-amber-950 outline-none bg-transparent"
+                            title={isInicial ? "Humedad % al inicio del reposo final" : "Humedad % al finalizar el reposo final"}
+                          />
+                        </td>
+
+                        {/* T° REAL */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.tempReal !== undefined ? row.tempReal : ""}
+                            placeholder="--"
+                            onChange={(e) => handleStageRowChange("etapaReposoFinal", idx, "tempReal", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "T° Real inicial" : "T° Real final"}
+                          />
+                        </td>
+
+                        {/* Tº PROG. */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.tempProgramada !== undefined ? row.tempProgramada : ""}
+                            placeholder="--"
+                            onChange={(e) => handleStageRowChange("etapaReposoFinal", idx, "tempProgramada", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "T° Programada inicial" : "T° Programada final"}
+                          />
+                        </td>
+
+                        {/* A1 */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.a1 !== undefined ? row.a1 : ""}
+                            placeholder="-"
+                            onChange={(e) => handleStageRowChange("etapaReposoFinal", idx, "a1", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "A1 inicial" : "A1 final"}
+                          />
+                        </td>
+
+                        {/* A2 */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5">
+                          <input
+                            type="number"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.a2 !== undefined ? row.a2 : ""}
+                            placeholder="-"
+                            onChange={(e) => handleStageRowChange("etapaReposoFinal", idx, "a2", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "A2 inicial" : "A2 final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: RI */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.ri !== undefined ? row.materiaPrima.ri : ""}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaReposoFinal", idx, "ri", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "RI inicial" : "RI final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: RB */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.rb !== undefined ? row.materiaPrima.rb : ""}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaReposoFinal", idx, "rb", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "RB inicial" : "RB final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: BLI */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.bli !== undefined ? row.materiaPrima.bli : ""}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaReposoFinal", idx, "bli", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "BLI inicial" : "BLI final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: BLP */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.blp !== undefined ? row.materiaPrima.blp : (row.materiaPrima?.blGrad !== undefined ? row.materiaPrima.blGrad : "")}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaReposoFinal", idx, "blp", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "BLP inicial" : "BLP final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: QI% */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.qiPct !== undefined ? row.materiaPrima.qiPct : ""}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaReposoFinal", idx, "qiPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "QI% inicial" : "QI% final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: QB% */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.qbPct !== undefined ? row.materiaPrima.qbPct : (row.materiaPrima?.qPct !== undefined ? row.materiaPrima.qPct : "")}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaReposoFinal", idx, "qbPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "QB% inicial" : "QB% final"}
+                          />
+                        </td>
+
+                        {/* Materia Prima: %TRIZ */}
+                        <td className="border-r border-amber-200 py-0.5 px-0.5 bg-amber-50/40" data-materia-prima="true">
+                          <input
+                            type="number"
+                            step="0.1"
+                            data-no-spin="true"
+                            onWheel={handlePreventNumberSpinWheel}
+                            onKeyDown={handlePreventNumberSpinKey}
+                            value={row.materiaPrima?.trizPct !== undefined ? row.materiaPrima.trizPct : ""}
+                            placeholder=""
+                            onChange={(e) => handleStageMateriaPrimaChange("etapaReposoFinal", idx, "trizPct", e.target.value === "" ? undefined : parseFloat(e.target.value))}
+                            className="w-full text-center outline-none bg-transparent text-[9px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none no-spin"
+                            title={isInicial ? "%TRIZ inicial" : "%TRIZ final"}
+                          />
+                        </td>
+
+                        <td className="py-0.5 px-0.5 text-center print:hidden">
+                          {etapaReposoFinal.length > 2 && isInicial && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const list = etapaReposoFinal.filter((_, i) => i !== idx && i !== idx + 1);
+                                setFormData(prev => ({ ...prev, etapaReposoFinal: list }));
+                              }}
+                              className="text-red-400 hover:text-red-700 font-bold text-xs cursor-pointer px-1"
+                              title="Eliminar este ciclo de reposo final (2 filas)"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

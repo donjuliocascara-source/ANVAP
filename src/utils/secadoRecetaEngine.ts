@@ -166,19 +166,31 @@ const SEED_HISTORICO_SECADO: RegistroHistoricoSecado[] = [
 
 /**
  * Obtiene el historial completo de registros de secado guardados.
+ * En producción comienza limpio (array vacío) y se alimenta de las operaciones reales.
  */
 export function getHistoricoSecado(): RegistroHistoricoSecado[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_HISTORICO);
     if (!raw) {
-      localStorage.setItem(STORAGE_KEY_HISTORICO, JSON.stringify(SEED_HISTORICO_SECADO));
-      return SEED_HISTORICO_SECADO;
+      return [];
     }
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : SEED_HISTORICO_SECADO;
+    return Array.isArray(parsed) ? parsed : [];
   } catch (e) {
     console.warn("Error leyendo historial de secado:", e);
-    return SEED_HISTORICO_SECADO;
+    return [];
+  }
+}
+
+/**
+ * Limpia el historial de recetas de secado para inicio en limpio.
+ */
+export function limpiarHistoricoSecado(): void {
+  try {
+    localStorage.removeItem(STORAGE_KEY_HISTORICO);
+    localStorage.removeItem("APIT_HISTORICO_RECETAS_SECADO_V1");
+  } catch (e) {
+    console.warn("Error limpiando historial de secado:", e);
   }
 }
 

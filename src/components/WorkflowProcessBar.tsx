@@ -124,7 +124,7 @@ export const WorkflowProcessBar: React.FC<WorkflowProcessBarProps> = ({
 
   return (
     <div className="bg-slate-900/90 border-y border-slate-800 py-2.5 px-3 sm:px-6 shadow-md backdrop-blur">
-      <div className="max-w-7xl mx-auto">
+      <div className="w-full">
         <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar pb-1">
           {steps.map((step, idx) => {
             const Icon = step.icon;
