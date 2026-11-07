@@ -2,15 +2,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /programaciones/{progId} {
-      allow read, delete: if true;
-      allow create, update: if !(progId in [
-        'PROG-BATCH-1793366859160',
-        'PROG-BATCH-1793383030066',
-        'PROG-BATCH-1793382916058',
-        'PROG-BATCH-1793196419455',
-        'PROG-BATCH-1793294634610',
-        'V374'
-      ]);
+      allow read, write: if true;
     }
     match /lotes/{loteId} {
       allow read, write: if true;

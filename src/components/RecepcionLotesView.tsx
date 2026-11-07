@@ -1203,11 +1203,15 @@ export const RecepcionLotesView: React.FC<RecepcionLotesViewProps> = ({
         const normalizedLotes = (result.db?.lotes || []).filter((l: any) => importedLoteIds.has(formatLoteCode(l.LOTE_ID)));
         const normalizedHum = (result.db?.registroHumedad || []).filter((h: any) => importedLoteIds.has(formatLoteCode(h.LOTE_ID)));
         const normalizedAH = (result.db?.analisisHumedo || []).filter((a: any) => importedLoteIds.has(formatLoteCode(a.LOTE_ID)));
+        const normalizedAS = (result.db?.analisisSeco || []).filter((a: any) => importedLoteIds.has(formatLoteCode(a.LOTE_ID)));
+        const normalizedPre = (result.db?.presecado || []).filter((p: any) => importedLoteIds.has(formatLoteCode(p.LOTE_ID)));
 
         await cloudSyncService.syncImportedDataset({
           lotes: normalizedLotes,
           registroHumedad: normalizedHum,
-          analisisHumedo: normalizedAH
+          analisisHumedo: normalizedAH,
+          analisisSeco: normalizedAS,
+          presecado: normalizedPre
         });
       } catch (csErr) {
         console.warn("[Recepcion] Cloud sync push warning:", csErr);

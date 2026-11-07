@@ -337,18 +337,7 @@ class CloudSyncService {
     this.notifyStatus();
 
     try {
-      // 0.0 Purgar datos de prueba para lanzamiento limpio en producción si aún no se ha hecho
-      if (typeof window !== "undefined" && window.localStorage) {
-        const hasPurgedCloud = window.localStorage.getItem("apit_cloud_purged_for_publish_v12") === "true";
-        if (!hasPurgedCloud) {
-          try {
-            await this.clearAllCloudData();
-            window.localStorage.setItem("apit_cloud_purged_for_publish_v12", "true");
-          } catch (e) {
-            console.warn("[CloudSync] Aviso en purga de lanzamiento limpio:", e);
-          }
-        }
-      }
+      // Preservar la persistencia íntegra en la nube para sincronización multi-computadora y multi-usuario
 
       // 0. Purgar de Firestore únicamente lotes explícitamente marcados para eliminación por el usuario (tombstones)
       const tombstones = getDeletedLotesTombstones();
@@ -556,6 +545,21 @@ class CloudSyncService {
         if (usersData && Array.isArray(usersData.users) && usersData.users.length > 0) {
           cloudData.users = usersData.users;
         }
+
+        const prioDoc = sysCfgSnap.docs.find((d) => d.id === "priorizacion_config");
+        if (prioDoc?.data()?.config) {
+          cloudData.priorizacionConfig = prioDoc.data().config;
+        }
+
+        const evalDoc = sysCfgSnap.docs.find((d) => d.id === "evaluacion_config");
+        if (evalDoc?.data()?.config) {
+          cloudData.configuracionEvaluacionLotes = evalDoc.data().config;
+        }
+
+        const paramsDoc = sysCfgSnap.docs.find((d) => d.id === "parametros_trabajo");
+        if (paramsDoc?.data()?.config) {
+          cloudData.parametrosTrabajo = paramsDoc.data().config;
+        }
       }
 
       if (Object.keys(cloudData).length > 0) {
@@ -689,6 +693,8 @@ class CloudSyncService {
     lotes?: Lote[];
     registroHumedad?: RegistroHumedad[];
     analisisHumedo?: AnalisisHumedo[];
+    analisisSeco?: AnalisisSeco[];
+    presecado?: Presecado[];
   }): Promise<boolean> {
     const operations: Array<{ ref: any; data: any }> = [];
 
@@ -734,6 +740,40 @@ class CloudSyncService {
             data: cleanFirestoreData({
               ...ah,
               ANALISIS_HUMEDO_ID: id,
+              updatedAt: new Date().toISOString()
+            })
+          });
+        }
+      }
+    }
+
+    if (Array.isArray(payload.analisisSeco)) {
+      for (const asData of payload.analisisSeco) {
+        const rawId = (asData.ANALISIS_SECO_ID || asData.LOTE_ID || "").toString().trim().replace(/[\/\s]/g, "_");
+        const cleanId = rawId.startsWith("AS-") ? rawId : `AS-${rawId}`;
+        if (cleanId) {
+          operations.push({
+            ref: doc(db, "analisisSeco", cleanId),
+            data: cleanFirestoreData({
+              ...asData,
+              ANALISIS_SECO_ID: cleanId,
+              updatedAt: new Date().toISOString()
+            })
+          });
+        }
+      }
+    }
+
+    if (Array.isArray(payload.presecado)) {
+      for (const pre of payload.presecado) {
+        const rawId = (pre.PRESECADO_ID || pre.LOTE_ID || "").toString().trim().replace(/[\/\s]/g, "_");
+        const cleanId = rawId.startsWith("PRE-") ? rawId : `PRE-${rawId}`;
+        if (cleanId) {
+          operations.push({
+            ref: doc(db, "presecados", cleanId),
+            data: cleanFirestoreData({
+              ...pre,
+              PRESECADO_ID: cleanId,
               updatedAt: new Date().toISOString()
             })
           });

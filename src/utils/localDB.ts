@@ -2472,6 +2472,7 @@ export interface CloudSyncBridge {
   syncPresecado(pre: Presecado): Promise<void>;
   syncAnalisisSeco(asData: AnalisisSeco): Promise<void>;
   syncBatch(batch: BatchVaporizado): Promise<void>;
+  syncBatchLotes?(batchLotesList: BatchLote[]): Promise<void>;
   deleteBatchFromCloud(batchId: string): Promise<void>;
   syncControl(control: ControlVaporizado): Promise<void>;
   syncAnalisisVaporizado(av: AnalisisVaporizado): Promise<void>;
@@ -3970,6 +3971,10 @@ class LocalDBService {
     this.addAuditLog(`Guardado de Batch ${rawBatchId} (${savedBatch.ESTADO_BATCH})`, user);
     this.persist();
     this.cloudBridge?.syncBatch(savedBatch).catch(() => {});
+    const batchBlsToSync = db.batchLotes.filter(bl => bl.BATCH_ID === rawBatchId);
+    if (batchBlsToSync.length > 0) {
+      this.cloudBridge?.syncBatchLotes?.(batchBlsToSync).catch(() => {});
+    }
     return savedBatch;
   }
 
@@ -5243,6 +5248,10 @@ class LocalDBService {
     deduplicateAndMigrateLotes(db);
     this.persist();
     this.cloudBridge?.syncProgramacion(progObj).catch(() => {});
+    const progBls = db.batchLotes.filter(bl => bl.BATCH_ID === progObj.batch);
+    if (progBls.length > 0) {
+      this.cloudBridge?.syncBatchLotes?.(progBls).catch(() => {});
+    }
     return progObj;
   }
 
@@ -6413,6 +6422,36 @@ class LocalDBService {
           // ignore
         }
       }
+    }
+
+    if (cloudData.priorizacionConfig) {
+      db.priorizacionConfig = { ...db.priorizacionConfig, ...cloudData.priorizacionConfig };
+      if (typeof window !== "undefined" && window.localStorage) {
+        try {
+          window.localStorage.setItem("priorizacion_master_config_v1", JSON.stringify(db.priorizacionConfig));
+        } catch {}
+      }
+      changed = true;
+    }
+
+    if (cloudData.configuracionEvaluacionLotes) {
+      db.configuracionEvaluacionLotes = { ...db.configuracionEvaluacionLotes, ...cloudData.configuracionEvaluacionLotes };
+      if (typeof window !== "undefined" && window.localStorage) {
+        try {
+          window.localStorage.setItem("evaluacion_lotes_master_config_v1", JSON.stringify(db.configuracionEvaluacionLotes));
+        } catch {}
+      }
+      changed = true;
+    }
+
+    if (cloudData.parametrosTrabajo) {
+      db.parametrosTrabajo = { ...db.parametrosTrabajo, ...cloudData.parametrosTrabajo };
+      if (typeof window !== "undefined" && window.localStorage) {
+        try {
+          window.localStorage.setItem("arroz_apit_parametros_trabajo_v1", JSON.stringify(db.parametrosTrabajo));
+        } catch {}
+      }
+      changed = true;
     }
 
     if (changed) {

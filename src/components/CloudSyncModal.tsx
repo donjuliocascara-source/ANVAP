@@ -32,13 +32,24 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [localLotesCount, setLocalLotesCount] = useState(0);
+  const [localBatchesCount, setLocalBatchesCount] = useState(0);
+  const [localControlesCount, setLocalControlesCount] = useState(0);
+  const [localProgsCount, setLocalProgsCount] = useState(0);
   const [showConfirmPurge, setShowConfirmPurge] = useState(false);
+
+  const refreshCounts = () => {
+    const state = localDB.getState();
+    setLocalLotesCount(state.lotes?.length || 0);
+    setLocalBatchesCount(state.batchesVaporizado?.length || 0);
+    setLocalControlesCount(state.controlVaporizado?.length || 0);
+    setLocalProgsCount(state.programacionesOficiales?.length || state.programacionApit?.length || 0);
+  };
 
   useEffect(() => {
     const unsub = cloudSyncService.subscribeStatus((newStatus) => {
       setSyncStatus(newStatus);
     });
-    setLocalLotesCount(localDB.getLotes().length);
+    refreshCounts();
 
     return () => unsub();
   }, [isOpen]);
@@ -52,7 +63,7 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
       const ok = await cloudSyncService.pullAllFromCloud();
       if (ok) {
         setSuccessMessage("¡Datos descargados y actualizados con éxito desde la nube!");
-        setLocalLotesCount(localDB.getLotes().length);
+        refreshCounts();
         if (onSyncComplete) onSyncComplete();
       }
     } catch (err: any) {
@@ -69,7 +80,7 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
       const ok = await cloudSyncService.pushAllLocalToCloud();
       if (ok) {
         setSuccessMessage("¡Todos los datos locales han sido subidos a la nube! Ahora estarán disponibles en todas las demás computadoras.");
-        setLocalLotesCount(localDB.getLotes().length);
+        refreshCounts();
         if (onSyncComplete) onSyncComplete();
       }
     } catch (err: any) {
@@ -85,7 +96,7 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
     try {
       await cloudSyncService.purgeAllOperationalData();
       setSuccessMessage("¡Información registrada eliminada exitosamente! El sistema está limpio y listo para iniciar las pruebas.");
-      setLocalLotesCount(0);
+      refreshCounts();
       setShowConfirmPurge(false);
       if (onSyncComplete) onSyncComplete();
     } catch (err: any) {
@@ -145,39 +156,51 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
           </div>
 
           {/* Metric Status Badges */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <div className="p-3.5 bg-slate-950/50 border border-slate-800 rounded-xl">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-3 bg-slate-950/50 border border-slate-800 rounded-xl">
               <span className="text-[11px] uppercase tracking-wider text-slate-400 block mb-1">
                 Conexión
               </span>
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-                <span className="text-sm font-semibold text-emerald-400">
+                <span className="text-xs font-semibold text-emerald-400">
                   En Tiempo Real
                 </span>
               </div>
             </div>
 
-            <div className="p-3.5 bg-slate-950/50 border border-slate-800 rounded-xl">
+            <div className="p-3 bg-slate-950/50 border border-slate-800 rounded-xl">
               <span className="text-[11px] uppercase tracking-wider text-slate-400 block mb-1">
-                Lotes en la Nube
+                Lotes
               </span>
               <div className="flex items-center gap-2">
-                <Database className="w-4 h-4 text-blue-400" />
-                <span className="text-sm font-semibold text-white">
-                  {syncStatus.totalCloudLotes > 0 ? `${syncStatus.totalCloudLotes} Lotes` : `${localLotesCount} Lotes`}
+                <Database className="w-3.5 h-3.5 text-blue-400" />
+                <span className="text-xs font-semibold text-white">
+                  {localLotesCount} registrados
                 </span>
               </div>
             </div>
 
-            <div className="p-3.5 bg-slate-950/50 border border-slate-800 rounded-xl col-span-2 sm:col-span-1">
+            <div className="p-3 bg-slate-950/50 border border-slate-800 rounded-xl">
               <span className="text-[11px] uppercase tracking-wider text-slate-400 block mb-1">
-                Esta Máquina
+                Batches APIT
               </span>
               <div className="flex items-center gap-2">
-                <Laptop className="w-4 h-4 text-amber-400" />
-                <span className="text-sm font-semibold text-white">
-                  {localLotesCount} Locales
+                <Server className="w-3.5 h-3.5 text-amber-400" />
+                <span className="text-xs font-semibold text-white">
+                  {localBatchesCount} batches
+                </span>
+              </div>
+            </div>
+
+            <div className="p-3 bg-slate-950/50 border border-slate-800 rounded-xl">
+              <span className="text-[11px] uppercase tracking-wider text-slate-400 block mb-1">
+                Controles & Prog
+              </span>
+              <div className="flex items-center gap-2">
+                <CloudCheck className="w-3.5 h-3.5 text-purple-400" />
+                <span className="text-xs font-semibold text-white">
+                  {localControlesCount} ctrl / {localProgsCount} prog
                 </span>
               </div>
             </div>

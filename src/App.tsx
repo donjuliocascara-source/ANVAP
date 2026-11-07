@@ -314,12 +314,23 @@ export default function App() {
   };
 
   useEffect(() => {
-    fetchAllData();
+    const initApp = async () => {
+      // 1. Carga inmediata de datos locales hidratados
+      await fetchAllData();
 
-    // Iniciar sincronización centralizada en la nube con Firebase Firestore
-    cloudSyncService.initSync().catch((err) => {
-      console.warn("[App] Cloud sync init error:", err);
-    });
+      // 2. Descarga y sincronización centralizada en tiempo real con Firebase Firestore
+      try {
+        await cloudSyncService.initSync();
+        // 3. Recargar inmediatamente los datos consolidados desde la nube
+        await fetchAllData();
+      } catch (err) {
+        console.warn("[App] Cloud sync init error:", err);
+      } finally {
+        setIsLoadingInitial(false);
+      }
+    };
+
+    initApp();
 
     // Debounce de recarga de datos para evitar re-renderizados continuos ante ráfagas de eventos
     let reloadTimer: ReturnType<typeof setTimeout> | null = null;
