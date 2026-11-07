@@ -778,6 +778,15 @@ export const STORAGE_KEY_EVALUACION_PRESETS = "molino_evaluacion_presets_custom_
  */
 export const PRESETS_EVALUACION_LOTES: ConfiguracionEvaluacionLotes[] = JSON.parse(JSON.stringify(PRESETS_BASE_DEFAULT));
 
+// Helper seguro para acceder a localDB evitando errores de zona muerta temporal (TDZ) ante dependencias circulares
+function getLocalDBSafely() {
+  try {
+    return typeof localDB !== "undefined" ? localDB : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Obtiene los presets de evaluación combinando las plantillas de fábrica con las personalizaciones guardadas
  */
@@ -785,10 +794,13 @@ export function obtenerPresetsEvaluacion(): ConfiguracionEvaluacionLotes[] {
   try {
     let savedPresets: ConfiguracionEvaluacionLotes[] | null = null;
     
-    // 1. Intentar desde localDB
-    const dbPresets = localDB.getPresetsEvaluacionLotes();
-    if (dbPresets && Array.isArray(dbPresets) && dbPresets.length > 0) {
-      savedPresets = dbPresets;
+    // 1. Intentar desde localDB de forma segura
+    const db = getLocalDBSafely();
+    if (db && typeof db.getPresetsEvaluacionLotes === "function") {
+      const dbPresets = db.getPresetsEvaluacionLotes();
+      if (dbPresets && Array.isArray(dbPresets) && dbPresets.length > 0) {
+        savedPresets = dbPresets;
+      }
     }
 
     // 2. Fallback a localStorage
@@ -857,8 +869,11 @@ export function guardarPresetEvaluacion(preset: ConfiguracionEvaluacionLotes): v
   try {
     if (!preset || (!preset.id && !preset.nombre)) return;
 
-    // Actualizar en localDB
-    localDB.savePresetEvaluacion(preset);
+    // Actualizar en localDB de forma segura
+    const db = getLocalDBSafely();
+    if (db && typeof db.savePresetEvaluacion === "function") {
+      db.savePresetEvaluacion(preset);
+    }
 
     // Obtener lista completa consolidada
     const currentList = obtenerPresetsEvaluacion();
@@ -906,7 +921,8 @@ export function cargarConfiguracionEvaluacion(): ConfiguracionEvaluacionLotes {
     // Sincronizar presets en memoria primero
     const presetsActualizados = obtenerPresetsEvaluacion();
 
-    const localDbConfig = localDB.getEvaluacionLotesConfig();
+    const db = getLocalDBSafely();
+    const localDbConfig = db && typeof db.getEvaluacionLotesConfig === "function" ? db.getEvaluacionLotesConfig() : null;
     if (localDbConfig && localDbConfig.criterios && Array.isArray(localDbConfig.criterios) && localDbConfig.criterios.length > 0) {
       // Si la configuración cargada coincide con un preset, fusionar los umbrales más recientes del preset
       const matchPreset = presetsActualizados.find(p => p.id === localDbConfig.id || p.nombre === localDbConfig.nombre);
@@ -953,7 +969,10 @@ export function guardarConfiguracionEvaluacion(config: ConfiguracionEvaluacionLo
     if (typeof localStorage !== "undefined") {
       localStorage.setItem(STORAGE_KEY_EVALUACION_CONFIG, JSON.stringify(config));
     }
-    localDB.saveEvaluacionConfig(config);
+    const db = getLocalDBSafely();
+    if (db && typeof db.saveEvaluacionConfig === "function") {
+      db.saveEvaluacionConfig(config);
+    }
 
     // Si la configuración corresponde a uno de los presets oficiales (o tiene id), guardar también en el preset
     if (config.id || config.nombre) {
@@ -970,11 +989,6 @@ export function guardarConfiguracionEvaluacion(config: ConfiguracionEvaluacionLo
     console.warn("Error guardando configuración de evaluación:", e);
   }
 }
-
-// Inicializar presets en memoria inmediatamente al cargar el módulo
-try {
-  obtenerPresetsEvaluacion();
-} catch {}
 
 // -------------------------------------------------------------
 // MOTOR DE EVALUACIÓN DINÁMICO DE LOTES
