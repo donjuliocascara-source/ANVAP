@@ -77,6 +77,7 @@ import { FormatoRegistroVaporizadoModal } from "./FormatoRegistroVaporizadoModal
 import { obtenerResultadosCoccionLocales, buscarCoccionParaBatch } from "../utils/integracionCoccionService";
 import { localDB, evaluateControlSheetStages } from "../utils/localDB";
 import { compareLoteCodes, formatLoteCode } from "../utils/formatLoteCode";
+import { cargarProgramacionesOficiales } from "../utils/programacionBatchOficialService";
 import {
   calcularPesoProyectadoDescarga,
   obtenerRegistroSacasDescargaBatch,
@@ -356,32 +357,51 @@ export const BatchVaporizadoView: React.FC<BatchVaporizadoViewProps> = ({
       (bl.BATCH_ID && batch.BATCH_ID && bl.BATCH_ID.toUpperCase() === batch.BATCH_ID.toUpperCase())
     );
 
-    // Si batchLotes no contiene registros directos, reconstruir desde LOTES_UNION o lote asignado
+    // Si batchLotes no contiene registros directos, reconstruir desde filasLote, LOTES_UNION o lote asignado
     if (rawBL.length === 0) {
-      const rawLotesList: string[] = Array.isArray(batch.LOTES_UNION) && batch.LOTES_UNION.length > 0
-        ? batch.LOTES_UNION
-        : Array.isArray((batch as any).lotes) && (batch as any).lotes.length > 0
-        ? (batch as any).lotes
-        : typeof (batch as any).lote === "string" && (batch as any).lote.trim()
-        ? [(batch as any).lote.trim()]
-        : [];
-      
-      if (rawLotesList.length > 0) {
-        rawBL = rawLotesList.map((lid, idx) => {
+      if (Array.isArray((batch as any).filasLote) && (batch as any).filasLote.length > 0) {
+        rawBL = (batch as any).filasLote.map((f: any, idx: number) => {
+          const lid = f.loteId || f.LOTE_ID;
           const matchedL = lotes.find(l => l.LOTE_ID === lid || compareLoteCodes(l.LOTE_ID, lid));
           return {
             BATCH_LOTE_ID: `${batch.BATCH_ID}-BL-${idx + 1}`,
             BATCH_ID: batch.BATCH_ID,
             LOTE_ID: matchedL?.LOTE_ID || lid,
-            SACOS: matchedL?.SACOS || 0,
-            PESO_KG: matchedL?.PESO_KG || 0,
+            SACOS: f.sacProg || f.sacos || matchedL?.SACOS || 0,
+            PESO_KG: f.pesoProg || f.peso || matchedL?.PESO_KG || 0,
             ORDEN: idx + 1,
             ESTADO: matchedL?.ESTADO_LOTE || "PROGRAMADO",
-            CLIENTE: matchedL?.CLIENTE || batch.CLIENTE,
-            VARIEDAD: matchedL?.VARIEDAD || batch.VARIEDAD,
+            CLIENTE: f.cliente || matchedL?.CLIENTE || batch.CLIENTE,
+            VARIEDAD: f.variedad || matchedL?.VARIEDAD || batch.VARIEDAD,
             OBSERVACIONES: ""
           } as BatchLote;
         });
+      } else {
+        const rawLotesList: string[] = Array.isArray(batch.LOTES_UNION) && batch.LOTES_UNION.length > 0
+          ? batch.LOTES_UNION
+          : Array.isArray((batch as any).lotes) && (batch as any).lotes.length > 0
+          ? (batch as any).lotes
+          : typeof (batch as any).lote === "string" && (batch as any).lote.trim()
+          ? [(batch as any).lote.trim()]
+          : [];
+        
+        if (rawLotesList.length > 0) {
+          rawBL = rawLotesList.map((lid, idx) => {
+            const matchedL = lotes.find(l => l.LOTE_ID === lid || compareLoteCodes(l.LOTE_ID, lid));
+            return {
+              BATCH_LOTE_ID: `${batch.BATCH_ID}-BL-${idx + 1}`,
+              BATCH_ID: batch.BATCH_ID,
+              LOTE_ID: matchedL?.LOTE_ID || lid,
+              SACOS: matchedL?.SACOS || 0,
+              PESO_KG: matchedL?.PESO_KG || 0,
+              ORDEN: idx + 1,
+              ESTADO: matchedL?.ESTADO_LOTE || "PROGRAMADO",
+              CLIENTE: matchedL?.CLIENTE || batch.CLIENTE,
+              VARIEDAD: matchedL?.VARIEDAD || batch.VARIEDAD,
+              OBSERVACIONES: ""
+            } as BatchLote;
+          });
+        }
       }
     }
 
@@ -819,9 +839,67 @@ export const BatchVaporizadoView: React.FC<BatchVaporizadoViewProps> = ({
     };
   };
 
+  // Combinar batches registrados en memoria/DB con las programaciones oficiales activas (V371, V372, V373...)
+  const allCombinedBatches = useMemo(() => {
+    const map = new Map<string, BatchVaporizado>();
+
+    // 1. Batches existentes en la prop
+    (batches || []).forEach((b) => {
+      const code = (b.CORRELATIVO || b.BATCH_ID || "").trim().toUpperCase();
+      if (code) {
+        map.set(code, b);
+      }
+    });
+
+    // 2. Batches programados oficiales
+    try {
+      const officialProgs = cargarProgramacionesOficiales();
+      const dbProgs = localDB.getState().programacionesOficiales || [];
+      const allProgs = [...officialProgs, ...dbProgs];
+
+      allProgs.forEach((p) => {
+        const bCode = (p.batch || p.id || "").trim();
+        if (!bCode) return;
+        const bKey = bCode.toUpperCase();
+        const existing = map.get(bKey);
+        if (existing) {
+          if (!existing.CLIENTE && p.clientePrincipal) existing.CLIENTE = p.clientePrincipal;
+          if (!existing.VARIEDAD && p.variedadPrincipal) existing.VARIEDAD = p.variedadPrincipal;
+          if (!existing.PESO_TOTAL_KG && p.pesoTotalKg) existing.PESO_TOTAL_KG = p.pesoTotalKg;
+          if (!existing.filasLote && p.filasLote) (existing as any).filasLote = p.filasLote;
+          if (!existing.TON_PROGRAMADAS && p.pesoTotalKg) existing.TON_PROGRAMADAS = p.pesoTotalKg / 1000;
+        } else {
+          map.set(bKey, {
+            BATCH_ID: bCode,
+            CORRELATIVO: bCode,
+            FECHA_PROGRAMADA: p.fecha || new Date().toISOString().split("T")[0],
+            EQUIPO: "APIT",
+            ESTADO_BATCH: (p.estado as any) || "PROGRAMADO",
+            TON_PROGRAMADAS: (p.pesoTotalKg || 0) / 1000,
+            TON_PROCESADAS: (p.pesoTotalKg || 0) / 1000,
+            PESO_TOTAL_KG: p.pesoTotalKg || 0,
+            CLIENTE: p.clientePrincipal || "",
+            VARIEDAD: p.variedadPrincipal || "",
+            TURNO: p.turno === "DIA" ? "Turno Día" : "Turno Noche",
+            OPERADOR: "",
+            OBSERVACIONES: p.observacion || "",
+            filasLote: p.filasLote,
+            promedios: p.promedios,
+            parametrosDeterminados: p.parametrosDeterminados,
+            parametrosRecomendadosIA: p.parametrosRecomendadosIA
+          } as BatchVaporizado);
+        }
+      });
+    } catch {
+      // ignore
+    }
+
+    return Array.from(map.values());
+  }, [batches]);
+
   // Filtered & Sorted Batches
   const filteredBatches = useMemo(() => {
-    const result = batches.filter((b) => {
+    const result = allCombinedBatches.filter((b) => {
       const matchTurno = selectedTurnoFilter === "TODOS" || (b.TURNO || "Turno Día") === selectedTurnoFilter;
       const compEst = getComputedBatchStatus(b);
       const matchEstado = selectedEstadoFilter === "TODOS" || (() => {
@@ -917,7 +995,7 @@ export const BatchVaporizadoView: React.FC<BatchVaporizadoViewProps> = ({
       }
       return 0;
     });
-  }, [batches, batchLotes, lotes, analisisHumedos, controles, analisisVapList, analisisSecos, selectedTurnoFilter, selectedEstadoFilter, selectedVariedadFilter, selectedHumedadFilter, searchQuery, sortBy]);
+  }, [allCombinedBatches, batchLotes, lotes, analisisHumedos, controles, analisisVapList, analisisSecos, selectedTurnoFilter, selectedEstadoFilter, selectedVariedadFilter, selectedHumedadFilter, searchQuery, sortBy]);
 
   // Filtered Lotes with Pending Balance
   const lotesConSaldo = useMemo(() => {
@@ -948,17 +1026,17 @@ export const BatchVaporizadoView: React.FC<BatchVaporizadoViewProps> = ({
 
   // General & Daily target statistics
   const todayStr = new Date().toISOString().split("T")[0];
-  const batchesHoy = batches.filter((b) => (b.FECHA_PROGRAMADA || "").startsWith(todayStr));
+  const batchesHoy = allCombinedBatches.filter((b) => (b.FECHA_PROGRAMADA || "").startsWith(todayStr));
   const batchesHoyCount = batchesHoy.length;
   const objetivoDia = parametros.lotesObjetivoPorDia || 2;
   const maxDia = parametros.maxLotesPorDia || 3;
 
   // Aggregate Batch KPIs computados en tiempo real
-  const totalTnProgramadas = batches.reduce((acc, b) => acc + (b.TON_PROGRAMADAS || (b.PESO_TOTAL_KG ? b.PESO_TOTAL_KG / 1000 : 0)), 0);
-  const totalBatchesProgramados = batches.filter(b => getComputedBatchStatus(b) === "PROGRAMADO").length;
-  const totalBatchesEnProceso = batches.filter(b => getComputedBatchStatus(b) === "EN PROCESO").length;
-  const totalBatchesVaporizados = batches.filter(b => getComputedBatchStatus(b) === "VAPORIZADO").length;
-  const totalBatchesCompletados = batches.filter(b => getComputedBatchStatus(b) === "CERRADO" || getComputedBatchStatus(b) === "COMPLETADO").length;
+  const totalTnProgramadas = allCombinedBatches.reduce((acc, b) => acc + (b.TON_PROGRAMADAS || (b.PESO_TOTAL_KG ? b.PESO_TOTAL_KG / 1000 : 0)), 0);
+  const totalBatchesProgramados = allCombinedBatches.filter(b => getComputedBatchStatus(b) === "PROGRAMADO").length;
+  const totalBatchesEnProceso = allCombinedBatches.filter(b => getComputedBatchStatus(b) === "EN PROCESO").length;
+  const totalBatchesVaporizados = allCombinedBatches.filter(b => getComputedBatchStatus(b) === "VAPORIZADO").length;
+  const totalBatchesCompletados = allCombinedBatches.filter(b => getComputedBatchStatus(b) === "CERRADO" || getComputedBatchStatus(b) === "COMPLETADO").length;
 
   // Open Traceability Handler
   const handleOpenTrazabilidad = (type: "batch" | "lote", id: string) => {
@@ -1082,7 +1160,7 @@ export const BatchVaporizadoView: React.FC<BatchVaporizadoViewProps> = ({
                 Batches Guardados de Vaporizado
               </h1>
               <span className="text-xs px-2.5 py-1 bg-amber-500/20 text-amber-300 font-mono font-bold rounded-lg border border-amber-500/30">
-                {batches.length} {batches.length === 1 ? "Batch" : "Batches"}
+                {allCombinedBatches.length} {allCombinedBatches.length === 1 ? "Batch" : "Batches"}
               </span>
             </div>
             <p className="text-xs sm:text-sm text-slate-400 max-w-2xl">
@@ -1486,7 +1564,7 @@ export const BatchVaporizadoView: React.FC<BatchVaporizadoViewProps> = ({
 
           {/* SECCIÓN DE RESUMEN: PROMEDIOS DE TRIZADO, CUARTEADO, DEFECTOS & RESULTADOS DE COCCIÓN */}
           <ResumenParametrosCoccionSection
-            batches={batches}
+            batches={allCombinedBatches}
             filteredBatches={filteredBatches}
             batchLotes={batchLotes}
             lotes={lotes}

@@ -1499,77 +1499,97 @@ export function deduplicateAndMigrateLotes(db: LocalDatabaseSchema): void {
       // PROGRAMADO -> EN PROCESO -> EN REPOSO -> EN SECADO -> VAPORIZADO -> ANALISIS_FINAL -> EVALUADO -> CERRADO
       const stageCtrl = evaluateControlSheetStages(ctrl);
       const estBatchUpper = (b.ESTADO_BATCH || "").toString().trim().toUpperCase();
-      const yaFueVaporizado =
-        stageCtrl.isLiquidado ||
-        estBatchUpper === "VAPORIZADO" ||
-        estBatchUpper === "ANALISIS_FINAL" ||
-        estBatchUpper === "EVALUADO" ||
-        estBatchUpper === "CERRADO" ||
-        estBatchUpper === "TERMINADO" ||
-        estBatchUpper === "FINALIZADO" ||
-        estBatchUpper === "COMPLETADO";
+      const hasRealSheetData = tieneInformacionEnHojaVaporizado(ctrl);
 
-      const allLinkedLotesClosed =
-        batchLoteCodes.size > 0 &&
-        Array.from(batchLoteCodes).every((lid) => {
-          const l = findLoteByCode(lid);
-          const lEst = (l?.ESTADO_LOTE || "").toString().trim().toUpperCase();
-          return (lEst === "CERRADO" || Boolean((l as any)?.cerroCompletamente)) && Boolean((l as any)?.cerroPorJefatura);
-        });
-
-      // Solo es CERRADO si fue formalmente cerrado por Jefe de Vaporizado Y cuenta con análisis de descarga Y cocción completas
-      const isTrulyClosedByJefatura =
-        Boolean((b as any).cerroPorJefatura) && hasDescarga && hasCoccion;
-
-      const isHistoricalSeedClosed =
-        isTrulyClosedByJefatura ||
-        (estBatchUpper === "CERRADO" && Boolean((b as any).cerroCompletamente) && (hasDescarga && hasCoccion)) ||
-        ((estBatchUpper === "TERMINADO" || estBatchUpper === "FINALIZADO" || estBatchUpper === "COMPLETADO") &&
-          (yaFueVaporizado && hasDescarga && hasCoccion));
-
-      // CORRECCIÓN AUTOMÁTICA (AUTO-CURACIÓN):
-      // Si el batch estaba erróneamente marcado como CERRADO pero no cuenta con análisis de descarga y cocción (o solo se cerró y liquidó la hoja de vaporizado):
-      // Debe volver a VAPORIZADO (o ANALISIS_FINAL / EVALUADO) y quedar pendiente para que los analistas suban descarga y cocción
-      if (!isHistoricalSeedClosed && (estBatchUpper === "CERRADO" || estBatchUpper === "COMPLETADO" || Boolean((b as any).cerroCompletamente) || Boolean((b as any).cerroPorJefatura))) {
+      // Si aún no se ha subido ningún tipo de información en su hoja y no cuenta con análisis de descarga ni cocción:
+      // El batch es 100% PROGRAMADO activo (e.g. V371, V372, V373...)
+      if (!hasRealSheetData && !hasDescarga && !hasCoccion) {
+        b.ESTADO_BATCH = "PROGRAMADO";
         delete (b as any).cerroCompletamente;
         delete (b as any).cerroPorJefatura;
         delete (b as any).CERRADO_COMPLETO;
         delete (b as any).cerradoTotal;
-      }
-
-      if (isHistoricalSeedClosed) {
-        b.ESTADO_BATCH = "CERRADO";
-        (b as any).cerroCompletamente = true;
-        (b as any).cerroPorJefatura = true;
-        if (prog) prog.estado = "CERRADO";
-      } else if (yaFueVaporizado && hasDescarga && hasCoccion) {
-        b.ESTADO_BATCH = "EVALUADO";
-        if (prog) prog.estado = "EVALUADO";
-      } else if (yaFueVaporizado && hasDescarga) {
-        b.ESTADO_BATCH = "ANALISIS_FINAL";
-        (b as any).ESTADO_ANALISIS_DESCARGA = "COMPLETO";
-        (b as any).ESTADO_COCCION = "PENDIENTE";
-        (b as any).coccionPendiente = true;
-        if (prog) prog.estado = "ANALISIS_FINAL";
-      } else if (stageCtrl.isLiquidado || estBatchUpper === "VAPORIZADO" || yaFueVaporizado) {
-        b.ESTADO_BATCH = "VAPORIZADO";
-        (b as any).ESTADO_ANALISIS_DESCARGA = "PENDIENTE";
-        (b as any).analisisDescargaPendiente = true;
-        (b as any).ESTADO_COCCION = "PENDIENTE";
-        (b as any).coccionPendiente = true;
-        if (prog) prog.estado = "VAPORIZADO";
-      } else if (stageCtrl.hasEtapaSecado || estBatchUpper === "EN SECADO") {
-        b.ESTADO_BATCH = "EN SECADO";
-        if (prog) prog.estado = "EN SECADO";
-      } else if (stageCtrl.hasEtapaReposo || estBatchUpper === "EN REPOSO") {
-        b.ESTADO_BATCH = "EN REPOSO";
-        if (prog) prog.estado = "EN REPOSO";
-      } else if (stageCtrl.hasDatosVaporizado || estBatchUpper === "EN PROCESO" || estBatchUpper === "EN_PROCESO" || estBatchUpper === "EN EJECUCION") {
-        b.ESTADO_BATCH = "EN PROCESO";
-        if (prog) prog.estado = "EN PROCESO";
+        delete (b as any).liquidado;
+        delete (b as any).ESTADO_ANALISIS_DESCARGA;
+        delete (b as any).analisisDescargaPendiente;
+        delete (b as any).ESTADO_COCCION;
+        delete (b as any).coccionPendiente;
+        if (prog) {
+          prog.estado = "PROGRAMADO";
+          delete (prog as any).cerroCompletamente;
+          delete (prog as any).cerroPorJefatura;
+          delete (prog as any).liquidado;
+        }
+        if (ctrl) {
+          ctrl.ESTADO_PROCESO = "PROGRAMADO";
+          delete ctrl.liquidado;
+          delete (ctrl as any).cerroCompletamente;
+        }
       } else {
-        b.ESTADO_BATCH = "PROGRAMADO";
-        if (prog && !prog.estado) prog.estado = "PROGRAMADO";
+        const yaFueVaporizado =
+          stageCtrl.isLiquidado ||
+          estBatchUpper === "VAPORIZADO" ||
+          estBatchUpper === "ANALISIS_FINAL" ||
+          estBatchUpper === "EVALUADO" ||
+          estBatchUpper === "CERRADO" ||
+          estBatchUpper === "TERMINADO" ||
+          estBatchUpper === "FINALIZADO" ||
+          estBatchUpper === "COMPLETADO";
+
+        // Solo es CERRADO si fue formalmente cerrado por Jefe de Vaporizado Y cuenta con análisis de descarga Y cocción completas
+        const isTrulyClosedByJefatura =
+          Boolean((b as any).cerroPorJefatura) && hasDescarga && hasCoccion;
+
+        const isHistoricalSeedClosed =
+          isTrulyClosedByJefatura ||
+          (estBatchUpper === "CERRADO" && Boolean((b as any).cerroCompletamente) && (hasDescarga && hasCoccion)) ||
+          ((estBatchUpper === "TERMINADO" || estBatchUpper === "FINALIZADO" || estBatchUpper === "COMPLETADO") &&
+            (yaFueVaporizado && hasDescarga && hasCoccion));
+
+        // CORRECCIÓN AUTOMÁTICA (AUTO-CURACIÓN):
+        // Si el batch estaba erróneamente marcado como CERRADO pero no cuenta con análisis de descarga y cocción (o solo se cerró y liquidó la hoja de vaporizado):
+        // Debe volver a VAPORIZADO (o ANALISIS_FINAL / EVALUADO) y quedar pendiente para que los analistas suban descarga y cocción
+        if (!isHistoricalSeedClosed && (estBatchUpper === "CERRADO" || estBatchUpper === "COMPLETADO" || Boolean((b as any).cerroCompletamente) || Boolean((b as any).cerroPorJefatura))) {
+          delete (b as any).cerroCompletamente;
+          delete (b as any).cerroPorJefatura;
+          delete (b as any).CERRADO_COMPLETO;
+          delete (b as any).cerradoTotal;
+        }
+
+        if (isHistoricalSeedClosed) {
+          b.ESTADO_BATCH = "CERRADO";
+          (b as any).cerroCompletamente = true;
+          (b as any).cerroPorJefatura = true;
+          if (prog) prog.estado = "CERRADO";
+        } else if (yaFueVaporizado && hasDescarga && hasCoccion) {
+          b.ESTADO_BATCH = "EVALUADO";
+          if (prog) prog.estado = "EVALUADO";
+        } else if (yaFueVaporizado && hasDescarga) {
+          b.ESTADO_BATCH = "ANALISIS_FINAL";
+          (b as any).ESTADO_ANALISIS_DESCARGA = "COMPLETO";
+          (b as any).ESTADO_COCCION = "PENDIENTE";
+          (b as any).coccionPendiente = true;
+          if (prog) prog.estado = "ANALISIS_FINAL";
+        } else if (stageCtrl.isLiquidado || estBatchUpper === "VAPORIZADO" || yaFueVaporizado) {
+          b.ESTADO_BATCH = "VAPORIZADO";
+          (b as any).ESTADO_ANALISIS_DESCARGA = "PENDIENTE";
+          (b as any).analisisDescargaPendiente = true;
+          (b as any).ESTADO_COCCION = "PENDIENTE";
+          (b as any).coccionPendiente = true;
+          if (prog) prog.estado = "VAPORIZADO";
+        } else if (stageCtrl.hasEtapaSecado || estBatchUpper === "EN SECADO") {
+          b.ESTADO_BATCH = "EN SECADO";
+          if (prog) prog.estado = "EN SECADO";
+        } else if (stageCtrl.hasEtapaReposo || estBatchUpper === "EN REPOSO") {
+          b.ESTADO_BATCH = "EN REPOSO";
+          if (prog) prog.estado = "EN REPOSO";
+        } else if (stageCtrl.hasDatosVaporizado || estBatchUpper === "EN PROCESO" || estBatchUpper === "EN_PROCESO" || estBatchUpper === "EN EJECUCION") {
+          b.ESTADO_BATCH = "EN PROCESO";
+          if (prog) prog.estado = "EN PROCESO";
+        } else {
+          b.ESTADO_BATCH = "PROGRAMADO";
+          if (prog && !prog.estado) prog.estado = "PROGRAMADO";
+        }
       }
     });
   }
@@ -1834,18 +1854,27 @@ export function deduplicateAndMigrateLotes(db: LocalDatabaseSchema): void {
     (db.batchesVaporizado || []).forEach((b: any) => {
       if (!b) return;
       const st = (b.ESTADO_BATCH || "").toString().trim().toUpperCase();
-      if ((st === "CERRADO" || st === "COMPLETADO") && Boolean(b.cerroPorJefatura)) {
+      const ctrl = (db.controlVaporizado || []).find((c: any) => {
+        const cB = (c?.BATCH_ID || "").toString().trim().toUpperCase();
+        const cC = (c?.CORRELATIVO || "").toString().trim().toUpperCase();
+        return (b.BATCH_ID && (cB === b.BATCH_ID.toUpperCase() || cC === b.BATCH_ID.toUpperCase())) ||
+               (b.CORRELATIVO && (cB === b.CORRELATIVO.toUpperCase() || cC === b.CORRELATIVO.toUpperCase()));
+      });
+      const hasRealData = tieneInformacionEnHojaVaporizado(ctrl);
+
+      if ((st === "CERRADO" || st === "COMPLETADO") && Boolean(b.cerroPorJefatura) && hasRealData) {
         if (b.BATCH_ID) closedBatchKeys.add(normalizeBatchKey(b.BATCH_ID));
         if (b.CORRELATIVO) closedBatchKeys.add(normalizeBatchKey(b.CORRELATIVO));
-      } else if (st === "VAPORIZADO" || st === "ANALISIS_FINAL" || st === "EVALUADO" || (st === "CERRADO" && !Boolean(b.cerroPorJefatura))) {
+      } else if (hasRealData && (st === "VAPORIZADO" || st === "ANALISIS_FINAL" || st === "EVALUADO" || (st === "CERRADO" && !Boolean(b.cerroPorJefatura)))) {
         if (b.BATCH_ID) vaporizedBatchKeys.add(normalizeBatchKey(b.BATCH_ID));
         if (b.CORRELATIVO) vaporizedBatchKeys.add(normalizeBatchKey(b.CORRELATIVO));
       }
     });
 
-    // Incluir cualquier batch cuyo control de vaporizado esté cerrado o liquidado
+    // Incluir únicamente batches cuyo control de vaporizado tenga información real cargada en planta
     (db.controlVaporizado || []).forEach((c: any) => {
       if (!c) return;
+      if (!tieneInformacionEnHojaVaporizado(c)) return;
       const st = (c.ESTADO_PROCESO || "").toString().trim().toUpperCase();
       if (Boolean((c as any).cerroPorJefatura)) {
         if (c.BATCH_ID) closedBatchKeys.add(normalizeBatchKey(c.BATCH_ID));
@@ -1909,7 +1938,7 @@ export function deduplicateAndMigrateLotes(db: LocalDatabaseSchema): void {
 
     const beforeLen = JSON.stringify(db.programacionesOficiales);
 
-    // Antes de retirar de programación los batches cerrados o vaporizados, asegurar que queden registrados en db.batchesVaporizado
+    // Asegurar que todos los batches programados (activos, en proceso o cerrados) queden registrados en db.batchesVaporizado
     db.programacionesOficiales.forEach((p: any) => {
       if (!p) return;
       const kBatch = normalizeBatchKey(p.batch);
@@ -2052,6 +2081,70 @@ export function deduplicateAndMigrateLotes(db: LocalDatabaseSchema): void {
             });
           }
         }
+      } else {
+        // Batch PROGRAMADO oficial activo (e.g. V371, V372, V373...)
+        p.estado = "PROGRAMADO";
+        delete (p as any).cerroCompletamente;
+        delete (p as any).cerroPorJefatura;
+        const bCode = (p.batch || p.id || "").toString().trim();
+        if (bCode) {
+          if (!Array.isArray(db.batchesVaporizado)) db.batchesVaporizado = [];
+          const existingB = db.batchesVaporizado.find(
+            (b: any) => sameBatchKey(b?.BATCH_ID, bCode) || sameBatchKey(b?.CORRELATIVO, bCode)
+          );
+          if (existingB) {
+            existingB.ESTADO_BATCH = "PROGRAMADO";
+            delete (existingB as any).cerroCompletamente;
+            delete (existingB as any).cerroPorJefatura;
+            delete (existingB as any).liquidado;
+            if (!existingB.CLIENTE && p.clientePrincipal) existingB.CLIENTE = p.clientePrincipal;
+            if (!existingB.VARIEDAD && p.variedadPrincipal) existingB.VARIEDAD = p.variedadPrincipal;
+            if (!existingB.PESO_TOTAL_KG && p.pesoTotalKg) existingB.PESO_TOTAL_KG = p.pesoTotalKg;
+            if (!existingB.filasLote && p.filasLote) (existingB as any).filasLote = p.filasLote;
+          } else {
+            db.batchesVaporizado.push({
+              BATCH_ID: bCode,
+              CORRELATIVO: bCode,
+              FECHA_PROGRAMADA: p.fecha || new Date().toISOString().split("T")[0],
+              EQUIPO: "APIT",
+              ESTADO_BATCH: "PROGRAMADO",
+              TON_PROGRAMADAS: (p.pesoTotalKg || 18000) / 1000,
+              TON_PROCESADAS: (p.pesoTotalKg || 18000) / 1000,
+              PESO_TOTAL_KG: p.pesoTotalKg || 18000,
+              CLIENTE: p.clientePrincipal || "MOLINO DON JULIO S.A.C.",
+              VARIEDAD: p.variedadPrincipal || "TINAJONES",
+              TURNO: p.turno === "DIA" ? "Turno Día" : "Turno Noche",
+              OBSERVACIONES: p.observacion || "",
+              filasLote: p.filasLote,
+              promedios: p.promedios,
+              parametrosDeterminados: p.parametrosDeterminados,
+              parametrosRecomendadosIA: p.parametrosRecomendadosIA
+            } as any);
+          }
+          if (Array.isArray(p.filasLote)) {
+            if (!Array.isArray(db.batchLotes)) db.batchLotes = [];
+            p.filasLote.forEach((f: any) => {
+              const lid = sanitizeLoteCode(f?.loteId || f?.LOTE_ID);
+              if (lid) {
+                const bl = db.batchLotes.find((x: any) => sameBatchKey(x?.BATCH_ID, bCode) && sanitizeLoteCode(x?.LOTE_ID) === lid);
+                if (bl) {
+                  bl.ESTADO = "PROGRAMADO";
+                } else {
+                  db.batchLotes.push({
+                    BATCH_LOTE_ID: `BL-${bCode}-${lid}`,
+                    BATCH_ID: bCode,
+                    LOTE_ID: lid,
+                    SACOS: f.sacProg || f.sacos || 100,
+                    PESO_KG: f.pesoProg || f.peso || 5000,
+                    CLIENTE: f.cliente || p.clientePrincipal,
+                    VARIEDAD: f.variedad || p.variedadPrincipal,
+                    ESTADO: "PROGRAMADO"
+                  } as any);
+                }
+              }
+            });
+          }
+        }
       }
     });
 
@@ -2160,6 +2253,68 @@ export function hasLotePaso1AndPaso2(lote: any, db: LocalDatabaseSchema): boolea
   );
 
   return hasAnalisisInAh || hasAnalisisInLote;
+}
+
+export function tieneInformacionEnHojaVaporizado(ctrl: any): boolean {
+  if (!ctrl) return false;
+  const isNonEmptyStr = (v: any) => v !== undefined && v !== null && String(v).trim() !== "" && String(v).trim() !== "0";
+  const isFilledNum = (v: any) => v !== undefined && v !== null && String(v).trim() !== "" && !isNaN(Number(v)) && Number(v) > 0;
+
+  // Si tiene fecha y hora fin de proceso real
+  if (isNonEmptyStr(ctrl.FECHA_HORA_FIN) && ctrl.FECHA_HORA_FIN !== ctrl.FECHA_HORA_INICIO) return true;
+
+  // 1. Datos de vaporizado
+  const dv = ctrl.datosVaporizado;
+  if (dv) {
+    if (
+      isNonEmptyStr(dv.llenadoTolvaPulmon?.inicio) ||
+      isNonEmptyStr(dv.llenadoTolvaPulmon?.fin) ||
+      isNonEmptyStr(dv.inicioRemojo) ||
+      isNonEmptyStr(dv.finRemojo) ||
+      isNonEmptyStr(dv.inyeccionVapor?.inicio) ||
+      isNonEmptyStr(dv.inyeccionVapor?.fin) ||
+      isNonEmptyStr(dv.inyeccionVaporPase1?.inicio) ||
+      isNonEmptyStr(dv.inyeccionVaporPase1?.fin) ||
+      isNonEmptyStr(dv.inyeccionVaporPase2?.inicio) ||
+      isNonEmptyStr(dv.inyeccionVaporPase2?.fin)
+    ) return true;
+  }
+
+  // Silos
+  const checkSilos = (arr: any) =>
+    Array.isArray(arr) &&
+    arr.some((s: any) =>
+      isNonEmptyStr(s?.exclusa?.inicio) ||
+      isNonEmptyStr(s?.exclusa?.fin) ||
+      isNonEmptyStr(s?.descarga?.inicio) ||
+      isNonEmptyStr(s?.descarga?.fin) ||
+      isFilledNum(s?.tempSuperior) ||
+      isFilledNum(s?.tempInferior)
+    );
+  if (checkSilos(ctrl.silos) || checkSilos(ctrl.silosPase1) || checkSilos(ctrl.silosPase2) || checkSilos(ctrl.silosControl)) return true;
+
+  // Perfiles de secado o reposos
+  const checkPerfilRow = (p: any) =>
+    isNonEmptyStr(p?.horaInicio) ||
+    isNonEmptyStr(p?.hora) ||
+    isFilledNum(p?.tempGrano) ||
+    isFilledNum(p?.tempAmbiente) ||
+    isFilledNum(p?.humedad) ||
+    isFilledNum(p?.hIngreso) ||
+    isFilledNum(p?.hSalida) ||
+    isFilledNum(p?.tempReal) ||
+    isFilledNum(p?.tempPromedio);
+
+  if (Array.isArray(ctrl.etapaReposo1) && ctrl.etapaReposo1.some(checkPerfilRow)) return true;
+  if (Array.isArray(ctrl.perfilesSecado) && ctrl.perfilesSecado.some(checkPerfilRow)) return true;
+  if (Array.isArray(ctrl.etapaEnfriamiento) && ctrl.etapaEnfriamiento.some(checkPerfilRow)) return true;
+  if (Array.isArray(ctrl.etapaEnfriamientoFinal) && ctrl.etapaEnfriamientoFinal.some(checkPerfilRow)) return true;
+  if (Array.isArray(ctrl.etapaReposoFinal) && ctrl.etapaReposoFinal.some(checkPerfilRow)) return true;
+
+  // Sacas descarga
+  if (Array.isArray(ctrl.sacasDescarga) && ctrl.sacasDescarga.length > 0) return true;
+
+  return false;
 }
 
 export function evaluateControlSheetStages(ctrl: any): {
@@ -2277,10 +2432,12 @@ export function evaluateControlSheetStages(ctrl: any): {
     (Array.isArray(ctrl.pasesSecado) && ctrl.pasesSecado.length > 0);
 
   const estProcUpper = (ctrl.ESTADO_PROCESO || "").toString().trim().toUpperCase();
-  const isLiquidado = Boolean(
+  const hasAnyActualOperationalData = hasDatosVapFields || hasEtapaReposoFields || hasEtapaSecadoFields || (isNonEmptyStr(ctrl.FECHA_HORA_FIN) && ctrl.FECHA_HORA_FIN !== ctrl.FECHA_HORA_INICIO);
+
+  const isLiquidado = hasAnyActualOperationalData && Boolean(
     ctrl.liquidado ||
     ctrl.cerroCompletamente ||
-    isNonEmptyStr(ctrl.FECHA_HORA_FIN) ||
+    (isNonEmptyStr(ctrl.FECHA_HORA_FIN) && ctrl.FECHA_HORA_FIN !== ctrl.FECHA_HORA_INICIO) ||
     estProcUpper === "LIQUIDADO" ||
     estProcUpper === "VAPORIZADO" ||
     estProcUpper === "FINALIZADO" ||
@@ -2288,7 +2445,7 @@ export function evaluateControlSheetStages(ctrl: any): {
   );
 
   const hasSheetSaved = Boolean(
-    ctrl && (
+    ctrl && hasAnyActualOperationalData && (
       ctrl.guardado === true ||
       ctrl.liquidado === true ||
       isLiquidado ||

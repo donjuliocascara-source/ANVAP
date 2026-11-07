@@ -86,7 +86,7 @@ import {
   cerrarSesionUsuario,
   obtenerUsuarioActivoGuardado
 } from "./utils/usuariosService";
-import { guardarProgramacionesOficiales } from "./utils/programacionBatchOficialService";
+import { guardarProgramacionesOficiales, cargarProgramacionesOficiales } from "./utils/programacionBatchOficialService";
 
 // Loading indicator for Suspense boundaries
 const ViewLoadingFallback = () => (
@@ -233,11 +233,44 @@ export default function App() {
       if (Array.isArray(anSecRes)) setAnalisisSec(anSecRes);
       if (Array.isArray(progRes)) setProgramaciones(progRes);
       if (Array.isArray(batchRes)) {
-        const normBatches = batchRes.map((b: any) => ({
-          ...b,
-          EQUIPO: "APIT"
-        }));
-        setBatches(normBatches);
+        const progOficiales = cargarProgramacionesOficiales();
+        const batchMap = new Map<string, any>();
+        batchRes.forEach((b: any) => {
+          const k = (b.CORRELATIVO || b.BATCH_ID || "").trim().toUpperCase();
+          if (k) batchMap.set(k, { ...b, EQUIPO: "APIT" });
+        });
+        progOficiales.forEach((p) => {
+          const bCode = (p.batch || p.id || "").trim();
+          if (!bCode) return;
+          const k = bCode.toUpperCase();
+          const existing = batchMap.get(k);
+          if (existing) {
+            if (!existing.CLIENTE && p.clientePrincipal) existing.CLIENTE = p.clientePrincipal;
+            if (!existing.VARIEDAD && p.variedadPrincipal) existing.VARIEDAD = p.variedadPrincipal;
+            if (!existing.PESO_TOTAL_KG && p.pesoTotalKg) existing.PESO_TOTAL_KG = p.pesoTotalKg;
+            if (!existing.filasLote && p.filasLote) existing.filasLote = p.filasLote;
+          } else {
+            batchMap.set(k, {
+              BATCH_ID: bCode,
+              CORRELATIVO: bCode,
+              FECHA_PROGRAMADA: p.fecha || new Date().toISOString().split("T")[0],
+              EQUIPO: "APIT",
+              ESTADO_BATCH: (p.estado as any) || "PROGRAMADO",
+              TON_PROGRAMADAS: (p.pesoTotalKg || 0) / 1000,
+              TON_PROCESADAS: (p.pesoTotalKg || 0) / 1000,
+              PESO_TOTAL_KG: p.pesoTotalKg || 0,
+              CLIENTE: p.clientePrincipal || "",
+              VARIEDAD: p.variedadPrincipal || "",
+              TURNO: p.turno === "DIA" ? "Turno Día" : "Turno Noche",
+              OBSERVACIONES: p.observacion || "",
+              filasLote: p.filasLote,
+              promedios: p.promedios,
+              parametrosDeterminados: p.parametrosDeterminados,
+              parametrosRecomendadosIA: p.parametrosRecomendadosIA
+            });
+          }
+        });
+        setBatches(Array.from(batchMap.values()));
       }
       if (Array.isArray(batchLotesRes)) setBatchLotes(batchLotesRes);
       if (Array.isArray(ctrlRes)) setControles(ctrlRes);

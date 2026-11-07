@@ -1460,69 +1460,44 @@ export const ProgramacionBatchOficialView: React.FC<ProgramacionBatchOficialView
       return;
     }
 
-    // 0.2 REGLA ESTRICTA: NO REPETIR EN OTROS BATCHES (UN LOTE NO SE PUEDE REPETIR)
+    // 0.2 REGLA ESTRICTA: SALDO DE LOTE PROCESADO PUEDE UNIRSE COMO OTRO BATCH SI ES DEL MISMO CLIENTE
     const currentMacro = batchCorrelativo ? batchCorrelativo.split("-")[0] : null;
-    const infoEnOtros = obtenerInfoLoteEnBatches(loteId, programaciones, batches, editingProgId, batchCorrelativo, currentMacro, editingOriginalBatchCode);
-    if (infoEnOtros.estaProgramado && !infoEnOtros.esMismoBatch) {
+    const saldoLote = calcularSaldoDisponibleLoteParaBatch(
+      loteId,
+      lotesSincronizados,
+      programaciones,
+      batches,
+      batchLotes,
+      editingProgId,
+      batchCorrelativo
+    );
+    const infoEnOtros = obtenerInfoLoteEnBatches(
+      loteId,
+      programaciones,
+      batches,
+      editingProgId,
+      batchCorrelativo,
+      currentMacro,
+      editingOriginalBatchCode,
+      lotesSincronizados,
+      batchLotes
+    );
+
+    // Solo bloquear si el lote ya consumió el 100% de su saldo en otros batches
+    if (infoEnOtros.estaProgramado && !infoEnOtros.esMismoBatch && saldoLote.sacosDisponibles <= 0) {
       setDialogModal({
         isOpen: true,
         tipo: "error",
-        titulo: "🚫 Lote Ya Programado (No se puede repetir)",
-        mensaje: `El lote ${loteId} ya se encuentra comprometido en el Batch ${infoEnOtros.batchCodigo} (${infoEnOtros.caso}).`,
+        titulo: "🚫 Lote Ya Programado (Sin Saldo Disponible)",
+        mensaje: `El lote ${loteId} ya se encuentra comprometido al 100% en el Batch ${infoEnOtros.batchCodigo} (${infoEnOtros.caso}) y no tiene saldo remanente.`,
         detalles: [
-          `Por normativa estricta de planta, los lotes NO se pueden repetir en distintos batches ni programar por duplicado.`,
+          `Por normativa estricta de planta, los lotes sin saldo disponible NO se pueden repetir en distintos batches ni programar por duplicado.`,
           `Fecha de programación original: ${infoEnOtros.fecha || "No especificada"}`
         ],
         textoBotonPrincipal: "Entendido",
         onConfirmar: () => setDialogModal(null)
       });
       return;
-    }
-
-    // 0.3 REGLA ESTRICTA: RESERVA EXCLUSIVA DE SALDOS DE UNIÓN
-    // "Los saldos de cada código solo debe unirse con los que se seleccionó que van a juntarse"
-    const bObjUnion = batches.find(b => Array.isArray(b.LOTES_UNION) && b.LOTES_UNION.includes(loteId));
-    if (bObjUnion && Array.isArray(bObjUnion.LOTES_UNION) && bObjUnion.LOTES_UNION.length > 0) {
-      const lotesPermitidos = bObjUnion.LOTES_UNION;
-      const macroNombre = bObjUnion.PROCESO_PADRE || (bObjUnion.CORRELATIVO ? bObjUnion.CORRELATIVO.split("-")[0] : "PROCESO");
-      
-      const lotesAjenosEnBatch = filasLote
-        .map(f => f.loteId)
-        .filter(lid => !lotesPermitidos.includes(lid));
-
-      if (lotesAjenosEnBatch.length > 0) {
-        setDialogModal({
-          isOpen: true,
-          tipo: "error",
-          titulo: "🚫 Restricción Exclusiva de Saldo de Unión",
-          mensaje: `El código ${loteId} pertenece al proceso de unión ${macroNombre} y su saldo restante está reservado EXCLUSIVAMENTE para combinarse con los códigos [${lotesPermitidos.join(", ")}].`,
-          detalles: [
-            `El batch actual contiene códigos no autorizados para esta unión: ${lotesAjenosEnBatch.join(", ")}.`,
-            `Norma estricta de planta: Los saldos de cada código solo deben unirse con los que se seleccionó que van a juntarse.`
-          ],
-          textoBotonPrincipal: "Entendido",
-          onConfirmar: () => setDialogModal(null)
-        });
-        return;
-      }
-    }
-
-    for (const f of filasLote) {
-      const bUnion = batches.find(b => Array.isArray(b.LOTES_UNION) && b.LOTES_UNION.includes(f.loteId));
-      if (bUnion && Array.isArray(bUnion.LOTES_UNION) && !bUnion.LOTES_UNION.includes(loteId)) {
-        setDialogModal({
-          isOpen: true,
-          tipo: "error",
-          titulo: "🚫 Restricción Exclusiva de Saldo de Unión",
-          mensaje: `No se puede agregar el lote ${loteId}. El batch contiene el lote ${f.loteId} cuyo saldo está reservado EXCLUSIVAMENTE para combinarse con [${bUnion.LOTES_UNION.join(", ")}].`,
-          detalles: [
-            `Norma estricta de planta: Los saldos de cada código solo deben unirse con los que se seleccionó que van a juntarse.`
-          ],
-          textoBotonPrincipal: "Entendido",
-          onConfirmar: () => setDialogModal(null)
-        });
-        return;
-      }
     }
 
     const cleanId = (loteId || "").trim().toLowerCase();

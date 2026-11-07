@@ -44,7 +44,7 @@ import { SacasDescargaManager } from "./SacasDescargaManager";
 import { DEFAULT_PERFILES_SECADO, getBlankPlantControlRecord, createEmptyParametrosPaddy } from "../utils/plantSheetDefaults";
 import { useAutoSaveControlVaporizado } from "../hooks/useAutoSaveControlVaporizado";
 import { tienePermiso, obtenerMensajeRestriccion } from "../utils/permisosService";
-import { localDB } from "../utils/localDB";
+import { localDB, tieneInformacionEnHojaVaporizado } from "../utils/localDB";
 import { 
   cargarProgramacionesOficiales, 
   guardarProgramacionesOficiales, 
@@ -164,21 +164,33 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
 
     dbBatches.forEach((b) => addBatchIfMissing(b));
 
+    const allCtrlList = [...dbControles, ...(controles || [])];
+    const findCtrlForBatchCode = (k1?: string, k2?: string) => {
+      const u1 = (k1 || "").trim().toUpperCase();
+      const u2 = (k2 || "").trim().toUpperCase();
+      return allCtrlList.find((c) => {
+        const c1 = (c.BATCH_ID || "").trim().toUpperCase();
+        const c2 = (c.CORRELATIVO || "").trim().toUpperCase();
+        return (u1 && (c1 === u1 || c2 === u1)) || (u2 && (c1 === u2 || c2 === u2));
+      });
+    };
+
     // Agregar batches que ya tienen ficha guardada o liquidada en dbControles
     dbControles.forEach((c) => {
       const bCode = (c.BATCH_ID || c.CORRELATIVO || "").trim();
       if (bCode) {
-        const isLiq = Boolean(c.liquidado) || c.ESTADO_PROCESO === "LIQUIDADO" || c.ESTADO_PROCESO === "VAPORIZADO";
+        const hasData = tieneInformacionEnHojaVaporizado(c);
+        const isLiq = hasData && (Boolean(c.liquidado) || c.ESTADO_PROCESO === "LIQUIDADO" || c.ESTADO_PROCESO === "VAPORIZADO");
         addBatchIfMissing({
           BATCH_ID: bCode,
           CORRELATIVO: c.CORRELATIVO || bCode,
           CLIENTE: c.CLIENTE || (c.datosIngreso as any)?.cliente || "",
           VARIEDAD: c.VARIEDAD || c.datosIngreso?.variedad || "",
-          ESTADO_BATCH: isLiq ? "VAPORIZADO" : ((c.ESTADO_PROCESO as any) || "CERRADO"),
-          cerroCompletamente: Boolean((c as any).cerroCompletamente || isLiq),
+          ESTADO_BATCH: isLiq ? "VAPORIZADO" : (hasData ? ((c.ESTADO_PROCESO as any) || "EN PROCESO") : "PROGRAMADO"),
+          cerroCompletamente: Boolean((c as any).cerroCompletamente && hasData),
           liquidado: Boolean(isLiq),
           PESO_TOTAL_KG: c.datosIngreso?.pesoKg || (c.TON_PROCESADAS ? c.TON_PROCESADAS * 1000 : 0)
-        } as any, "VAPORIZADO");
+        } as any, hasData ? "VAPORIZADO" : "PROGRAMADO");
       }
     });
 
@@ -186,17 +198,18 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
       controles.forEach((c) => {
         const bCode = (c.BATCH_ID || c.CORRELATIVO || "").trim();
         if (bCode) {
-          const isLiq = Boolean(c.liquidado) || c.ESTADO_PROCESO === "LIQUIDADO" || c.ESTADO_PROCESO === "VAPORIZADO";
+          const hasData = tieneInformacionEnHojaVaporizado(c);
+          const isLiq = hasData && (Boolean(c.liquidado) || c.ESTADO_PROCESO === "LIQUIDADO" || c.ESTADO_PROCESO === "VAPORIZADO");
           addBatchIfMissing({
             BATCH_ID: bCode,
             CORRELATIVO: c.CORRELATIVO || bCode,
             CLIENTE: c.CLIENTE || (c.datosIngreso as any)?.cliente || "",
             VARIEDAD: c.VARIEDAD || c.datosIngreso?.variedad || "",
-            ESTADO_BATCH: isLiq ? "VAPORIZADO" : ((c.ESTADO_PROCESO as any) || "CERRADO"),
-            cerroCompletamente: Boolean((c as any).cerroCompletamente || isLiq),
+            ESTADO_BATCH: isLiq ? "VAPORIZADO" : (hasData ? ((c.ESTADO_PROCESO as any) || "EN PROCESO") : "PROGRAMADO"),
+            cerroCompletamente: Boolean((c as any).cerroCompletamente && hasData),
             liquidado: Boolean(isLiq),
             PESO_TOTAL_KG: c.datosIngreso?.pesoKg || (c.TON_PROCESADAS ? c.TON_PROCESADAS * 1000 : 0)
-          } as any, "VAPORIZADO");
+          } as any, hasData ? "VAPORIZADO" : "PROGRAMADO");
         }
       });
     }
@@ -217,32 +230,30 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
     };
 
     const closedKeys = new Set<string>();
-    combinedRawBatches.forEach((b) => {
-      const k1 = (b.CORRELATIVO || "").trim().toUpperCase();
-      const k2 = (b.BATCH_ID || "").trim().toUpperCase();
-      const bLotes = batchLotes.filter((bl) => {
-        const blId = (bl.BATCH_ID || "").trim().toUpperCase();
-        return (k1 && blId === k1) || (k2 && blId === k2);
-      });
-      const allLotesClosed =
-        bLotes.length > 0 &&
-        bLotes.every((bl) => {
-          const foundLote = lotes.find((l) => l.LOTE_ID === bl.LOTE_ID);
-          const lEst = (foundLote?.ESTADO_LOTE || "").toString().trim().toUpperCase();
-          return lEst === "CERRADO" || Boolean((foundLote as any)?.cerroCompletamente);
-        });
 
-      if (isClosedState(b.ESTADO_BATCH, (b as any).cerroCompletamente, (b as any).liquidado) || allLotesClosed) {
-        if (k1) closedKeys.add(k1);
-        if (k2) closedKeys.add(k2);
-      }
-    });
-
-    [...dbControles, ...(controles || [])].forEach((c) => {
+    // Solo se agregan batches a closedKeys si cuentan con información operativa en su hoja de vaporizado
+    allCtrlList.forEach((c) => {
+      if (!c) return;
+      if (!tieneInformacionEnHojaVaporizado(c)) return;
       const est = (c?.ESTADO_PROCESO || "").toString().trim().toUpperCase();
       if (c?.liquidado || (c as any)?.cerroCompletamente || isClosedState(est)) {
         if (c.BATCH_ID) closedKeys.add(c.BATCH_ID.trim().toUpperCase());
         if (c.CORRELATIVO) closedKeys.add(c.CORRELATIVO.trim().toUpperCase());
+      }
+    });
+
+    combinedRawBatches.forEach((b) => {
+      const k1 = (b.CORRELATIVO || "").trim().toUpperCase();
+      const k2 = (b.BATCH_ID || "").trim().toUpperCase();
+      const matchingCtrl = findCtrlForBatchCode(k1, k2);
+      const hasDataInSheet = tieneInformacionEnHojaVaporizado(matchingCtrl);
+
+      // Si no tiene información en su hoja, NUNCA puede considerarse cerrado
+      if (!hasDataInSheet) return;
+
+      if (isClosedState(b.ESTADO_BATCH, (b as any).cerroCompletamente, (b as any).liquidado)) {
+        if (k1) closedKeys.add(k1);
+        if (k2) closedKeys.add(k2);
       }
     });
 
@@ -254,13 +265,21 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
       const bCode = (p.batch || p.id || "").trim();
       if (!bCode) return;
       const bKey = bCode.toUpperCase();
-      const isProgClosed = isClosedState(p.estado, (p as any).cerroCompletamente, (p as any).liquidado) || closedKeys.has(bKey);
+      const matchingCtrl = findCtrlForBatchCode(bCode);
+      const hasDataInSheet = tieneInformacionEnHojaVaporizado(matchingCtrl);
+
+      // Si aún no se ha subido ningún tipo de información en su hoja, NUNCA está cerrado
+      const isProgClosed = hasDataInSheet && (
+        isClosedState(p.estado, (p as any).cerroCompletamente, (p as any).liquidado) ||
+        closedKeys.has(bKey)
+      );
+
       const batchItem: BatchVaporizado = {
         BATCH_ID: bCode,
         CORRELATIVO: bCode,
         FECHA_PROGRAMADA: p.fecha || new Date().toISOString().split("T")[0],
         EQUIPO: "APIT",
-        ESTADO_BATCH: isProgClosed ? ((p.estado as any) || "CERRADO") : ((p.estado as any) || "PROGRAMADO"),
+        ESTADO_BATCH: isProgClosed ? ((p.estado as any) || "CERRADO") : "PROGRAMADO",
         TON_PROGRAMADAS: (p.pesoTotalKg || 0) / 1000,
         TON_PROCESADAS: (p.pesoTotalKg || 0) / 1000,
         PESO_TOTAL_KG: p.pesoTotalKg || 0,
@@ -286,10 +305,14 @@ export const ControlVaporizadoView: React.FC<ControlVaporizadoViewProps> = ({
       const primaryKey = key1 || key2;
       if (!primaryKey) return;
 
-      const isClosed =
+      const matchingCtrl = findCtrlForBatchCode(key1, key2);
+      const hasDataInSheet = tieneInformacionEnHojaVaporizado(matchingCtrl);
+
+      const isClosed = hasDataInSheet && (
         isClosedState(b.ESTADO_BATCH, (b as any).cerroCompletamente, (b as any).liquidado) ||
         (key1 && closedKeys.has(key1)) ||
-        (key2 && closedKeys.has(key2));
+        (key2 && closedKeys.has(key2))
+      );
 
       if (isClosed) {
         // Asegurar que no quede en activos

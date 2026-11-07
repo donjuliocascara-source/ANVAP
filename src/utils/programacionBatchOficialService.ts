@@ -1,6 +1,6 @@
 import { AnalisisHumedo, Lote, Presecado } from "../types";
 import { formatLoteCode } from "./formatLoteCode";
-import { getDeletedLotesTombstones, isV200BatchReference, isProgramacionTombstoned } from "./localDB";
+import { localDB, getDeletedLotesTombstones, isV200BatchReference, isProgramacionTombstoned, tieneInformacionEnHojaVaporizado } from "./localDB";
 import { cloudSyncService } from "../services/cloudSyncService";
 
 export interface LoteProgramacionFila {
@@ -872,8 +872,15 @@ export function cargarProgramacionesOficiales(): ProgramacionBatchOficial[] {
 
         if (Array.isArray(parsedDb?.batchesVaporizado)) {
           parsedDb.batchesVaporizado.forEach((b: any) => {
+            const ctrl = (parsedDb?.controlVaporizado || []).find((c: any) => {
+              const cB = (c?.BATCH_ID || "").toString().trim().toUpperCase();
+              const cC = (c?.CORRELATIVO || "").toString().trim().toUpperCase();
+              return (b?.BATCH_ID && (cB === b.BATCH_ID.toUpperCase() || cC === b.BATCH_ID.toUpperCase())) ||
+                     (b?.CORRELATIVO && (cB === b.CORRELATIVO.toUpperCase() || cC === b.CORRELATIVO.toUpperCase()));
+            });
+            const hasData = tieneInformacionEnHojaVaporizado(ctrl);
             const est = (b?.ESTADO_BATCH || "").toString().trim().toUpperCase();
-            if (est === "CERRADO" || est === "VAPORIZADO" || est === "COMPLETADO" || Boolean(b?.cerroCompletamente)) {
+            if (hasData && (est === "CERRADO" || est === "VAPORIZADO" || est === "COMPLETADO" || Boolean(b?.cerroCompletamente))) {
               addClosedCode(b?.BATCH_ID);
               addClosedCode(b?.CORRELATIVO);
             }
@@ -881,6 +888,7 @@ export function cargarProgramacionesOficiales(): ProgramacionBatchOficial[] {
         }
         if (Array.isArray(parsedDb?.controlVaporizado)) {
           parsedDb.controlVaporizado.forEach((c: any) => {
+            if (!tieneInformacionEnHojaVaporizado(c)) return;
             const est = (c?.ESTADO_PROCESO || "").toString().trim().toUpperCase();
             if (Boolean(c?.liquidado) || Boolean(c?.cerroCompletamente) || est === "LIQUIDADO" || est === "VAPORIZADO" || est === "CERRADO" || est === "FINALIZADO") {
               addClosedCode(c?.BATCH_ID);
@@ -1153,11 +1161,15 @@ export function obtenerInfoLoteEnBatches(
   // REGLA CRÍTICA DE PLANTA:
   // Si se ha procesado o programado solo una parte de un lote (ej. C08427),
   // la otra parte (saldo remanente de sacos y kg) DEBE QUEDAR DISPONIBLE
-  // para seguir programándose o uniéndose con otros lotes.
-  if (Array.isArray(lotes) && lotes.length > 0) {
+  // para seguir programándose o uniéndose con otros lotes del mismo cliente.
+  const activeLotes = (Array.isArray(lotes) && lotes.length > 0)
+    ? lotes
+    : (typeof localDB !== "undefined" && typeof localDB.getLotes === "function" ? localDB.getLotes() : []);
+
+  if (Array.isArray(activeLotes) && activeLotes.length > 0) {
     const saldoInfo = calcularSaldoDisponibleLoteParaBatch(
       loteId,
-      lotes,
+      activeLotes,
       programaciones,
       batches,
       batchLotes || [],

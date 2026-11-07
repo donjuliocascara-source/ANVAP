@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { 
   X, 
   FlaskConical, 
@@ -73,18 +73,29 @@ export const ModalSustentoExperimentalLote: React.FC<ModalSustentoExperimentalLo
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [confirmarRechazo, setConfirmarRechazo] = useState(false);
 
+  const initializedLoteIdRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (lote && isOpen) {
+    if (!isOpen || !lote) {
+      initializedLoteIdRef.current = null;
+      return;
+    }
+
+    const currentLoteId = String(lote.LOTE_ID || "").trim();
+    // Solo inicializar cuando se abre el modal o cambia el lote para no borrar lo que escribe el usuario
+    if (initializedLoteIdRef.current !== currentLoteId) {
+      initializedLoteIdRef.current = currentLoteId;
+
       const auth = lote.AUTORIZACION_EXPERIMENTAL;
       const sustentoActual = auth?.sustento || lote.SUSTENTO_EXPERIMENTAL || "";
       setSustentoTexto(sustentoActual);
-      setCondicionUso(auth?.condicionUso || CONDICIONES_USO[0]);
+      setCondicionUso(auth?.condicionUso || (lote as any).CONDICION_USO || CONDICIONES_USO[0]);
       setMotivoRechazo("");
       setErrorMsg(null);
       setConfirmarRechazo(false);
       setModo(initialModo);
     }
-  }, [lote, isOpen, initialModo]);
+  }, [isOpen, lote?.LOTE_ID, initialModo]);
 
   if (!isOpen || !lote) return null;
 

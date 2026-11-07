@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { 
   X, 
   FlaskConical, 
@@ -60,22 +60,34 @@ export const ModalAutorizarExperimental: React.FC<ModalAutorizarExperimentalProp
     lote?.ESTADO_LOTE === "APTO EXPERIMENTAL"
   );
 
+  const initializedLoteIdRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (lote) {
+    if (!isOpen || !lote) {
+      initializedLoteIdRef.current = null;
+      return;
+    }
+
+    const currentLoteId = String(lote.LOTE_ID || "").trim();
+    // Solo inicializar cuando se abre el modal o cuando cambia de lote
+    // Esto evita que al tipear o seleccionar la condición de uso se borre el contenido
+    if (initializedLoteIdRef.current !== currentLoteId) {
+      initializedLoteIdRef.current = currentLoteId;
+
       if (yaEsExperimental && lote.AUTORIZACION_EXPERIMENTAL) {
         setSustento(lote.AUTORIZACION_EXPERIMENTAL.sustento || lote.SUSTENTO_EXPERIMENTAL || "");
         setCondicionUso(lote.AUTORIZACION_EXPERIMENTAL.condicionUso || CONDICIONES_USO[0]);
         setDeclaracionAceptada(true);
         setModoEdicion(false);
       } else {
-        setSustento("");
-        setCondicionUso(CONDICIONES_USO[0]);
+        setSustento(lote.SUSTENTO_EXPERIMENTAL || "");
+        setCondicionUso((lote as any).CONDICION_USO || CONDICIONES_USO[0]);
         setDeclaracionAceptada(false);
         setModoEdicion(true);
       }
       setErrorMsg(null);
     }
-  }, [lote, isOpen, yaEsExperimental]);
+  }, [isOpen, lote?.LOTE_ID, yaEsExperimental]);
 
   if (!isOpen || !lote) return null;
 

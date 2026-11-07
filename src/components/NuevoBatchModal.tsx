@@ -145,8 +145,8 @@ export const NuevoBatchModal: React.FC<NuevoBatchModalProps> = ({
         if (initialLoteId) {
           const saldo = saldosMap.get(initialLoteId);
           const loteObj = lotes.find(l => l.LOTE_ID === initialLoteId);
-          const sacosIngresados = Number(loteObj?.SACOS) || (saldo?.sacosPendientes ?? 0);
-          const pesoIngresado = Number(loteObj?.PESO_KG) || (sacosIngresados * 50) || (saldo?.saldoPendienteKg ?? 0);
+          const sacosIngresados = (saldo && saldo.sacosPendientes > 0) ? saldo.sacosPendientes : (Number(loteObj?.SACOS) || 0);
+          const pesoIngresado = (saldo && saldo.saldoPendienteKg > 0) ? saldo.saldoPendienteKg : (Number(loteObj?.PESO_KG) || (sacosIngresados * 50));
 
           setSelectedLotes([{
             loteId: initialLoteId,
@@ -391,13 +391,14 @@ export const NuevoBatchModal: React.FC<NuevoBatchModalProps> = ({
       return;
     }
 
-    // 0. REGLA ESTRICTA DE PLANTA: NO REPETIR LOTES ENTRE BATCHES
+    // 0. REGLA ESTRICTA DE PLANTA: NO REPETIR LOTES ENTRE BATCHES (SALVO QUE TENGA SALDO REMANENTE)
     const progsOficiales = cargarProgramacionesOficiales();
     const otherBatches = batchToEdit ? batchesExistentes.filter((b) => b.BATCH_ID !== batchToEdit.BATCH_ID) : batchesExistentes;
-    const batchInfo = obtenerInfoLoteEnBatches(loteId, progsOficiales, otherBatches);
-    if (batchInfo.estaProgramado) {
+    const batchInfo = obtenerInfoLoteEnBatches(loteId, progsOficiales, otherBatches, null, null, null, null, lotes, []);
+    const saldoKg = s ? s.saldoPendienteKg : 0;
+    if (batchInfo.estaProgramado && (!batchInfo.tieneSaldoDisponible && saldoKg <= 50)) {
       setErrorMessage(
-        `🚫 Lote ya programado: El lote ${loteId} ya se encuentra asignado al Batch ${batchInfo.batchCodigo} (${batchInfo.caso}). Los lotes no se pueden repetir.`
+        `🚫 Lote ya programado: El lote ${loteId} ya se encuentra asignado al Batch ${batchInfo.batchCodigo} (${batchInfo.caso}) y no cuenta con saldo pendiente disponible. Los lotes sin saldo no se pueden repetir.`
       );
       return;
     }
@@ -413,14 +414,14 @@ export const NuevoBatchModal: React.FC<NuevoBatchModalProps> = ({
       return;
     }
 
-    // Regla estricta de Criterios de Unión: Todos los lotes del batch deben pertenecer a un solo cliente
-    if (selectedLotes.length > 0 && criteriosConfig.exigirMismoCliente) {
+    // Regla estricta: Todos los lotes y saldos a unir en el batch deben pertenecer al MISMO CLIENTE
+    if (selectedLotes.length > 0) {
       const firstLoteObj = lotes.find((l) => l.LOTE_ID === selectedLotes[0].loteId);
       const clienteNuevo = (loteObj?.CLIENTE || "").trim();
       const clienteActual = (firstLoteObj?.CLIENTE || "").trim();
       if (clienteNuevo && clienteActual && clienteNuevo.toLowerCase() !== clienteActual.toLowerCase()) {
         setErrorMessage(
-          `Criterio de Unión no cumplido (Cliente Único): No se puede unir el lote ${loteId} (Cliente: "${clienteNuevo}") con "${clienteActual}". Según los Criterios de Unión de Planta, todos los lotes deben pertenecer al mismo cliente.`
+          `Criterio de Unión no cumplido (Cliente Único): No se puede unir el saldo o lote ${loteId} (Cliente: "${clienteNuevo}") con "${clienteActual}". Todos los lotes y saldos del Batch deben pertenecer al mismo cliente.`
         );
         return;
       }
@@ -441,42 +442,16 @@ export const NuevoBatchModal: React.FC<NuevoBatchModalProps> = ({
       }
     }
 
-    // Regla estricta: Reserva Exclusiva de Saldos de Unión
-    const sInfo = saldosMap.get(loteId);
-    if (sInfo?.esSaldoReservadoUnion && sInfo.lotesPermitidosUnion && sInfo.lotesPermitidosUnion.length > 0) {
-      if (selectedLotes.length > 0) {
-        const lotesAjenos = selectedLotes
-          .map((sl) => sl.loteId)
-          .filter((lid) => !sInfo.lotesPermitidosUnion!.includes(lid));
-        if (lotesAjenos.length > 0) {
-          setErrorMessage(
-            `RESTRICCIÓN DE SALDO EXCLUSIVO: El saldo del código ${loteId} está reservado para el proceso ${sInfo.grupoUnionProceso || "de unión"} con los códigos [${sInfo.lotesPermitidosUnion.join(", ")}]. No se puede mezclar con códigos externos (${lotesAjenos.join(", ")}).`
-          );
-          return;
-        }
-      }
-    }
-
-    for (const sl of selectedLotes) {
-      const slInfo = saldosMap.get(sl.loteId);
-      if (slInfo?.esSaldoReservadoUnion && slInfo.lotesPermitidosUnion && !slInfo.lotesPermitidosUnion.includes(loteId)) {
-        setErrorMessage(
-          `RESTRICCIÓN DE SALDO EXCLUSIVO: El lote ${sl.loteId} tiene saldo reservado para unirse exclusivamente con [${slInfo.lotesPermitidosUnion.join(", ")}]. No se permite agregar el lote ajeno ${loteId}.`
-        );
-        return;
-      }
-    }
-
     setErrorMessage(null);
 
-    // Si ya hay lotes en el batch, calcular la cantidad restante para no sobrecargar los 35 TN
-    let pesoIngresado = Number(loteObj?.PESO_KG) || s.saldoPendienteKg;
-    let sacosIngresados = Number(loteObj?.SACOS) || (s?.sacosPendientes ?? 0) || Math.round(pesoIngresado / 50);
+    // Si el lote tiene saldo pendiente de un batch anterior, inicializar con su saldo pendiente real
+    let pesoIngresado = (s && s.saldoPendienteKg > 0) ? s.saldoPendienteKg : (Number(loteObj?.PESO_KG) || 0);
+    let sacosIngresados = (s && s.sacosPendientes > 0) ? s.sacosPendientes : (Number(loteObj?.SACOS) || Math.round(pesoIngresado / 50));
 
     if (selectedLotes.length > 0) {
       const remCapKg = Math.max(0, parametros.capacidadMaximaSecadoraKg - pesoTotalKg);
       if (remCapKg > 0 && pesoIngresado > remCapKg) {
-        pesoIngresado = Math.min(s.saldoPendienteKg, remCapKg);
+        pesoIngresado = Math.min((s?.saldoPendienteKg || pesoIngresado), remCapKg);
         sacosIngresados = Math.round(pesoIngresado / 50);
       }
     }
