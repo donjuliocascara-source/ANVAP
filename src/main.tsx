@@ -1,6 +1,7 @@
 import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import {injectSpeedInsights} from '@vercel/speed-insights';
+import {Analytics} from '@vercel/analytics/react';
 
 // Purge any lingering test data or legacy queues for 100% clean production launch
 if (typeof window !== 'undefined' && window.localStorage) {
@@ -38,5 +39,6 @@ injectSpeedInsights();
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
+    <Analytics />
   </StrictMode>,
 );
